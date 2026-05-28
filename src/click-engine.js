@@ -39,9 +39,20 @@ function buildClickActionFromScenario(scenario) {
 }
 
 // Имитация клика — в будущем здесь будет реальный системный вызов
+// (Step 17) Тонкая обёртка над action-pipeline. Сохранена для
+// обратной совместимости — все вызовы внутри click-engine идут
+// через executeAction() в action-pipeline.js, который никогда
+// не выполняет реальных кликов.
 function simulateClick(action) {
+  if (typeof executeAction === 'function') {
+    var ctx = (typeof createActionContext === 'function')
+      ? createActionContext({ id: clickEngineState.currentScenarioId }, null)
+      : { executionMode: 'simulation' };
+    return executeAction(action, ctx);
+  }
   return {
     ok: true,
+    mode: 'simulation',
     simulated: true,
     action: action,
     timestamp: new Date().toISOString()
@@ -105,6 +116,12 @@ async function runScenario(scenario, callbacks, options) {
   // Валидация с учётом безопасных лимитов
   const validation = validateRunnableScenario(scenario, safetySettings);
   if (!validation.ok) {
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('safety.validation.failed', {
+        scenarioId: scenario && scenario.id,
+        reason: validation.message
+      });
+    }
     if (cb.onError) cb.onError(validation.message);
     return;
   }
@@ -124,6 +141,12 @@ async function runScenario(scenario, callbacks, options) {
   clickEngineState.startedAt = new Date().toISOString();
   clickEngineState.finishedAt = null;
 
+  // Step 17: build a single context for this run.
+  // executionMode is forced to "simulation" — no real-action path here.
+  const ctx = (typeof createActionContext === 'function')
+    ? createActionContext(scenario, options && options.settings)
+    : { scenarioId: scenario.id, executionMode: 'simulation' };
+
   if (cb.onStart) cb.onStart();
 
   try {
@@ -138,7 +161,22 @@ async function runScenario(scenario, callbacks, options) {
       clickEngineState.currentIteration = i;
 
       const action = buildClickActionFromScenario(scenario);
-      simulateClick(action);
+
+      // Step 17: every action goes through the central pipeline.
+      // The pipeline does the schema check, runs the simulate path,
+      // and emits an "action.simulated" audit event. It NEVER
+      // performs real OS input.
+      if (typeof executeAction === 'function') {
+        const result = executeAction(action, ctx);
+        if (result && result.ok === false && result.blocked === true) {
+          // Defensive: should not happen because ctx.executionMode === 'simulation'.
+          if (cb.onError) cb.onError(result.error || 'Real action blocked');
+          return;
+        }
+      } else {
+        // Fallback to the legacy simulate path if action-pipeline is missing.
+        simulateClick(action);
+      }
 
       if (cb.onAction) cb.onAction(action, i, total);
       if (cb.onProgress) cb.onProgress(i, total);

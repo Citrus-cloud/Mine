@@ -316,7 +316,35 @@ const translations = {
     resetCompleted: "Сброс выполнен",
     smokeCheck: "Smoke-проверка",
     flagDisabled: "выключен",
-    flagEnabled: "включён"
+    flagEnabled: "включён",
+
+    // Step 17: action pipeline / safety gates / audit events
+    realActionsReadiness: "Готовность реальных действий",
+    realActionsDisabled: "Реальные действия отключены",
+    simulationOnlyBuild: "Сборка только в режиме имитации",
+    realActionsImplemented: "Реальные действия реализованы",
+    realActionsFeatureFlag: "Feature flag реальных действий",
+    desktopAdapterNotInstalled: "Desktop-адаптер не установлен",
+    osPermissionsNotChecked: "OS-разрешения не проверены",
+    finalSafetyReviewNotPassed: "Финальный safety review не пройден",
+    actionPipeline: "Action pipeline",
+    pipelineReady: "Pipeline готов",
+    realActionsEnabled: "Реальные действия включены",
+    realActionAllowed: "Реальное действие разрешено",
+    missingRequirements: "Невыполненные требования",
+    safetyGates: "Safety gates",
+    auditEvents: "Audit events",
+    auditEventsCount: "Количество audit-событий",
+    lastAuditEvent: "Последнее audit-событие",
+    realDesktopActionsDisabledNotice:
+      "Реальные действия рабочего стола пока отключены. ClickFlow продолжает работать только в режиме имитации.",
+    actionRealBlocked: "Real action заблокирован",
+    safetyValidationFailed: "Safety-валидация не пройдена",
+    notImplemented: "не реализовано",
+    notInstalled: "не установлено",
+    notChecked: "не проверено",
+    notPassed: "не пройден",
+    none2: "—"
   },
   en: {
     // Main screen
@@ -633,7 +661,35 @@ const translations = {
     resetCompleted: "Reset completed",
     smokeCheck: "Smoke check",
     flagDisabled: "disabled",
-    flagEnabled: "enabled"
+    flagEnabled: "enabled",
+
+    // Step 17: action pipeline / safety gates / audit events
+    realActionsReadiness: "Real actions readiness",
+    realActionsDisabled: "Real actions disabled",
+    simulationOnlyBuild: "Simulation-only build",
+    realActionsImplemented: "Real actions implemented",
+    realActionsFeatureFlag: "Real actions feature flag",
+    desktopAdapterNotInstalled: "Desktop adapter not installed",
+    osPermissionsNotChecked: "OS permissions not checked",
+    finalSafetyReviewNotPassed: "Final safety review not passed",
+    actionPipeline: "Action pipeline",
+    pipelineReady: "Pipeline ready",
+    realActionsEnabled: "Real actions enabled",
+    realActionAllowed: "Real action allowed",
+    missingRequirements: "Missing requirements",
+    safetyGates: "Safety gates",
+    auditEvents: "Audit events",
+    auditEventsCount: "Audit events count",
+    lastAuditEvent: "Last audit event",
+    realDesktopActionsDisabledNotice:
+      "Real desktop actions are disabled. ClickFlow still runs in simulation mode only.",
+    actionRealBlocked: "Real action blocked",
+    safetyValidationFailed: "Safety validation failed",
+    notImplemented: "not implemented",
+    notInstalled: "not installed",
+    notChecked: "not checked",
+    notPassed: "not passed",
+    none2: "—"
   }
 };
 

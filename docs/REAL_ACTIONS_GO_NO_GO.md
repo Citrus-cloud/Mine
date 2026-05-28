@@ -4,16 +4,44 @@ This is the **mandatory** checklist for any future work that introduces
 real desktop input (mouse / keyboard) into ClickFlow. It is the
 sign-off gate for the `0.3.x` release line.
 
-> **Current status (0.1.0-beta).** Real clicks are **NOT implemented**.
-> ClickFlow only runs in **simulation mode**.
-> `src/feature-flags.js` ships `realDesktopActions: false`,
-> `ocr: false`, `imageRecognition: false`, `simulationOnly: true`.
-> No UI in the app can flip those values.
+> **Current status (0.1.0-beta, after Step 17).** Real clicks are
+> **NOT implemented**. ClickFlow only runs in **simulation mode**.
+> Step 17 added the architectural scaffolding the future adapter
+> will plug into — `src/action-pipeline.js` (centralized
+> `executeAction()`), `src/safety-gates.js` (`isRealActionAllowed`
+> hard-coded `false`), and `src/audit-events.js` (in-memory
+> allowlist-only audit model). None of those files perform real
+> OS input. `src/feature-flags.js` still ships
+> `realDesktopActions: false`, `ocr: false`, `imageRecognition: false`,
+> `simulationOnly: true`. No UI in the app can flip those values.
 >
 > A green checklist below is **necessary but not sufficient**: a
 > separate written safety review in a Safety report issue
 > (`.github/ISSUE_TEMPLATE/safety_report.md`) must accompany any PR
 > that turns `realDesktopActions` on.
+
+---
+
+## 0. What step 17 changed
+
+- [x] Action pipeline (`src/action-pipeline.js`) routes every action
+      through `executeAction(action, context)`. Only the simulate
+      path is wired. `executionMode === "real"` calls `blockRealAction()`
+      and never invokes any OS API.
+- [x] Safety gate layer (`src/safety-gates.js`) gives the future
+      adapter a single place to consult. `isRealActionAllowed()`
+      is hard-coded `false` for `0.1.x` and `0.2.x`.
+- [x] Audit event model (`src/audit-events.js`) records start /
+      stop / completion / emergency stop / simulated action /
+      real-blocked / safety-validation-failed / settings changed /
+      import / export, in memory only.
+- [x] Diagnostics show `Action pipeline`, `Safety gates`, `Real
+      actions readiness`, and `Audit events` cards.
+- [x] Smoke check (`npm run smoke`) verifies the new files exist
+      and the simulation-only invariants are baked into source.
+
+These additions are **preparation only**. They do not constitute
+implementation of real input. The list below is unchanged.
 
 ---
 

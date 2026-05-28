@@ -197,6 +197,31 @@ Status as of `0.1.0-beta` (Step 14).
 - [x] `docs/PRIVACY.md`.
 - [x] `scripts/README.md` and `scripts/smoke-check.js`.
 
+## 17. Controlled action pipeline & safety gates (Step 17)
+
+- [x] `src/action-pipeline.js` — `executeAction`, `validateAction`,
+      `evaluateActionSafety`, `createActionContext`,
+      `executeSimulatedAction`, `blockRealAction`,
+      `canExecuteRealAction` (always false),
+      `getActionPipelineStatus`. Real-action requests blocked with
+      explicit error and audit event.
+- [x] `src/safety-gates.js` — predicate layer with
+      `isRealActionAllowed` hard-coded false and
+      `getRealActionRequirements` returning the 9-item contract.
+- [x] `src/audit-events.js` — in-memory event store with fixed
+      allowlist. **No file persistence.**
+- [x] `click-engine.js` dispatches through `executeAction`.
+- [x] Renderer audit instrumentation at start / approved-start /
+      stop / completed / emergency-stop / import / export /
+      settings.
+- [x] Advanced → Safety: cards Action pipeline, Safety gates,
+      Real actions readiness, Audit events.
+- [x] `Copy diagnostics` includes pipeline / gates / audit lines.
+- [x] `npm run smoke` covers Step 17 invariants and new files.
+- [x] Docs updated: `REAL_ACTIONS_GO_NO_GO`, `DESKTOP_ADAPTER_PLAN`,
+      `AUDIT_LOG_PLAN`, `ACTION_SCHEMA`, `SECURITY_CHECKLIST`,
+      `SMOKE_TESTS`, README, PROJECT_CONTEXT, CHANGELOG.
+
 ## 17. Known limitations (single source of truth)
 
 See [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md). Highlights:

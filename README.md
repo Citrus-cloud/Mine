@@ -29,7 +29,7 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening).
 - Версия: **`0.1.0-beta`**.
 - Состояние: simulation-only MVP, готов к публичному beta-тестированию,
   GitHub pre-release-ready.
@@ -44,6 +44,15 @@ safety review).
     карточка Feature flags, Next safety milestone в Future,
     `REAL_ACTIONS_GO_NO_GO`, `FEATURE_FLAGS`, `AUDIT_LOG_PLAN`,
     `PRIVACY`.
+  - **Шаг 17 — controlled action pipeline:**
+    `src/action-pipeline.js` (centralized `executeAction()`,
+    блокировка `executionMode === "real"`),
+    `src/safety-gates.js` (`isRealActionAllowed` hard-coded `false`,
+    список requirements для будущего real mode),
+    `src/audit-events.js` (in-memory модель audit-событий, без
+    file persistence). Карточки **Action pipeline**, **Safety
+    gates**, **Real actions readiness**, **Audit events** в
+    Advanced → Safety. Реальные клики по-прежнему **не реализованы**.
 
 ---
 
@@ -73,7 +82,9 @@ safety review).
 Safety, Future. Diagnostics, история ошибок, профили, импорт /
 экспорт, readiness-чеклист desktop-адаптера, **Beta health card**
 (Step 15), **Feature flags card** (Step 16), **Next safety milestone**
-карточка во вкладке Future.
+карточка во вкладке Future. **Step 17:** карточки **Action pipeline**,
+**Safety gates**, **Real actions readiness** (9-row checklist),
+**Audit events** (count + last event) в Advanced → Safety.
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -217,7 +228,9 @@ npm run dist     # релизные артефакты в dist/
 │   ├── README.md
 │   └── smoke-check.js
 ├── src/
+│   ├── action-pipeline.js
 │   ├── app-state.js
+│   ├── audit-events.js
 │   ├── click-engine.js
 │   ├── error-manager.js
 │   ├── feature-flags.js
@@ -226,6 +239,7 @@ npm run dist     # релизные артефакты в dist/
 │   ├── logger.js
 │   ├── profile-manager.js
 │   ├── renderer.js
+│   ├── safety-gates.js
 │   ├── scenario-manager.js
 │   ├── settings-manager.js
 │   └── styles.css
@@ -313,6 +327,7 @@ npm run dist     # релизные артефакты в dist/
 | 14 | Release prep | Этот release-каркас. |
 | 15 | Final stabilization | `npm run smoke`, Beta health, JSON corruption guard, `FINAL_BETA_REVIEW`. |
 | 16 | Handoff design | Feature flags, go/no-go, audit log plan, privacy doc. |
+| 17 | Action pipeline | `action-pipeline.js`, `safety-gates.js`, `audit-events.js` (in-memory). Real actions blocked. |
 
 ---
 
