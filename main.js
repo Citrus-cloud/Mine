@@ -4,9 +4,12 @@ const fs = require('fs');
 
 let mainWindow = null;
 
-// Путь к файлу сценариев в userData
 function getScenariosPath() {
   return path.join(app.getPath('userData'), 'scenarios.json');
+}
+
+function getSettingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json');
 }
 
 function createWindow() {
@@ -31,7 +34,7 @@ function createWindow() {
   });
 }
 
-// --- IPC-обработчики для сценариев ---
+// --- IPC: Сценарии ---
 
 ipcMain.handle('scenarios:load', async () => {
   try {
@@ -43,20 +46,20 @@ ipcMain.handle('scenarios:load', async () => {
     const scenarios = JSON.parse(raw);
     return { success: true, data: scenarios };
   } catch (err) {
-    return { success: false, error: 'Не удалось загрузить сценарии' };
+    return { success: false, error: 'Failed to load scenarios' };
   }
 });
 
 ipcMain.handle('scenarios:save', async (event, scenarios) => {
   try {
     if (!Array.isArray(scenarios)) {
-      return { success: false, error: 'Данные должны быть массивом' };
+      return { success: false, error: 'Data must be an array' };
     }
     const filePath = getScenariosPath();
     fs.writeFileSync(filePath, JSON.stringify(scenarios, null, 2), 'utf-8');
     return { success: true };
   } catch (err) {
-    return { success: false, error: 'Не удалось сохранить сценарии' };
+    return { success: false, error: 'Failed to save scenarios' };
   }
 });
 
@@ -68,7 +71,48 @@ ipcMain.handle('scenarios:reset', async () => {
     }
     return { success: true };
   } catch (err) {
-    return { success: false, error: 'Не удалось сбросить сценарии' };
+    return { success: false, error: 'Failed to reset scenarios' };
+  }
+});
+
+// --- IPC: Настройки ---
+
+ipcMain.handle('settings:load', async () => {
+  try {
+    const filePath = getSettingsPath();
+    if (!fs.existsSync(filePath)) {
+      return { success: true, data: null };
+    }
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const settings = JSON.parse(raw);
+    return { success: true, data: settings };
+  } catch (err) {
+    return { success: false, error: 'Failed to load settings' };
+  }
+});
+
+ipcMain.handle('settings:save', async (event, settings) => {
+  try {
+    if (!settings || typeof settings !== 'object') {
+      return { success: false, error: 'Data must be an object' };
+    }
+    const filePath = getSettingsPath();
+    fs.writeFileSync(filePath, JSON.stringify(settings, null, 2), 'utf-8');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: 'Failed to save settings' };
+  }
+});
+
+ipcMain.handle('settings:reset', async () => {
+  try {
+    const filePath = getSettingsPath();
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: 'Failed to reset settings' };
   }
 });
 

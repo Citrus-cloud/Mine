@@ -572,6 +572,92 @@ body {
   color: var(--danger);
 }
 
+/* Настройки */
+.settings-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hotkey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hotkey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.hotkey-label {
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.hotkey-value {
+  font-size: 0.82rem;
+  font-family: monospace;
+  background: var(--bg);
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.safety-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.safety-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.safety-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.safety-on {
+  background: #ecfdf5;
+  color: var(--success);
+}
+
+.safety-off {
+  background: #fef2f2;
+  color: var(--danger);
+}
+
 /* Футер */
 .footer {
   margin-top: 4px;

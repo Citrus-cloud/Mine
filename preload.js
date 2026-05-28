@@ -7,5 +7,10 @@ contextBridge.exposeInMainWorld('clickflow', {
     load: () => ipcRenderer.invoke('scenarios:load'),
     save: (scenarios) => ipcRenderer.invoke('scenarios:save', scenarios),
     reset: () => ipcRenderer.invoke('scenarios:reset')
+  },
+  settings: {
+    load: () => ipcRenderer.invoke('settings:load'),
+    save: (settings) => ipcRenderer.invoke('settings:save', settings),
+    reset: () => ipcRenderer.invoke('settings:reset')
   }
 });

@@ -7,11 +7,11 @@ const scenarioValue = document.getElementById('scenario-value');
 const btnStart = document.getElementById('btn-start');
 const btnStop = document.getElementById('btn-stop');
 const btnScenario = document.getElementById('btn-scenario');
+const btnSettings = document.getElementById('btn-settings');
 const btnAdvanced = document.getElementById('btn-advanced');
 const logsContainer = document.getElementById('logs-container');
 
 // DOM — прогресс
-const progressCard = document.getElementById('progress-card');
 const progressMeta = document.getElementById('progress-meta');
 const progressBarFill = document.getElementById('progress-bar-fill');
 const lastActionEl = document.getElementById('last-action');
@@ -20,6 +20,7 @@ const lastActionEl = document.getElementById('last-action');
 const viewMain = document.getElementById('view-main');
 const viewScenarios = document.getElementById('view-scenarios');
 const viewScenarioForm = document.getElementById('view-scenario-form');
+const viewSettings = document.getElementById('view-settings');
 const viewAdvanced = document.getElementById('view-advanced');
 
 // DOM — список сценариев
@@ -27,7 +28,7 @@ const scenarioListEl = document.getElementById('scenario-list');
 const btnCreateScenario = document.getElementById('btn-create-scenario');
 const btnScenariosBack = document.getElementById('btn-scenarios-back');
 
-// DOM — форма
+// DOM — форма сценария
 const formTitle = document.getElementById('form-title');
 const formError = document.getElementById('form-error');
 const inputName = document.getElementById('input-name');
@@ -39,6 +40,19 @@ const inputRepeat = document.getElementById('input-repeat');
 const inputButton = document.getElementById('input-button');
 const btnSaveScenario = document.getElementById('btn-save-scenario');
 const btnFormCancel = document.getElementById('btn-form-cancel');
+
+// DOM — настройки
+const settingsLanguage = document.getElementById('settings-language');
+const settingsTheme = document.getElementById('settings-theme');
+const settingsMinInterval = document.getElementById('settings-min-interval');
+const settingsMaxRepeats = document.getElementById('settings-max-repeats');
+const safetyModeBadge = document.getElementById('safety-mode-badge');
+const emergencyStopBadge = document.getElementById('emergency-stop-badge');
+const hotkeyStartEl = document.getElementById('hotkey-start');
+const hotkeyStopEl = document.getElementById('hotkey-stop');
+const hotkeyEmergencyEl = document.getElementById('hotkey-emergency');
+const btnSaveSettings = document.getElementById('btn-save-settings');
+const btnSettingsBack = document.getElementById('btn-settings-back');
 
 // DOM — расширенный режим
 const btnBack = document.getElementById('btn-back');
@@ -52,33 +66,34 @@ function showView(viewName) {
   viewMain.style.display = 'none';
   viewScenarios.style.display = 'none';
   viewScenarioForm.style.display = 'none';
+  viewSettings.style.display = 'none';
   viewAdvanced.style.display = 'none';
 
   switch (viewName) {
     case 'main': viewMain.style.display = 'flex'; break;
     case 'scenarios': viewScenarios.style.display = 'flex'; break;
     case 'scenarioForm': viewScenarioForm.style.display = 'flex'; break;
+    case 'settings': viewSettings.style.display = 'flex'; break;
     case 'advanced': viewAdvanced.style.display = 'flex'; break;
   }
 }
 
-// --- Отрисовка главного экрана ---
+// --- Отрисовка ---
 
 function renderState() {
   const state = getState();
 
   // Статус
   if (state.isRunning) {
-    statusValue.textContent = 'Работает';
+    statusValue.textContent = t('running');
     statusIndicator.classList.add('running');
     statusIndicator.classList.remove('stopped');
   } else {
-    statusValue.textContent = 'Остановлен';
+    statusValue.textContent = t('stopped');
     statusIndicator.classList.add('stopped');
     statusIndicator.classList.remove('running');
   }
 
-  // Сценарий
   scenarioValue.textContent = state.selectedScenarioName;
 
   // Кнопки
@@ -109,13 +124,13 @@ function renderExecutionProgress(execution) {
   if (execution.lastAction) {
     lastActionEl.textContent = formatLastAction(execution.lastAction);
   } else {
-    lastActionEl.textContent = 'Последнее действие: нет';
+    lastActionEl.textContent = t('lastAction') + ': ' + t('none');
   }
 }
 
 function formatLastAction(action) {
-  if (!action) return 'Последнее действие: нет';
-  return `Последнее действие: ${action.type} x=${action.x} y=${action.y} button=${action.button}`;
+  if (!action) return t('lastAction') + ': ' + t('none');
+  return `${t('lastAction')}: ${action.type} x=${action.x} y=${action.y} button=${action.button}`;
 }
 
 function shouldLogAction(current, total) {
@@ -132,7 +147,7 @@ function renderLogs(logs) {
   if (recent.length === 0) {
     const p = document.createElement('p');
     p.className = 'logs-empty';
-    p.textContent = 'Нет событий';
+    p.textContent = t('noEvents');
     logsContainer.appendChild(p);
     return;
   }
@@ -170,7 +185,7 @@ function renderScenarioList() {
   if (scenarios.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'scenario-empty';
-    empty.textContent = 'Нет сценариев';
+    empty.textContent = t('noScenarios');
     scenarioListEl.appendChild(empty);
     return;
   }
@@ -178,9 +193,7 @@ function renderScenarioList() {
   scenarios.forEach(sc => {
     const card = document.createElement('div');
     card.className = 'scenario-card';
-    if (sc.id === state.selectedScenarioId) {
-      card.classList.add('active');
-    }
+    if (sc.id === state.selectedScenarioId) card.classList.add('active');
 
     const header = document.createElement('div');
     header.className = 'scenario-card-header';
@@ -193,7 +206,7 @@ function renderScenarioList() {
     if (sc.meta && sc.meta.isDefault) {
       const badge = document.createElement('span');
       badge.className = 'scenario-card-badge';
-      badge.textContent = 'базовый';
+      badge.textContent = t('defaultBadge');
       header.appendChild(badge);
     }
 
@@ -202,7 +215,7 @@ function renderScenarioList() {
     const settings = document.createElement('div');
     settings.className = 'scenario-card-settings';
     const s = sc.settings;
-    settings.textContent = `x:${s.x} y:${s.y} · ${s.intervalMs}мс · ${s.repeatCount}× · ${s.button}`;
+    settings.textContent = `x:${s.x} y:${s.y} · ${s.intervalMs}ms · ${s.repeatCount}× · ${s.button}`;
     card.appendChild(settings);
 
     const actions = document.createElement('div');
@@ -210,20 +223,20 @@ function renderScenarioList() {
 
     const btnSelect = document.createElement('button');
     btnSelect.className = 'btn-sm btn-sm-select';
-    btnSelect.textContent = 'Выбрать';
+    btnSelect.textContent = t('select');
     btnSelect.addEventListener('click', () => selectScenarioById(sc.id));
     actions.appendChild(btnSelect);
 
     const btnEdit = document.createElement('button');
     btnEdit.className = 'btn-sm btn-sm-edit';
-    btnEdit.textContent = 'Изменить';
+    btnEdit.textContent = t('edit');
     btnEdit.addEventListener('click', () => openEditScenarioForm(sc.id));
     actions.appendChild(btnEdit);
 
     if (!sc.meta || !sc.meta.isDefault) {
       const btnDel = document.createElement('button');
       btnDel.className = 'btn-sm btn-sm-delete';
-      btnDel.textContent = 'Удалить';
+      btnDel.textContent = t('delete');
       btnDel.addEventListener('click', () => deleteScenarioById(sc.id));
       actions.appendChild(btnDel);
     }
@@ -236,7 +249,7 @@ function renderScenarioList() {
 // --- Действия со сценариями ---
 
 function openScenarioList() {
-  addLogEntry(createLog('info', 'Открыт список сценариев'));
+  addLogEntry(createLog('info', t('logScenariosOpened')));
   showView('scenarios');
   renderScenarioList();
   renderState();
@@ -246,7 +259,7 @@ function selectScenarioById(id) {
   const sc = getScenarioById(id);
   if (!sc) return;
   setSelectedScenario(sc);
-  addLogEntry(createLog('success', `Выбран сценарий: ${sc.name}`));
+  addLogEntry(createLog('success', `${t('select')}: ${sc.name}`));
   showView('main');
   renderState();
 }
@@ -256,7 +269,7 @@ function openCreateScenarioForm() {
   setEditingScenarioId(null);
   clearScenarioForm();
   clearFormError();
-  formTitle.textContent = 'Создать сценарий';
+  formTitle.textContent = t('createScenarioTitle');
   showView('scenarioForm');
 }
 
@@ -267,7 +280,7 @@ function openEditScenarioForm(id) {
   setEditingScenarioId(id);
   fillScenarioForm(sc);
   clearFormError();
-  formTitle.textContent = 'Редактировать сценарий';
+  formTitle.textContent = t('editScenarioTitle');
   showView('scenarioForm');
 }
 
@@ -291,15 +304,12 @@ async function saveScenarioFromForm() {
   }
 
   if (!result || !result.success) {
-    showFormError(result ? result.error : 'Неизвестная ошибка');
+    showFormError(result ? result.error : 'Unknown error');
     return;
   }
 
   await saveScenarios();
-
-  const actionLabel = state.scenarioFormMode === 'create' ? 'Создан' : 'Обновлён';
-  addLogEntry(createLog('success', `${actionLabel} сценарий: ${data.name}`));
-
+  addLogEntry(createLog('success', `${state.scenarioFormMode === 'create' ? t('createScenarioTitle') : t('editScenarioTitle')}: ${data.name}`));
   closeScenarioForm();
   renderState();
 }
@@ -308,8 +318,7 @@ async function deleteScenarioById(id) {
   const sc = getScenarioById(id);
   if (!sc) return;
   if (sc.meta && sc.meta.isDefault) return;
-
-  if (!confirm(`Удалить сценарий "${sc.name}"?`)) return;
+  if (!confirm(`${t('delete')} "${sc.name}"?`)) return;
 
   const result = deleteScenario(id);
   if (!result.success) return;
@@ -321,12 +330,12 @@ async function deleteScenarioById(id) {
   }
 
   await saveScenarios();
-  addLogEntry(createLog('info', `Удалён сценарий: ${sc.name}`));
+  addLogEntry(createLog('info', `${t('delete')}: ${sc.name}`));
   renderScenarioList();
   renderState();
 }
 
-// --- Форма ---
+// --- Форма сценария ---
 
 function getScenarioFormData() {
   return {
@@ -370,24 +379,80 @@ function clearFormError() {
   formError.classList.remove('visible');
 }
 
-// --- Start / Stop с click-engine ---
+// --- Настройки ---
+
+function openSettings() {
+  addLogEntry(createLog('info', t('logSettingsOpened')));
+  renderSettingsForm();
+  showView('settings');
+  renderState();
+}
+
+function renderSettingsForm() {
+  const s = getSettings();
+  settingsLanguage.value = s.language;
+  settingsTheme.value = s.theme;
+  settingsMinInterval.value = s.safety.minIntervalMs;
+  settingsMaxRepeats.value = s.safety.maxRepeatCount;
+  hotkeyStartEl.textContent = s.hotkeys.start;
+  hotkeyStopEl.textContent = s.hotkeys.stop;
+  hotkeyEmergencyEl.textContent = s.hotkeys.emergencyStop;
+  safetyModeBadge.textContent = s.safety.safeMode ? t('enabled') : t('disabled');
+  safetyModeBadge.className = 'safety-badge ' + (s.safety.safeMode ? 'safety-on' : 'safety-off');
+  emergencyStopBadge.textContent = s.safety.emergencyStopEnabled ? t('enabled') : t('disabled');
+  emergencyStopBadge.className = 'safety-badge ' + (s.safety.emergencyStopEnabled ? 'safety-on' : 'safety-off');
+}
+
+async function saveSettingsFromForm() {
+  const newSettings = {
+    language: settingsLanguage.value,
+    theme: settingsTheme.value,
+    hotkeys: getSettings().hotkeys,
+    safety: {
+      safeMode: true,
+      emergencyStopEnabled: true,
+      minIntervalMs: Math.max(50, Number(settingsMinInterval.value) || 50),
+      maxRepeatCount: Math.min(100000, Math.max(1, Number(settingsMaxRepeats.value) || 100000))
+    }
+  };
+
+  setSettings(newSettings);
+  await saveSettings(newSettings);
+
+  // Применить язык
+  setLanguage(newSettings.language);
+  applyTranslations();
+
+  addLogEntry(createLog('success', t('logSettingsSaved')));
+  showView('main');
+  renderState();
+}
+
+function goBackFromSettings() {
+  addLogEntry(createLog('info', t('logMainOpened')));
+  showView('main');
+  renderState();
+}
+
+// --- Start / Stop ---
 
 function startScenario() {
   const state = getState();
 
-  // Защита от повторного запуска
   if (state.execution.isRunning) {
-    addLogEntry(createLog('warning', 'Сценарий уже выполняется'));
+    addLogEntry(createLog('warning', t('logAlreadyRunning')));
     renderState();
     return;
   }
 
   const sc = getScenarioById(state.selectedScenarioId);
   if (!sc) {
-    addLogEntry(createLog('error', 'Активный сценарий не найден'));
+    addLogEntry(createLog('error', t('logNoScenario')));
     renderState();
     return;
   }
+
+  const safetyOpts = state.settings.safety;
 
   runScenario(sc, {
     onStart: () => {
@@ -397,78 +462,115 @@ function startScenario() {
       setExecutionStartedAt(new Date().toISOString());
       setExecutionFinishedAt(null);
       setExecutionLastAction(null);
-      addLogEntry(createLog('success', `Сценарий запущен: ${sc.name}`));
+      addLogEntry(createLog('success', `${t('logScenarioStarted')}: ${sc.name}`));
       renderState();
     },
-
     onAction: (action, current, total) => {
       setExecutionLastAction(action);
       if (shouldLogAction(current, total)) {
-        addLogEntry(createLog('info', `Действие ${current}/${total}: click x=${action.x} y=${action.y}`));
+        addLogEntry(createLog('info', `${current}/${total}: click x=${action.x} y=${action.y}`));
       }
     },
-
     onProgress: (current, total) => {
       setExecutionProgress(current, total);
       renderState();
     },
-
     onStop: () => {
       setRunning(false);
       setExecutionRunning(false);
       setExecutionFinishedAt(new Date().toISOString());
-      addLogEntry(createLog('warning', 'Сценарий остановлен пользователем'));
+      addLogEntry(createLog('warning', t('logScenarioStopped')));
       renderState();
     },
-
     onComplete: () => {
       setRunning(false);
       setExecutionRunning(false);
       setExecutionFinishedAt(new Date().toISOString());
-      addLogEntry(createLog('success', 'Сценарий завершён'));
+      addLogEntry(createLog('success', t('logScenarioComplete')));
       renderState();
     },
-
     onError: (message) => {
       setRunning(false);
       setExecutionRunning(false);
       addLogEntry(createLog('error', message));
       renderState();
     }
-  });
+  }, { safety: safetyOpts });
 }
 
 function stopScenario() {
   const state = getState();
   if (!state.execution.isRunning) {
-    addLogEntry(createLog('info', 'Нет активного сценария для остановки'));
+    addLogEntry(createLog('info', t('logNoActiveStop')));
     renderState();
     return;
   }
   stopEngine();
-  addLogEntry(createLog('info', 'Остановка сценария...'));
+  addLogEntry(createLog('info', t('logStopping')));
+  renderState();
+}
+
+function triggerEmergencyStop() {
+  const state = getState();
+  if (!state.execution.isRunning) return;
+  stopEngine();
+  setRunning(false);
+  setExecutionRunning(false);
+  setExecutionFinishedAt(new Date().toISOString());
+  addLogEntry(createLog('warning', t('logEmergencyStop')));
   renderState();
 }
 
 // --- Расширенный режим ---
 
 function openAdvancedMode() {
-  addLogEntry(createLog('info', 'Открыт расширенный режим'));
+  addLogEntry(createLog('info', t('logAdvancedOpened')));
   showView('advanced');
   renderState();
 }
 
 function goBackToMain() {
-  addLogEntry(createLog('info', 'Открыто главное меню'));
+  addLogEntry(createLog('info', t('logMainOpened')));
   showView('main');
   renderState();
 }
+
+// --- Горячие клавиши ---
+
+function handleGlobalHotkeys(event) {
+  const state = getState();
+  const hotkeys = state.settings.hotkeys;
+
+  // Ctrl+Alt+S — Start
+  if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 's') {
+    event.preventDefault();
+    startScenario();
+    return;
+  }
+
+  // Ctrl+Alt+X — Stop
+  if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'x') {
+    event.preventDefault();
+    stopScenario();
+    return;
+  }
+
+  // Escape — Emergency Stop
+  if (event.key === 'Escape' && state.settings.safety.emergencyStopEnabled) {
+    event.preventDefault();
+    triggerEmergencyStop();
+    return;
+  }
+}
+
+document.addEventListener('keydown', handleGlobalHotkeys);
 
 // --- Обработчики событий ---
 
 btnStart.addEventListener('click', startScenario);
 btnStop.addEventListener('click', stopScenario);
 btnScenario.addEventListener('click', openScenarioList);
+btnSettings.addEventListener('click', openSettings);
 btnAdvanced.addEventListener('click', (e) => { e.preventDefault(); openAdvancedMode(); });
 btnBack.addEventListener('click', goBackToMain);
 
@@ -477,14 +579,25 @@ btnScenariosBack.addEventListener('click', goBackToMain);
 btnSaveScenario.addEventListener('click', saveScenarioFromForm);
 btnFormCancel.addEventListener('click', closeScenarioForm);
 
+btnSaveSettings.addEventListener('click', saveSettingsFromForm);
+btnSettingsBack.addEventListener('click', goBackFromSettings);
+
 // --- Инициализация ---
 
 async function init() {
+  // Загрузить настройки
+  const settings = await loadSettings();
+  setSettings(settings);
+  setLanguage(settings.language);
+  applyTranslations();
+
+  // Загрузить сценарии
   await initScenarios();
   const def = getDefaultScenario();
   setSelectedScenario(def);
   resetExecution();
-  addLogEntry(createLog('info', 'Приложение готово'));
+
+  addLogEntry(createLog('info', t('logAppReady')));
   showView('main');
   renderState();
 }
