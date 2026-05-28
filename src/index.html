@@ -9,43 +9,74 @@
 </head>
 <body>
   <div class="container">
-    <!-- Заголовок -->
-    <header class="header">
-      <h1 class="app-title">ClickFlow</h1>
-      <p class="app-description">Минималистичный кликер для быстрых сценариев</p>
-    </header>
 
-    <!-- Карточка статуса -->
-    <div class="status-card">
-      <div class="status-row">
-        <span class="status-label">Статус:</span>
-        <span class="status-indicator" id="status-indicator"></span>
-        <span class="status-value" id="status-value">Остановлен</span>
+    <!-- Главный экран -->
+    <div id="view-main" class="view">
+
+      <!-- Заголовок -->
+      <header class="header">
+        <h1 class="app-title">ClickFlow</h1>
+        <p class="app-description">Минималистичный кликер для быстрых сценариев</p>
+      </header>
+
+      <!-- Карточка статуса -->
+      <div class="status-card">
+        <div class="status-row">
+          <span class="status-label">Статус:</span>
+          <span class="status-indicator" id="status-indicator"></span>
+          <span class="status-value" id="status-value">Остановлен</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Сценарий:</span>
+          <span class="scenario-value" id="scenario-value">Быстрый кликер</span>
+        </div>
       </div>
-      <div class="status-row">
-        <span class="status-label">Сценарий:</span>
-        <span class="scenario-value" id="scenario-value">Быстрый кликер</span>
+
+      <!-- Основные кнопки -->
+      <div class="actions">
+        <button class="btn btn-start" id="btn-start">Start</button>
+        <button class="btn btn-stop" id="btn-stop">Stop</button>
       </div>
+
+      <!-- Дополнительные действия -->
+      <div class="secondary-actions">
+        <button class="btn btn-secondary" id="btn-scenario">Выбрать сценарий</button>
+        <a href="#" class="link-advanced" id="btn-advanced">Расширенный режим</a>
+      </div>
+
+      <!-- Последние события -->
+      <div class="logs-section">
+        <h3 class="logs-title">Последние события</h3>
+        <div class="logs-list" id="logs-container"></div>
+      </div>
+
+      <!-- Нижняя строка -->
+      <footer class="footer">
+        <span class="safe-mode">🛡️ Безопасный режим включён</span>
+      </footer>
+
     </div>
 
-    <!-- Основные кнопки -->
-    <div class="actions">
-      <button class="btn btn-start" id="btn-start">Start</button>
-      <button class="btn btn-stop" id="btn-stop">Stop</button>
+    <!-- Расширенный режим (заглушка) -->
+    <div id="view-advanced" class="view view-hidden">
+      <header class="header">
+        <h1 class="app-title">Расширенный режим</h1>
+        <p class="app-description">Здесь позже появятся сценарии, OCR, изображения, логи и безопасность.</p>
+      </header>
+
+      <div class="advanced-placeholder">
+        <p class="placeholder-text">Этот раздел находится в разработке.</p>
+      </div>
+
+      <button class="btn btn-back" id="btn-back">← Назад</button>
     </div>
 
-    <!-- Дополнительные действия -->
-    <div class="secondary-actions">
-      <button class="btn btn-secondary" id="btn-scenario">Выбрать сценарий</button>
-      <a href="#" class="link-advanced" id="btn-advanced">Расширенный режим</a>
-    </div>
-
-    <!-- Нижняя строка -->
-    <footer class="footer">
-      <span class="safe-mode">🛡️ Безопасный режим включён</span>
-    </footer>
   </div>
 
+  <!-- Модули (порядок важен) -->
+  <script src="app-state.js"></script>
+  <script src="logger.js"></script>
+  <script src="scenario-manager.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

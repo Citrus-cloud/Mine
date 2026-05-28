@@ -6,6 +6,7 @@
   --accent: #4f8ef7;
   --success: #22c55e;
   --danger: #ef4444;
+  --warning: #f59e0b;
   --border: #e5e7eb;
   --radius: 18px;
 }
@@ -30,10 +31,18 @@ body {
   width: 100%;
   max-width: 480px;
   padding: 48px 32px;
+}
+
+/* Виды */
+.view {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 32px;
+  gap: 28px;
+}
+
+.view-hidden {
+  display: none;
 }
 
 /* Заголовок */
@@ -51,6 +60,7 @@ body {
 .app-description {
   font-size: 0.95rem;
   color: var(--muted);
+  line-height: 1.5;
 }
 
 /* Карточка статуса */
@@ -185,9 +195,109 @@ body {
   color: var(--accent);
 }
 
+/* Логи */
+.logs-section {
+  width: 100%;
+}
+
+.logs-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.logs-empty {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 12px;
+}
+
+.log-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.log-icon {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.log-time {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-family: monospace;
+}
+
+.log-message {
+  color: var(--text);
+}
+
+.log-info {
+  border-left: 3px solid var(--accent);
+}
+
+.log-success {
+  border-left: 3px solid var(--success);
+}
+
+.log-warning {
+  border-left: 3px solid var(--warning);
+}
+
+.log-error {
+  border-left: 3px solid var(--danger);
+}
+
+/* Расширенный режим — заглушка */
+.advanced-placeholder {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.placeholder-text {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.btn-back {
+  background-color: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 12px 32px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.btn-back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* Футер */
 .footer {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .safe-mode {
