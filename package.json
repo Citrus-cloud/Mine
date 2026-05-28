@@ -1,0 +1,15 @@
+{
+  "name": "clickflow",
+  "version": "0.1.0",
+  "description": "Минималистичный кроссплатформенный кликер и визуальный автоматизатор",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}
