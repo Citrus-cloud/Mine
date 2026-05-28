@@ -665,6 +665,12 @@ async function init() {
   const def = getDefaultScenario(); setSelectedScenario(def);
   resetExecution();
 
+  // Set version badge (textContent, safe)
+  const verBadge = document.getElementById('badge-version');
+  if (verBadge && window.clickflow && window.clickflow.version) {
+    verBadge.textContent = 'v' + window.clickflow.version;
+  }
+
   // Register global hotkey listeners from main process
   window.clickflow.hotkeys.onStart(() => startScenario());
   window.clickflow.hotkeys.onStop(() => stopScenario());

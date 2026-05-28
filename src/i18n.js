@@ -275,7 +275,26 @@ const translations = {
     isPackaged: "Упакован",
     systemInfo: "Системная информация",
     packaging: "Упаковка",
-    packagingReady: "Готовность упаковки"
+    packagingReady: "Готовность упаковки",
+
+    // Steps 13-14: Beta polish & release
+    beta: "Бета",
+    release: "Релиз",
+    betaVersion: "0.1.0-beta",
+    simulationBadge: "Режим имитации",
+    safeBadge: "Безопасный режим",
+    readyStatus: "Готово",
+    appReady: "Приложение готово",
+    packagingStatus: "Упаковка готова",
+    knownLimitations: "Известные ограничения",
+    roadmap: "Roadmap",
+    releaseNotes: "Заметки к релизу",
+    changelog: "История изменений",
+    contributing: "Контрибьютинг",
+    noRealClicks: "Реальные клики не реализованы",
+    simulationOnlyShort: "Только имитация",
+    yes: "да",
+    no: "нет"
   },
   en: {
     // Main screen
@@ -551,7 +570,26 @@ const translations = {
     isPackaged: "Packaged",
     systemInfo: "System info",
     packaging: "Packaging",
-    packagingReady: "Packaging ready"
+    packagingReady: "Packaging ready",
+
+    // Steps 13-14: Beta polish & release
+    beta: "Beta",
+    release: "Release",
+    betaVersion: "0.1.0-beta",
+    simulationBadge: "Simulation mode",
+    safeBadge: "Safe mode",
+    readyStatus: "Ready",
+    appReady: "Application ready",
+    packagingStatus: "Packaging ready",
+    knownLimitations: "Known limitations",
+    roadmap: "Roadmap",
+    releaseNotes: "Release notes",
+    changelog: "Changelog",
+    contributing: "Contributing",
+    noRealClicks: "Real clicks not implemented",
+    simulationOnlyShort: "Simulation only",
+    yes: "yes",
+    no: "no"
   }
 };
 
