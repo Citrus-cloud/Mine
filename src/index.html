@@ -29,9 +29,21 @@
         </div>
       </div>
 
+      <!-- Прогресс выполнения -->
+      <div class="progress-card" id="progress-card">
+        <div class="progress-header">
+          <span class="progress-title">Прогресс</span>
+          <span class="progress-meta" id="progress-meta">0 / 0 · 0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+        <div class="last-action" id="last-action">Последнее действие: нет</div>
+      </div>
+
       <div class="actions">
         <button class="btn btn-start" id="btn-start">Start</button>
-        <button class="btn btn-stop" id="btn-stop">Stop</button>
+        <button class="btn btn-stop" id="btn-stop" disabled>Stop</button>
       </div>
 
       <div class="secondary-actions">
@@ -140,6 +152,7 @@
   <script src="app-state.js"></script>
   <script src="logger.js"></script>
   <script src="scenario-manager.js"></script>
+  <script src="click-engine.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

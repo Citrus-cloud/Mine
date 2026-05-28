@@ -10,6 +10,12 @@ const btnScenario = document.getElementById('btn-scenario');
 const btnAdvanced = document.getElementById('btn-advanced');
 const logsContainer = document.getElementById('logs-container');
 
+// DOM — прогресс
+const progressCard = document.getElementById('progress-card');
+const progressMeta = document.getElementById('progress-meta');
+const progressBarFill = document.getElementById('progress-bar-fill');
+const lastActionEl = document.getElementById('last-action');
+
 // DOM — виды
 const viewMain = document.getElementById('view-main');
 const viewScenarios = document.getElementById('view-scenarios');
@@ -39,7 +45,6 @@ const btnBack = document.getElementById('btn-back');
 
 const MAX_VISIBLE_LOGS = 5;
 
-
 // --- Управление видами ---
 
 function showView(viewName) {
@@ -62,6 +67,7 @@ function showView(viewName) {
 function renderState() {
   const state = getState();
 
+  // Статус
   if (state.isRunning) {
     statusValue.textContent = 'Работает';
     statusIndicator.classList.add('running');
@@ -72,10 +78,52 @@ function renderState() {
     statusIndicator.classList.remove('running');
   }
 
+  // Сценарий
   scenarioValue.textContent = state.selectedScenarioName;
+
+  // Кнопки
+  btnStart.disabled = state.execution.isRunning;
+  btnStop.disabled = !state.execution.isRunning;
+
+  // Прогресс
+  renderExecutionProgress(state.execution);
+
+  // Логи
   renderLogs(state.logs);
 }
 
+function renderExecutionProgress(execution) {
+  const current = execution.progressCurrent;
+  const total = execution.progressTotal;
+  const percent = execution.progressPercent;
+
+  progressMeta.textContent = `${current} / ${total} · ${percent}%`;
+  progressBarFill.style.width = percent + '%';
+
+  if (percent >= 100) {
+    progressBarFill.classList.add('complete');
+  } else {
+    progressBarFill.classList.remove('complete');
+  }
+
+  if (execution.lastAction) {
+    lastActionEl.textContent = formatLastAction(execution.lastAction);
+  } else {
+    lastActionEl.textContent = 'Последнее действие: нет';
+  }
+}
+
+function formatLastAction(action) {
+  if (!action) return 'Последнее действие: нет';
+  return `Последнее действие: ${action.type} x=${action.x} y=${action.y} button=${action.button}`;
+}
+
+function shouldLogAction(current, total) {
+  if (current <= 3) return true;
+  if (current === total) return true;
+  if (current % 10 === 0) return true;
+  return false;
+}
 
 function renderLogs(logs) {
   const recent = logs.slice(-MAX_VISIBLE_LOGS);
@@ -112,7 +160,6 @@ function renderLogs(logs) {
   });
 }
 
-
 // --- Список сценариев ---
 
 function renderScenarioList() {
@@ -135,7 +182,6 @@ function renderScenarioList() {
       card.classList.add('active');
     }
 
-    // Заголовок карточки
     const header = document.createElement('div');
     header.className = 'scenario-card-header';
 
@@ -153,14 +199,12 @@ function renderScenarioList() {
 
     card.appendChild(header);
 
-    // Настройки
     const settings = document.createElement('div');
     settings.className = 'scenario-card-settings';
     const s = sc.settings;
     settings.textContent = `x:${s.x} y:${s.y} · ${s.intervalMs}мс · ${s.repeatCount}× · ${s.button}`;
     card.appendChild(settings);
 
-    // Кнопки действий
     const actions = document.createElement('div');
     actions.className = 'scenario-card-actions';
 
@@ -188,7 +232,6 @@ function renderScenarioList() {
     scenarioListEl.appendChild(card);
   });
 }
-
 
 // --- Действия со сценариями ---
 
@@ -236,7 +279,6 @@ function closeScenarioForm() {
   renderScenarioList();
 }
 
-
 async function saveScenarioFromForm() {
   const data = getScenarioFormData();
   const state = getState();
@@ -272,7 +314,6 @@ async function deleteScenarioById(id) {
   const result = deleteScenario(id);
   if (!result.success) return;
 
-  // Если удалён активный сценарий, выбрать базовый
   const state = getState();
   if (state.selectedScenarioId === id) {
     const def = getDefaultScenario();
@@ -284,7 +325,6 @@ async function deleteScenarioById(id) {
   renderScenarioList();
   renderState();
 }
-
 
 // --- Форма ---
 
@@ -330,24 +370,83 @@ function clearFormError() {
   formError.classList.remove('visible');
 }
 
-
-// --- Start / Stop ---
+// --- Start / Stop с click-engine ---
 
 function startScenario() {
-  const sc = getScenarioById(getState().selectedScenarioId);
-  if (!sc) {
-    addLogEntry(createLog('error', 'Сценарий не найден'));
+  const state = getState();
+
+  // Защита от повторного запуска
+  if (state.execution.isRunning) {
+    addLogEntry(createLog('warning', 'Сценарий уже выполняется'));
     renderState();
     return;
   }
-  setRunning(true);
-  addLogEntry(createLog('success', 'Сценарий запущен'));
-  renderState();
+
+  const sc = getScenarioById(state.selectedScenarioId);
+  if (!sc) {
+    addLogEntry(createLog('error', 'Активный сценарий не найден'));
+    renderState();
+    return;
+  }
+
+  runScenario(sc, {
+    onStart: () => {
+      setRunning(true);
+      setExecutionRunning(true);
+      setExecutionProgress(0, sc.settings.repeatCount);
+      setExecutionStartedAt(new Date().toISOString());
+      setExecutionFinishedAt(null);
+      setExecutionLastAction(null);
+      addLogEntry(createLog('success', `Сценарий запущен: ${sc.name}`));
+      renderState();
+    },
+
+    onAction: (action, current, total) => {
+      setExecutionLastAction(action);
+      if (shouldLogAction(current, total)) {
+        addLogEntry(createLog('info', `Действие ${current}/${total}: click x=${action.x} y=${action.y}`));
+      }
+    },
+
+    onProgress: (current, total) => {
+      setExecutionProgress(current, total);
+      renderState();
+    },
+
+    onStop: () => {
+      setRunning(false);
+      setExecutionRunning(false);
+      setExecutionFinishedAt(new Date().toISOString());
+      addLogEntry(createLog('warning', 'Сценарий остановлен пользователем'));
+      renderState();
+    },
+
+    onComplete: () => {
+      setRunning(false);
+      setExecutionRunning(false);
+      setExecutionFinishedAt(new Date().toISOString());
+      addLogEntry(createLog('success', 'Сценарий завершён'));
+      renderState();
+    },
+
+    onError: (message) => {
+      setRunning(false);
+      setExecutionRunning(false);
+      addLogEntry(createLog('error', message));
+      renderState();
+    }
+  });
 }
 
 function stopScenario() {
-  setRunning(false);
-  addLogEntry(createLog('info', 'Сценарий остановлен'));
+  const state = getState();
+  if (!state.execution.isRunning) {
+    addLogEntry(createLog('info', 'Нет активного сценария для остановки'));
+    renderState();
+    return;
+  }
+  stopEngine();
+  addLogEntry(createLog('info', 'Остановка сценария...'));
   renderState();
 }
 
@@ -364,7 +463,6 @@ function goBackToMain() {
   showView('main');
   renderState();
 }
-
 
 // --- Обработчики событий ---
 
@@ -385,6 +483,7 @@ async function init() {
   await initScenarios();
   const def = getDefaultScenario();
   setSelectedScenario(def);
+  resetExecution();
   addLogEntry(createLog('info', 'Приложение готово'));
   showView('main');
   renderState();
