@@ -69,6 +69,10 @@ function showView(viewName) {
   viewSettings.style.display = 'none';
   viewAdvanced.style.display = 'none';
 
+  // Adjust container width for advanced view
+  const container = document.querySelector('.container');
+  container.style.maxWidth = (viewName === 'advanced') ? '720px' : '520px';
+
   switch (viewName) {
     case 'main': viewMain.style.display = 'flex'; break;
     case 'scenarios': viewScenarios.style.display = 'flex'; break;
@@ -105,6 +109,11 @@ function renderState() {
 
   // Логи
   renderLogs(state.logs);
+
+  // Update advanced dashboard if visible
+  if (state.currentView === 'advanced') {
+    renderAdvancedDashboard();
+  }
 }
 
 function renderExecutionProgress(execution) {
@@ -523,15 +532,440 @@ function triggerEmergencyStop() {
 
 // --- Расширенный режим ---
 
+let advancedLogFilter = "all";
+
 function openAdvancedMode() {
   addLogEntry(createLog('info', t('logAdvancedOpened')));
   showView('advanced');
+  setAdvancedTab('overview');
+  renderAdvancedDashboard();
   renderState();
 }
 
 function goBackToMain() {
   addLogEntry(createLog('info', t('logMainOpened')));
   showView('main');
+  renderState();
+}
+
+// --- Advanced Tab Management ---
+
+function setAdvancedTab(tab) {
+  setActiveAdvancedTab(tab);
+
+  // Update tab buttons
+  document.querySelectorAll('.adv-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-advanced-tab') === tab);
+  });
+
+  // Show/hide sections
+  document.querySelectorAll('.adv-section').forEach(sec => {
+    sec.classList.add('adv-section-hidden');
+  });
+  const activeSection = document.getElementById('advanced-tab-' + tab);
+  if (activeSection) activeSection.classList.remove('adv-section-hidden');
+
+  renderAdvancedDashboard();
+}
+
+function renderAdvancedDashboard() {
+  const state = getState();
+  switch (state.activeAdvancedTab) {
+    case 'overview': renderAdvancedOverview(); break;
+    case 'scenarios': renderAdvancedScenarios(); break;
+    case 'execution': renderAdvancedExecution(); break;
+    case 'logs': renderAdvancedLogs(); break;
+    case 'settings': renderAdvancedSettings(); break;
+    case 'safety': renderAdvancedSafety(); break;
+    case 'future': renderAdvancedFuture(); break;
+  }
+}
+
+function renderAdvancedOverview() {
+  const state = getState();
+  const sc = getScenarioById(state.selectedScenarioId);
+  const scenarios = getScenarios();
+  const container = document.getElementById('advanced-tab-overview');
+  container.innerHTML = '';
+
+  // Grid
+  const grid = document.createElement('div');
+  grid.className = 'adv-grid';
+
+  // Active scenario card
+  const scCard = document.createElement('div');
+  scCard.className = 'adv-card';
+  const scTitle = document.createElement('div');
+  scTitle.className = 'adv-card-title';
+  scTitle.textContent = t('activeScenario');
+  scCard.appendChild(scTitle);
+  if (sc) {
+    addCardRow(scCard, t('scenarioName'), sc.name);
+    addCardRow(scCard, t('type'), sc.type);
+    addCardRow(scCard, t('coordinates'), `${sc.settings.x}, ${sc.settings.y}`);
+    addCardRow(scCard, t('interval'), `${sc.settings.intervalMs} ms`);
+    addCardRow(scCard, t('repeats'), `${sc.settings.repeatCount}`);
+  } else {
+    addCardRow(scCard, '', t('noData'));
+  }
+  grid.appendChild(scCard);
+
+  // Execution status card
+  const exCard = document.createElement('div');
+  exCard.className = 'adv-card';
+  const exTitle = document.createElement('div');
+  exTitle.className = 'adv-card-title';
+  exTitle.textContent = t('executionStatus');
+  exCard.appendChild(exTitle);
+  addCardRow(exCard, t('status'), state.isRunning ? t('running') : t('stopped'));
+  addCardRow(exCard, t('progress'), `${state.execution.progressCurrent}/${state.execution.progressTotal} (${state.execution.progressPercent}%)`);
+  if (state.execution.lastAction) {
+    addCardRow(exCard, t('lastAction'), `x=${state.execution.lastAction.x} y=${state.execution.lastAction.y}`);
+  }
+  grid.appendChild(exCard);
+
+  // Settings summary
+  const setCard = document.createElement('div');
+  setCard.className = 'adv-card';
+  const setTitle = document.createElement('div');
+  setTitle.className = 'adv-card-title';
+  setTitle.textContent = t('settingsSummary');
+  setCard.appendChild(setTitle);
+  addCardRow(setCard, t('language'), state.settings.language === 'ru' ? t('langRu') : t('langEn'));
+  addCardRow(setCard, t('theme'), t('theme' + state.settings.theme.charAt(0).toUpperCase() + state.settings.theme.slice(1)));
+  addCardRow(setCard, t('safeMode'), state.settings.safety.safeMode ? t('enabled') : t('disabled'));
+  addCardRow(setCard, t('emergencyStop'), state.settings.safety.emergencyStopEnabled ? t('enabled') : t('disabled'));
+  grid.appendChild(setCard);
+
+  // Statistics
+  const statCard = document.createElement('div');
+  statCard.className = 'adv-card';
+  const statTitle = document.createElement('div');
+  statTitle.className = 'adv-card-title';
+  statTitle.textContent = t('statistics');
+  statCard.appendChild(statTitle);
+  addCardRow(statCard, t('scenarioCount'), `${scenarios.length}`);
+  addCardRow(statCard, t('logCount'), `${state.logs.length}`);
+  addCardRow(statCard, t('minInterval'), `${state.settings.safety.minIntervalMs} ms`);
+  addCardRow(statCard, t('maxRepeats'), `${state.settings.safety.maxRepeatCount}`);
+  grid.appendChild(statCard);
+
+  container.appendChild(grid);
+
+  // Recent events (full width)
+  const recentCard = document.createElement('div');
+  recentCard.className = 'adv-card';
+  const recentTitle = document.createElement('div');
+  recentTitle.className = 'adv-card-title';
+  recentTitle.textContent = t('recentEvents');
+  recentCard.appendChild(recentTitle);
+  const recentLogs = state.logs.slice(-3);
+  if (recentLogs.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'adv-log-empty';
+    empty.textContent = t('noEvents');
+    recentCard.appendChild(empty);
+  } else {
+    recentLogs.forEach(log => recentCard.appendChild(createLogEl(log)));
+  }
+  container.appendChild(recentCard);
+}
+
+function renderAdvancedScenarios() {
+  const state = getState();
+  const scenarios = getScenarios();
+  const container = document.getElementById('advanced-tab-scenarios');
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'adv-card';
+  const title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = t('tabScenarios');
+  card.appendChild(title);
+  addCardRow(card, t('scenarioCount'), `${scenarios.length}`);
+  addCardRow(card, t('activeScenario'), state.selectedScenarioName);
+
+  // Show first 3 scenarios as mini cards
+  scenarios.slice(0, 3).forEach(sc => {
+    const row = document.createElement('div');
+    row.className = 'adv-card-row';
+    const lbl = document.createElement('span');
+    lbl.className = 'adv-card-label';
+    lbl.textContent = sc.name;
+    const val = document.createElement('span');
+    val.className = 'adv-card-value';
+    val.textContent = `${sc.settings.x},${sc.settings.y} · ${sc.settings.intervalMs}ms · ${sc.settings.repeatCount}×`;
+    row.appendChild(lbl);
+    row.appendChild(val);
+    card.appendChild(row);
+  });
+
+  const btn = document.createElement('button');
+  btn.className = 'adv-btn';
+  btn.textContent = t('openScenarioList');
+  btn.addEventListener('click', () => {
+    openScenarioList();
+  });
+  card.appendChild(btn);
+  container.appendChild(card);
+}
+
+function renderAdvancedExecution() {
+  const state = getState();
+  const container = document.getElementById('advanced-tab-execution');
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'adv-card';
+  const title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = t('executionStatus');
+  card.appendChild(title);
+
+  addCardRow(card, t('status'), state.isRunning ? t('running') : t('stopped'));
+  addCardRow(card, t('executionMode'), t('simulationMode'));
+  addCardRow(card, t('progress'), `${state.execution.progressCurrent} / ${state.execution.progressTotal} · ${state.execution.progressPercent}%`);
+
+  if (state.execution.lastAction) {
+    addCardRow(card, t('lastAction'), `click x=${state.execution.lastAction.x} y=${state.execution.lastAction.y} ${state.execution.lastAction.button}`);
+  } else {
+    addCardRow(card, t('lastAction'), t('none'));
+  }
+
+  addCardRow(card, t('startedAt'), state.execution.startedAt || t('none'));
+  addCardRow(card, t('finishedAt'), state.execution.finishedAt || t('none'));
+
+  // Progress bar
+  const bar = document.createElement('div');
+  bar.className = 'adv-progress-bar';
+  const fill = document.createElement('div');
+  fill.className = 'adv-progress-fill' + (state.execution.progressPercent >= 100 ? ' complete' : '');
+  fill.style.width = state.execution.progressPercent + '%';
+  bar.appendChild(fill);
+  card.appendChild(bar);
+
+  container.appendChild(card);
+
+  // Start/Stop buttons
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:10px;width:100%';
+  const startBtn = document.createElement('button');
+  startBtn.className = 'adv-btn';
+  startBtn.textContent = t('start');
+  startBtn.disabled = state.execution.isRunning;
+  startBtn.style.flex = '1';
+  startBtn.addEventListener('click', startScenario);
+
+  const stopBtn = document.createElement('button');
+  stopBtn.className = 'adv-btn adv-btn-danger';
+  stopBtn.textContent = t('stop');
+  stopBtn.disabled = !state.execution.isRunning;
+  stopBtn.style.flex = '1';
+  stopBtn.addEventListener('click', stopScenario);
+
+  actions.appendChild(startBtn);
+  actions.appendChild(stopBtn);
+  container.appendChild(actions);
+}
+
+function renderAdvancedLogs() {
+  const state = getState();
+  const container = document.getElementById('advanced-tab-logs');
+  container.innerHTML = '';
+
+  // Filters
+  const filtersDiv = document.createElement('div');
+  filtersDiv.className = 'adv-log-filters';
+  const filters = [
+    { key: 'all', label: t('logFilterAll') },
+    { key: 'info', label: t('logFilterInfo') },
+    { key: 'success', label: t('logFilterSuccess') },
+    { key: 'warning', label: t('logFilterWarning') },
+    { key: 'error', label: t('logFilterError') }
+  ];
+  filters.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'adv-log-filter' + (advancedLogFilter === f.key ? ' active' : '');
+    btn.textContent = f.label;
+    btn.addEventListener('click', () => {
+      advancedLogFilter = f.key;
+      renderAdvancedLogs();
+    });
+    filtersDiv.appendChild(btn);
+  });
+  container.appendChild(filtersDiv);
+
+  // Log list
+  const card = document.createElement('div');
+  card.className = 'adv-card';
+  const title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = t('fullLogs') + ` (${state.logs.length})`;
+  card.appendChild(title);
+
+  const logList = document.createElement('div');
+  logList.className = 'adv-log-list';
+
+  let filtered = state.logs;
+  if (advancedLogFilter !== 'all') {
+    filtered = state.logs.filter(l => l.type === advancedLogFilter);
+  }
+
+  if (filtered.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'adv-log-empty';
+    empty.textContent = t('noLogs');
+    logList.appendChild(empty);
+  } else {
+    filtered.forEach(log => logList.appendChild(createLogEl(log)));
+  }
+
+  card.appendChild(logList);
+  container.appendChild(card);
+
+  // Clear button
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'adv-btn adv-btn-danger';
+  clearBtn.textContent = t('clearLogs');
+  clearBtn.addEventListener('click', () => {
+    clearAllLogs();
+  });
+  container.appendChild(clearBtn);
+}
+
+function renderAdvancedSettings() {
+  const state = getState();
+  const container = document.getElementById('advanced-tab-settings');
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'adv-card';
+  const title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = t('settingsSummary');
+  card.appendChild(title);
+
+  addCardRow(card, t('language'), state.settings.language === 'ru' ? t('langRu') : t('langEn'));
+  addCardRow(card, t('theme'), state.settings.theme);
+  addCardRow(card, t('hotkeyStart'), state.settings.hotkeys.start);
+  addCardRow(card, t('hotkeyStop'), state.settings.hotkeys.stop);
+  addCardRow(card, t('hotkeyEmergency'), state.settings.hotkeys.emergencyStop);
+  addCardRow(card, t('safeMode'), state.settings.safety.safeMode ? t('enabled') : t('disabled'));
+
+  const btn = document.createElement('button');
+  btn.className = 'adv-btn';
+  btn.textContent = t('openSettings');
+  btn.addEventListener('click', () => {
+    openSettings();
+  });
+  card.appendChild(btn);
+  container.appendChild(card);
+}
+
+function renderAdvancedSafety() {
+  const state = getState();
+  const container = document.getElementById('advanced-tab-safety');
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'adv-card';
+  const title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = t('safetyOverview');
+  card.appendChild(title);
+
+  addCardRow(card, t('safeMode'), state.settings.safety.safeMode ? t('enabled') : t('disabled'));
+  addCardRow(card, t('emergencyStop'), state.settings.safety.emergencyStopEnabled ? t('enabled') : t('disabled'));
+  addCardRow(card, t('minInterval'), `${state.settings.safety.minIntervalMs} ms`);
+  addCardRow(card, t('maxRepeats'), `${state.settings.safety.maxRepeatCount}`);
+  container.appendChild(card);
+
+  // Warning
+  const warning = document.createElement('div');
+  warning.className = 'adv-warning';
+  warning.textContent = t('simulationModeNotice');
+  container.appendChild(warning);
+}
+
+function renderAdvancedFuture() {
+  const container = document.getElementById('advanced-tab-future');
+  container.innerHTML = '';
+
+  const titleCard = document.createElement('div');
+  titleCard.className = 'adv-card';
+  const title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = t('futureFeatures');
+  titleCard.appendChild(title);
+  container.appendChild(titleCard);
+
+  const grid = document.createElement('div');
+  grid.className = 'adv-future-grid';
+
+  const features = [
+    'ocrTextDetection',
+    'imageRecognition',
+    'visualActionBuilder',
+    'profiles',
+    'importExport',
+    'realDesktopClicks'
+  ];
+
+  features.forEach(key => {
+    const card = document.createElement('div');
+    card.className = 'adv-future-card';
+    const name = document.createElement('div');
+    name.className = 'adv-future-card-name';
+    name.textContent = t(key);
+    const badge = document.createElement('span');
+    badge.className = 'adv-future-card-badge';
+    badge.textContent = t('planned');
+    card.appendChild(name);
+    card.appendChild(badge);
+    grid.appendChild(card);
+  });
+
+  container.appendChild(grid);
+}
+
+// --- Helper: create log element ---
+function createLogEl(log) {
+  const el = document.createElement('div');
+  el.className = `log-entry log-${log.type}`;
+  const icon = document.createElement('span');
+  icon.className = 'log-icon';
+  icon.textContent = getLogLabel(log.type);
+  const time = document.createElement('span');
+  time.className = 'log-time';
+  time.textContent = log.time;
+  const msg = document.createElement('span');
+  msg.className = 'log-message';
+  msg.textContent = log.message;
+  el.appendChild(icon);
+  el.appendChild(time);
+  el.appendChild(msg);
+  return el;
+}
+
+// --- Helper: add card row ---
+function addCardRow(card, label, value) {
+  const row = document.createElement('div');
+  row.className = 'adv-card-row';
+  const lbl = document.createElement('span');
+  lbl.className = 'adv-card-label';
+  lbl.textContent = label;
+  const val = document.createElement('span');
+  val.className = 'adv-card-value';
+  val.textContent = value;
+  row.appendChild(lbl);
+  row.appendChild(val);
+  card.appendChild(row);
+}
+
+function clearAllLogs() {
+  clearLogs();
+  renderAdvancedLogs();
   renderState();
 }
 
@@ -581,6 +1015,12 @@ btnFormCancel.addEventListener('click', closeScenarioForm);
 
 btnSaveSettings.addEventListener('click', saveSettingsFromForm);
 btnSettingsBack.addEventListener('click', goBackFromSettings);
+
+// Advanced tabs
+document.getElementById('advanced-tabs').addEventListener('click', (e) => {
+  const tab = e.target.getAttribute('data-advanced-tab');
+  if (tab) setAdvancedTab(tab);
+});
 
 // --- Инициализация ---
 

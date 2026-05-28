@@ -8,6 +8,7 @@ const appState = {
   logs: [],
   scenarioFormMode: null,
   editingScenarioId: null,
+  activeAdvancedTab: "overview",
   execution: {
     isRunning: false,
     progressCurrent: 0,
@@ -43,7 +44,8 @@ function getState() {
       ...appState.settings,
       hotkeys: { ...appState.settings.hotkeys },
       safety: { ...appState.settings.safety }
-    }
+    },
+    activeAdvancedTab: appState.activeAdvancedTab
   };
 }
 
@@ -74,6 +76,10 @@ function setScenarioFormMode(mode) {
 
 function setEditingScenarioId(id) {
   appState.editingScenarioId = id;
+}
+
+function setActiveAdvancedTab(tab) {
+  appState.activeAdvancedTab = tab;
 }
 
 // --- Execution state ---

@@ -667,3 +667,261 @@ body {
   font-size: 0.78rem;
   color: var(--muted);
 }
+
+/* === Advanced Dashboard === */
+
+.view-wide {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* Tabs */
+.advanced-tabs {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.adv-tab {
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.adv-tab:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.adv-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Content area */
+.advanced-content {
+  width: 100%;
+  min-height: 200px;
+}
+
+.adv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adv-section-hidden {
+  display: none;
+}
+
+/* Dashboard cards */
+.adv-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.adv-card-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+}
+
+.adv-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 0.84rem;
+}
+
+.adv-card-label {
+  color: var(--muted);
+}
+
+.adv-card-value {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Dashboard grid for overview */
+.adv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.adv-grid .adv-card {
+  min-width: 0;
+}
+
+.adv-grid-full {
+  grid-column: 1 / -1;
+}
+
+/* Progress in advanced */
+.adv-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.adv-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.adv-progress-fill.complete {
+  background: var(--success);
+}
+
+/* Log filters */
+.adv-log-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.adv-log-filter {
+  border: none;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.adv-log-filter:hover {
+  color: var(--text);
+}
+
+.adv-log-filter.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Full log list */
+.adv-log-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adv-log-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.84rem;
+  padding: 20px;
+}
+
+/* Warning block */
+.adv-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 0.84rem;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+/* Future feature cards */
+.adv-future-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.adv-future-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  opacity: 0.6;
+  text-align: center;
+}
+
+.adv-future-card-name {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.adv-future-card-badge {
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Button inside advanced cards */
+.adv-btn {
+  border: none;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #fff;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.adv-btn:hover {
+  background: #3b7be0;
+}
+
+.adv-btn-secondary {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.adv-btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.adv-btn-danger {
+  background: #fef2f2;
+  color: var(--danger);
+  border: 1px solid #fecaca;
+}
+
+.adv-btn-danger:hover {
+  background: #fee2e2;
+}
