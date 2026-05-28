@@ -8,8 +8,14 @@ Electron and vanilla JavaScript. It is intended for testing the user
 experience, the safety model, and the persistence layer **without**
 performing any real system input.
 
-This release closes Steps 1 — 14 of the development plan and is the
-candidate basis for a public GitHub pre-release.
+This release closes Steps 1 — 22 of the development plan and is
+the candidate basis for a public GitHub pre-release.
+
+> **Quick safety summary.** Six independent layers refuse real
+> desktop input: feature flags, safety gates, adapter interface,
+> adapter registry, action pipeline, and the dry-run sandbox.
+> No real cursor movement and no real keystrokes are produced by
+> this build. See **§ Safety model** below.
 
 ---
 
@@ -79,6 +85,48 @@ candidate basis for a public GitHub pre-release.
 - Re-worked dark theme (full token override + per-component fixes).
 - Responsive layout for the 1000 x 700 advanced window.
 
+### Step 17 — Controlled action pipeline
+- `src/action-pipeline.js` — central `executeAction()`.
+- `src/safety-gates.js` — `isRealActionAllowed()` hard-coded `false`.
+- `src/audit-events.js` — in-memory allowlist event store
+  (no file persistence yet).
+- Real-mode requests are blocked with `Real desktop actions are
+  disabled. Dry-run preview is available only.`
+
+### Step 18 — Desktop adapter interface + mock adapter
+- `src/desktop-adapter-interface.js` — adapter contract.
+- `src/mock-desktop-adapter.js` — the only `available: true`
+  adapter. Self-test passes 4 / 4. **No OS input.**
+- `src/adapter-registry.js` — `setActiveAdapter("real-desktop")`
+  is blocked.
+
+### Step 19 — Real-action sandbox
+- `src/real-action-sandbox.js` — read-only dry-run preview layer.
+  Permission checklist (11 items), blocked reasons (7 ids).
+  `evaluateRealActionReadiness()` always returns
+  `{ allowed: false }`. **No real execution, ever.**
+
+### Step 20 — Final beta QA
+- Static structural audit: 0 dup ids, 0 missing refs, 0 forbidden
+  imports, RU/EN parity 359/359.
+- Smoke check 113 invariants, exit 0.
+- `docs/BETA_QA_REPORT.md`, `docs/I18N_CHECKLIST.md`.
+
+### Step 21 — Beta release packaging pass
+- `.gitignore`, extended `package.json` `build` block, explicit
+  exclusions for `*.broken-*` and OS junk.
+- `docs/RELEASE_CHECKLIST.md`, `docs/BUILD_ARTIFACTS.md`,
+  `docs/GITHUB_RELEASE_DRAFT.md`, `docs/VERSIONING.md`.
+- New IPC `system:get-release-status` and a **Release status**
+  diagnostics card.
+
+### Step 22 — GitHub beta release finalization
+- `docs/RELEASE_FINAL_CHECK.md` — short pre-tag sign-off page.
+- `docs/TAG_AND_RELEASE_GUIDE.md` — manual git / GitHub
+  command sequence.
+- Smoke check expanded; Release status card now also reports the
+  presence of the final-check and tag-and-release-guide docs.
+
 ---
 
 ## Safety model
@@ -138,7 +186,10 @@ The default window opens the **Main** view. Use:
 
 ## How to test
 
-See `docs/BETA_TESTING_GUIDE.md` for the full beta-tester walkthrough.
+See `docs/BETA_TESTING_GUIDE.md` for the full beta-tester walkthrough,
+`docs/SMOKE_TESTS.md` Step 20 / Step 22 for the manual smoke run,
+and `docs/RELEASE_FINAL_CHECK.md` for the maintainer pre-tag
+sign-off.
 
 Quick smoke test:
 
@@ -181,7 +232,8 @@ If any of these fail, please file a bug report (see below).
 Planned for upcoming releases (see `docs/ROADMAP.md`):
 
 - `0.1.x` — additional beta polish, accessibility audit, automated
-  smoke harness.
+  smoke harness, GitHub Actions CI for `npm run smoke`, the first
+  signed builds.
 - `0.2.x` — profile and template improvements, richer import/export,
   better error reporting.
 - `0.3.x` — desktop action adapter prototype, **gated behind a separate

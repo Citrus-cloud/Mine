@@ -8,6 +8,105 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-22
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding (controlled action pipeline, safety gates, in-memory
+audit events), the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, and the Step 22 GitHub beta release finalization.
+**Still simulation-only.**
+
+### Added (Step 22 — GitHub beta release finalization)
+
+- `docs/RELEASE_FINAL_CHECK.md` — short pre-tag sign-off for the
+  maintainer. Sections: Release target / Required checks / Safety
+  checks / Documentation checks / Manual QA checks / Release
+  decision (default: "Ready after manual verification"). Ends
+  with maintainer sign-off lines (date / platform / reviewer /
+  decision).
+- `docs/TAG_AND_RELEASE_GUIDE.md` — manual git / GitHub command
+  sequence covering: clean working tree check; `npm install`;
+  `npm run smoke`; `npm start` smoke-launch; `npm run pack` /
+  `npm run dist`; `git tag -a v0.1.0-beta`; `git push origin
+  v0.1.0-beta`; GitHub release creation via web UI or `gh` CLI
+  with `--prerelease`; post-publication checks; regression
+  rollback policy. Explicit "things this guide will NEVER do for
+  you" section.
+- IPC `system:get-release-status` extended with `releaseTarget`
+  (`"0.1.0-beta"`), `releaseFinalCheckPresent`,
+  `tagAndReleaseGuidePresent`, `readyForManualRelease`
+  (= `releaseDocsReady && simulationOnly && !realActionsImplemented`).
+- Renderer — **Release status** card now has 12 rows (added
+  Final release check, Tag and release guide) and switched its
+  bottom badge to `Ready for manual release` /
+  `Not ready for release`.
+- `Copy diagnostics` includes the new release fields.
+- `scripts/smoke-check.js` — extended from 113 to 137 checks
+  (Step 22 adds presence + sanity assertions for the two new
+  docs, package version `=== "0.1.0"`, RELEASE_NOTES /
+  README / GITHUB_RELEASE_DRAFT mentioning `0.1.0-beta`,
+  README or PROJECT_CONTEXT mentioning step 22, SECURITY_CHECKLIST
+  having a "Final release security" section, KNOWN_LIMITATIONS
+  mentioning "dry-run sandbox is preview-only" and "mock adapter
+  only", `RELEASE_CHECKLIST.md` cross-referencing RELEASE_NOTES.md
+  and GITHUB_RELEASE_DRAFT.md, etc.).
+- 9 new RU + EN i18n keys: `releaseFinalization`, `releaseTarget`,
+  `finalReleaseCheck`, `tagAndReleaseGuide`,
+  `readyForManualRelease`, `githubReleaseDraft`, `betaPrerelease`,
+  `releaseDocsReady`, `manualVerificationRequired`.
+
+### Changed (Step 22)
+
+- `docs/GITHUB_RELEASE_DRAFT.md` finalized — explicit "dry-run
+  sandbox is preview-only" and "mock adapter only" lines added to
+  "What is intentionally not included"; Authenticode warning for
+  Windows installers added; Steps 1—22 referenced.
+- `RELEASE_NOTES.md` finalized — closes Steps 1—22, adds
+  per-step sections for 17—22, links to
+  `docs/RELEASE_FINAL_CHECK.md` and `docs/SMOKE_TESTS.md` Step 22.
+- `docs/SECURITY_CHECKLIST.md` — new "Final release security"
+  section with 10 mandatory boxes.
+- `docs/KNOWN_LIMITATIONS.md` — new section 8 (Beta release) with
+  7 subsections.
+- `docs/SMOKE_TESTS.md` — new "Step 22 — Release smoke sequence"
+  section (#135–#150).
+- README, PROJECT_CONTEXT, CHANGELOG updated to step 22.
+
+### Verified (Step 22 — no source-level safety changes required)
+
+- All six runtime safety layers still hard-coded false: feature
+  flags, safety gates, adapter interface, adapter registry,
+  action pipeline, sandbox readiness.
+- `package.json` declares no `robotjs` / `nut.js` / `iohook` /
+  `uiohook-napi` / `node-key-sender`.
+- CSP unchanged. `contextIsolation: true`, `nodeIntegration: false`
+  unchanged.
+- `node --check` passes for every modified or new JS file.
+- `npm run smoke` — 137 / 137 OK, exit 0.
+- i18n parity: 368 ru = 368 en, 0 mismatches.
+
+### Security (Step 22)
+
+- New IPC `system:get-release-status` reads only inside
+  `app.getAppPath()`. No private user paths flow to the
+  renderer.
+- `docs/RELEASE_FINAL_CHECK.md` enumerates every safety
+  invariant that must be reverified before tagging.
+- `docs/TAG_AND_RELEASE_GUIDE.md` makes it explicit that
+  this repository will never create a tag or publish a release
+  automatically — every action is manual.
+
+### Not included yet
+
+Same as the `0.1.0-beta` baseline: no real clicks, no OCR, no
+image recognition, no mobile, no cloud sync, no auto-update, no
+code signing.
+
+---
+
 ## [Unreleased] — Steps 15-21
 
 Final stabilization of the simulation-only beta, design-only handoff
@@ -714,3 +813,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |
 | 20 | Final beta QA | Structural audit (0 dup ids, perfect i18n parity 342/342), expanded smoke-check (96 checks), `BETA_QA_REPORT.md`, `I18N_CHECKLIST.md`. Manual testing required before tag. |
 | 21 | Beta release packaging | `.gitignore`, extended `package.json` `build` block, `RELEASE_CHECKLIST.md`, `BUILD_ARTIFACTS.md`, `GITHUB_RELEASE_DRAFT.md`, `VERSIONING.md`, Release status diagnostics, smoke-check 113 checks. |
+| 22 | GitHub beta release finalization | `RELEASE_FINAL_CHECK.md`, `TAG_AND_RELEASE_GUIDE.md`, finalized RELEASE_NOTES / GITHUB_RELEASE_DRAFT, expanded Release status card, smoke-check 137 checks. Tag and publication remain manual. |

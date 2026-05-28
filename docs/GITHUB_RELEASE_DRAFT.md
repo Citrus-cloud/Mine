@@ -44,7 +44,10 @@ first public pre-release.
   permission checklist, blocked reasons. **No real execution.**
 - **Step 20:** final beta QA pass. Smoke-check at 96 invariants.
 - **Step 21:** beta release packaging pass.
-- Localization RU + EN, parity verified (342 keys each).
+- **Step 22:** GitHub beta release finalization. Tag and release
+  guide, final-release check, and a Release status diagnostics
+  card all confirm the simulation-only invariants once more.
+- Localization RU + EN, parity verified (359 keys each).
 
 ## Safety model
 
@@ -84,15 +87,22 @@ realActionsAllowed=false`.
   `<file>.broken-<timestamp>` and defaults take over without
   crashing.
 
-## What is **not** included
+## What is intentionally **not** included
 
-- **No real system clicks.**
+- **No real system clicks.** The runtime click engine never calls
+  any OS input API.
 - **No OCR.**
 - **No image recognition / OpenCV.**
 - **No mobile build.**
 - **No cloud sync, no auto-update, no telemetry.**
 - **No code signing yet.** Gatekeeper / SmartScreen will warn on
   first launch of any packaged binary.
+- **Dry-run sandbox is preview-only** and never executes a real
+  action. Confirming a dry-run logs the confirmation but does not
+  invoke any adapter.
+- **Mock adapter only.** The `real-desktop` adapter is registered
+  as `available: false, planned: true` and cannot be activated by
+  any code path in this build.
 - **Permanently out of scope:** captcha bypass, antibot bypass,
   ad-click automation, automation against banking / payment /
   protected applications.
@@ -100,7 +110,7 @@ realActionsAllowed=false`.
 See [`docs/KNOWN_LIMITATIONS.md`](../docs/KNOWN_LIMITATIONS.md) for
 the full list.
 
-## Installation
+## Installation from source / Packaged builds
 
 ### Run from source
 
@@ -122,6 +132,9 @@ launch it normally. For asset names, see
 > Note. macOS DMGs are **not** notarized in `0.1.0-beta`.
 > First launch may require Right-click → Open or
 > System Settings → Privacy & Security → "Open anyway".
+> Windows installers are **not** Authenticode signed; SmartScreen
+> will warn. This is intentional for a pre-release tag and is
+> documented in [`docs/KNOWN_LIMITATIONS.md`](../docs/KNOWN_LIMITATIONS.md).
 
 ## Testing notes
 

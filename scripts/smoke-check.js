@@ -124,7 +124,10 @@ function safeJson(rel) {
   'docs/RELEASE_CHECKLIST.md',
   'docs/BUILD_ARTIFACTS.md',
   'docs/GITHUB_RELEASE_DRAFT.md',
-  'docs/VERSIONING.md'
+  'docs/VERSIONING.md',
+  // Step 22 docs
+  'docs/RELEASE_FINAL_CHECK.md',
+  'docs/TAG_AND_RELEASE_GUIDE.md'
 ].forEach(function (rel) {
   record('doc exists: ' + rel, fileExists(rel));
 });
@@ -625,6 +628,103 @@ record(
   /no\s+real(\s+system)?\s+clicks/.test(grLow) ||
   /no real input/.test(grLow) ||
   (grLow.indexOf('no ocr') !== -1 && grLow.indexOf('no image recognition') !== -1)
+);
+
+// --- Step 22: GitHub beta release finalization ---
+
+// 33. docs/RELEASE_FINAL_CHECK.md content sanity.
+var rfcTxt = readText('docs/RELEASE_FINAL_CHECK.md');
+record(
+  'docs/RELEASE_FINAL_CHECK.md exists and mentions 0.1.0-beta',
+  rfcTxt.indexOf('0.1.0-beta') !== -1
+);
+record(
+  'docs/RELEASE_FINAL_CHECK.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(rfcTxt)
+);
+
+// 34. docs/TAG_AND_RELEASE_GUIDE.md content sanity.
+var tagTxt = readText('docs/TAG_AND_RELEASE_GUIDE.md');
+record(
+  'docs/TAG_AND_RELEASE_GUIDE.md mentions git tag command',
+  /git\s+tag\s+-a\s+v0\.1\.0-beta/.test(tagTxt)
+);
+record(
+  'docs/TAG_AND_RELEASE_GUIDE.md mentions git push origin v0.1.0-beta',
+  tagTxt.indexOf('git push origin v0.1.0-beta') !== -1
+);
+record(
+  'docs/TAG_AND_RELEASE_GUIDE.md states pre-release on GitHub',
+  /pre-?release/i.test(tagTxt)
+);
+
+// 35. docs/GITHUB_RELEASE_DRAFT.md is concrete to 0.1.0-beta.
+record(
+  'docs/GITHUB_RELEASE_DRAFT.md mentions 0.1.0-beta',
+  readText('docs/GITHUB_RELEASE_DRAFT.md').indexOf('0.1.0-beta') !== -1
+);
+
+// 36. RELEASE_NOTES.md mentions 0.1.0-beta and simulation-only.
+record(
+  'RELEASE_NOTES.md mentions 0.1.0-beta',
+  readText('RELEASE_NOTES.md').indexOf('0.1.0-beta') !== -1
+);
+
+// 37. README mentions 0.1.0-beta.
+record(
+  'README.md mentions 0.1.0-beta',
+  readText('README.md').indexOf('0.1.0-beta') !== -1
+);
+
+// 38. PROJECT_CONTEXT mentions step 22.
+record(
+  'README or PROJECT_CONTEXT mentions step 22',
+  /step\s*22|шаг\s*22|Step 22|Шаг 22/.test(readText('README.md')) ||
+  /step\s*22|шаг\s*22|Step 22|Шаг 22/.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 39. package.json version is 0.1.0 (the `-beta` qualifier lives on the GitHub tag).
+if (pkg) {
+  record(
+    'package.json version is 0.1.0',
+    pkg.version === '0.1.0',
+    'version = ' + pkg.version
+  );
+  // 40. package.json declares scripts.smoke (already checked above) — re-assert here.
+  record(
+    'package.json scripts.smoke uses scripts/smoke-check.js',
+    !!(pkg.scripts && pkg.scripts.smoke && pkg.scripts.smoke.indexOf('scripts/smoke-check.js') !== -1)
+  );
+}
+
+// 41. RELEASE_CHECKLIST.md references the Step 22 docs.
+var rcTxt = readText('docs/RELEASE_CHECKLIST.md');
+record(
+  'docs/RELEASE_CHECKLIST.md references RELEASE_NOTES.md',
+  rcTxt.indexOf('RELEASE_NOTES.md') !== -1
+);
+record(
+  'docs/RELEASE_CHECKLIST.md references GITHUB_RELEASE_DRAFT.md',
+  rcTxt.indexOf('GITHUB_RELEASE_DRAFT.md') !== -1
+);
+
+// 42. SECURITY_CHECKLIST.md final-release section is present.
+var scTxt = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has final release security section',
+  /final\s+release\s+security/i.test(scTxt)
+);
+
+// 43. KNOWN_LIMITATIONS.md mentions Step 22 / dry-run sandbox / mock adapter only.
+var klTxt = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md covers dry-run sandbox preview-only',
+  /dry-?run\s+sandbox\s+is\s+preview-only/i.test(klTxt) ||
+  /preview\s+only/i.test(klTxt)
+);
+record(
+  'docs/KNOWN_LIMITATIONS.md mentions mock adapter only',
+  /mock\s+adapter\s+only/i.test(klTxt)
 );
 
 // --- Report ---

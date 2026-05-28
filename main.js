@@ -240,6 +240,9 @@ ipcMain.handle('system:get-release-status', async () => {
   const changelogPresent         = fileExistsInApp('CHANGELOG.md');
   const releaseNotesPresent      = fileExistsInApp('RELEASE_NOTES.md');
   const gitignorePresent         = fileExistsInApp('.gitignore');
+  // Step 22 docs
+  const releaseFinalCheckPresent = fileExistsInApp(path.join('docs', 'RELEASE_FINAL_CHECK.md'));
+  const tagAndReleaseGuidePresent = fileExistsInApp(path.join('docs', 'TAG_AND_RELEASE_GUIDE.md'));
 
   let appVersion = '?';
   let packagingConfigured = false;
@@ -265,10 +268,19 @@ ipcMain.handle('system:get-release-status', async () => {
   const releaseDocsReady = releaseChecklistPresent &&
     buildArtifactsPresent && githubReleaseDraftPresent &&
     versioningPresent && changelogPresent && releaseNotesPresent &&
-    smokeCheckScript && gitignorePresent;
+    smokeCheckScript && gitignorePresent &&
+    releaseFinalCheckPresent && tagAndReleaseGuidePresent;
+
+  // Step 22: separate aggregate for the "ready for manual release"
+  // signal. We keep it separate from releaseDocsReady so a future
+  // tightening (e.g. CI presence) can take effect without breaking
+  // the existing badge.
+  const readyForManualRelease = releaseDocsReady &&
+    simulationOnly && !realActionsImplemented;
 
   return {
     appVersion,
+    releaseTarget: '0.1.0-beta',
     beta,
     simulationOnly,
     realActionsImplemented,
@@ -281,7 +293,10 @@ ipcMain.handle('system:get-release-status', async () => {
     changelogPresent,
     releaseNotesPresent,
     gitignorePresent,
-    releaseDocsReady
+    releaseFinalCheckPresent,
+    tagAndReleaseGuidePresent,
+    releaseDocsReady,
+    readyForManualRelease
   };
 });
 
