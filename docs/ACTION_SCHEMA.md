@@ -17,6 +17,15 @@
 > OS input. Any caller that requests `executionMode === "real"` is
 > rejected by `blockRealAction()` with an `action.real.blocked` audit
 > event.
+>
+> **Step 19 update.** Action *previews* exist now via
+> `src/real-action-sandbox.js` (`createDryRunPlan()`,
+> `createRealActionPreview()`). **A preview is not an execution.**
+> The plan is a description: `mode: "dry-run"`, `realExecution: false`,
+> `actionsPreview` capped at 10 items, `truncated` reports whether
+> the underlying scenario contains more iterations. The pipeline
+> recognises `executionMode === "dry-run"` as a no-op that emits
+> `real.sandbox.preview.created`.
 
 ## Overview
 

@@ -91,7 +91,9 @@ function safeJson(rel) {
   // Step 18 modules
   'src/desktop-adapter-interface.js',
   'src/mock-desktop-adapter.js',
-  'src/adapter-registry.js'
+  'src/adapter-registry.js',
+  // Step 19 module
+  'src/real-action-sandbox.js'
 ].forEach(function (rel) {
   record('file exists: ' + rel, fileExists(rel));
 });
@@ -115,7 +117,9 @@ function safeJson(rel) {
   'docs/PRIVACY.md',
   'docs/FINAL_BETA_REVIEW.md',
   // Step 18 doc
-  'docs/ADAPTER_INTERFACE.md'
+  'docs/ADAPTER_INTERFACE.md',
+  // Step 19 doc
+  'docs/REAL_ACTION_SANDBOX.md'
 ].forEach(function (rel) {
   record('doc exists: ' + rel, fileExists(rel));
 });
@@ -229,7 +233,9 @@ var sourceFiles = [
   // Step 18 modules
   'src/desktop-adapter-interface.js',
   'src/mock-desktop-adapter.js',
-  'src/adapter-registry.js'
+  'src/adapter-registry.js',
+  // Step 19 module
+  'src/real-action-sandbox.js'
 ];
 var foundForbidden = [];
 sourceFiles.forEach(function (rel) {
@@ -283,7 +289,7 @@ record(
 );
 record(
   'action-pipeline blocks real actions with explicit error',
-  apTxt.indexOf('Real desktop actions are disabled in this build') !== -1
+  apTxt.indexOf('Real desktop actions are disabled') !== -1
 );
 
 // 11. safety-gates: isRealActionAllowed must return false.
@@ -377,6 +383,64 @@ record(
 record(
   'audit allowlist includes adapter.real.unavailable',
   auditTxt.indexOf("'adapter.real.unavailable'") !== -1
+);
+
+// 17. Step 19: real-action sandbox source-level invariants.
+var sboxTxt = readText('src/real-action-sandbox.js');
+record(
+  'real-action-sandbox getSandboxStatus returns realActionsAllowed: false',
+  /getSandboxStatus[\s\S]{0,400}realActionsAllowed:\s*false/.test(sboxTxt)
+);
+record(
+  'real-action-sandbox dryRunAvailable: true',
+  /dryRunAvailable:\s*true/.test(sboxTxt)
+);
+record(
+  'real-action-sandbox evaluateRealActionReadiness returns allowed: false',
+  /evaluateRealActionReadiness[\s\S]{0,800}allowed:\s*false/.test(sboxTxt)
+);
+record(
+  'real-action-sandbox confirmDryRunPlan never sets realExecution: true',
+  sboxTxt.indexOf('realExecution: true') === -1
+);
+record(
+  'audit allowlist includes real.sandbox.preview.created',
+  auditTxt.indexOf("'real.sandbox.preview.created'") !== -1
+);
+record(
+  'audit allowlist includes real.sandbox.dryrun.confirmed',
+  auditTxt.indexOf("'real.sandbox.dryrun.confirmed'") !== -1
+);
+record(
+  'audit allowlist includes real.sandbox.dryrun.cancelled',
+  auditTxt.indexOf("'real.sandbox.dryrun.cancelled'") !== -1
+);
+record(
+  'audit allowlist includes real.sandbox.blocked',
+  auditTxt.indexOf("'real.sandbox.blocked'") !== -1
+);
+record(
+  'audit allowlist includes real.permission.checklist.created',
+  auditTxt.indexOf("'real.permission.checklist.created'") !== -1
+);
+record(
+  'audit allowlist includes real.blocked.reason.generated',
+  auditTxt.indexOf("'real.blocked.reason.generated'") !== -1
+);
+
+// 18. Step 19: README or PROJECT_CONTEXT mentions dry-run / sandbox.
+record(
+  'README or PROJECT_CONTEXT mentions dry-run or sandbox',
+  readme.indexOf('dry-run') !== -1 ||
+  readme.indexOf('sandbox') !== -1 ||
+  projCtxLow.indexOf('dry-run') !== -1 ||
+  projCtxLow.indexOf('sandbox') !== -1
+);
+
+// 19. Step 19: action-pipeline updated block message mentions dry-run.
+record(
+  'action-pipeline block message mentions dry-run preview',
+  apTxt.indexOf('Dry-run preview is available only') !== -1
 );
 
 // --- Report ---

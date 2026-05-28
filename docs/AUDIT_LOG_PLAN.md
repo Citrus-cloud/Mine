@@ -99,7 +99,11 @@ on the rest of the desktop. Concretely:
   audit event model (Step 17). It records every event in the
   allowlist above with a stable id, a timestamp, a known/unknown
   flag, and a small payload of safe fields (no PII, no paths).
-  **No file is written.**
+  **No file is written.** Step 19 added six sandbox event types to
+  the allowlist (`real.sandbox.preview.created`,
+  `real.sandbox.dryrun.confirmed`, `real.sandbox.dryrun.cancelled`,
+  `real.sandbox.blocked`, `real.permission.checklist.created`,
+  `real.blocked.reason.generated`). They are still in-memory only.
 - 0.2.x — design firm, prototype optional. Adds JSONL files under
   `userData/audit/` per the layout above.
 - 0.3.x — **must be implemented before** `realDesktopActions` flips

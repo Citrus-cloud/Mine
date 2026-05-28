@@ -35,6 +35,9 @@
 - [x] **Step 18:** Adapter registry blocks real adapter — `setActiveAdapter("real-desktop")` returns `{ success: false, blocked: true, ... }` and emits `adapter.selection.blocked` + `adapter.real.unavailable`
 - [x] **Step 18:** `src/desktop-adapter-interface.js`'s `isRealAdapterAllowed()` is hard-coded to return `false`
 - [x] **Step 18:** No real-input dependencies — `package.json` declares no `robotjs` / `nut.js` / `iohook` / `uiohook-napi` / `node-key-sender` (verified by `npm run smoke`)
+- [x] **Step 19:** Dry-run only — `src/real-action-sandbox.js` performs **no** OS input. `evaluateRealActionReadiness()` always returns `{ allowed: false, ... }`; `confirmDryRunPlan()` returns `realExecution: false`; the new `executionMode === "dry-run"` path in `action-pipeline.js` never invokes any adapter
+- [x] **Step 19:** Pipeline block message for real mode is `Real desktop actions are disabled. Dry-run preview is available only.`
+- [x] **Step 19:** Audit allowlist gained six sandbox event types (`real.sandbox.preview.created`, `real.sandbox.dryrun.confirmed`, `real.sandbox.dryrun.cancelled`, `real.sandbox.blocked`, `real.permission.checklist.created`, `real.blocked.reason.generated`); payloads carry only ids and counts (no PII, no paths)
 
 ## Global Hotkeys
 
