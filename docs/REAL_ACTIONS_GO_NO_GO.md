@@ -76,6 +76,40 @@ implementation of real input. The list below is unchanged.
 These additions are **preparation only**. They do not constitute
 implementation of real input.
 
+## 0ter. What step 19 changed
+
+- [x] **Real-action sandbox** (`src/real-action-sandbox.js`) — a
+      read-only preview layer. `getSandboxStatus()` returns
+      `dryRunAvailable: true`, `realActionsAllowed: false`,
+      `realActionsImplemented: false`. `createRealActionPreview()`
+      builds a description-only dry-run plan capped at 10 actions
+      in the preview. `confirmDryRunPlan()` only confirms the
+      dry-run; it never asks any adapter to execute and returns
+      `realExecution: false`.
+- [x] **Permission checklist** is built by
+      `createPermissionChecklist()` — 11 items including
+      `realAdapterInstalled` (`blocked`), `osPermissions`
+      (`missing`), `finalSafetyReview` (`missing`),
+      `realFeatureFlag` (`blocked`).
+- [x] **Blocked reasons** are enumerated by
+      `getRealActionBlockedReasons()` — 7 stable ids covering the
+      feature flag, the simulation-only mode, the missing real
+      adapter, the missing OS permissions, the missing safety
+      review, the missing audit persistence, and the project-level
+      decision to keep real actions disabled.
+- [x] **Action pipeline** now also recognises `executionMode === "dry-run"`
+      and handles it via `executeDryRunAction()` without crossing
+      into any adapter. The real-mode block message now reads
+      `Real desktop actions are disabled. Dry-run preview is available only.`
+- [x] **Audit allowlist** gained six sandbox events.
+- [x] **UI** gained a `Real action sandbox` card with an inline
+      `Dry-run preview` panel including Confirm / Cancel buttons.
+- [x] **Smoke check** verifies the new module, doc, and audit types,
+      and that the README/PROJECT_CONTEXT mentions dry-run/sandbox.
+
+**Real adapter remains No-Go.** Dry-run is now the *required*
+intermediate step before any real-input PR can be considered.
+
 ---
 
 ## 1. Required before implementation

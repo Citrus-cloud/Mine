@@ -248,6 +248,38 @@ Status as of `0.1.0-beta` (Step 14).
       `SECURITY_CHECKLIST`, `SMOKE_TESTS`, README,
       PROJECT_CONTEXT, CHANGELOG.
 
+## 19. Real-action sandbox / dry-run preview (Step 19)
+
+- [x] `src/real-action-sandbox.js` — read-only preview module:
+      `getSandboxStatus`, `evaluateRealActionReadiness`
+      (always `allowed: false`),
+      `getRealActionBlockedReasons` (7 stable ids),
+      `createPermissionChecklist` (11 items),
+      `createDryRunPlan` (description only, capped at 10 actions),
+      `createRealActionPreview`, `confirmDryRunPlan`
+      (returns `realExecution: false`), `cancelDryRunPlan`.
+- [x] `src/action-pipeline.js` — added `executeDryRunAction()`.
+      Real-mode block message updated to
+      "Real desktop actions are disabled. Dry-run preview is
+      available only."
+- [x] `src/audit-events.js` allowlist gained 6 sandbox event
+      types: `real.sandbox.preview.created`,
+      `real.sandbox.dryrun.confirmed`,
+      `real.sandbox.dryrun.cancelled`, `real.sandbox.blocked`,
+      `real.permission.checklist.created`,
+      `real.blocked.reason.generated`.
+- [x] Advanced → Safety: **Real action sandbox** card with
+      "Create dry-run preview" button + inline dry-run preview
+      panel (action list, permission checklist, blocked reasons,
+      Confirm / Cancel).
+- [x] `Copy diagnostics` includes `Sandbox:` line.
+- [x] `npm run smoke` covers Step 19 invariants and new files.
+- [x] `docs/REAL_ACTION_SANDBOX.md` created.
+- [x] Docs updated: `DESKTOP_ADAPTER_PLAN`,
+      `REAL_ACTIONS_GO_NO_GO`, `AUDIT_LOG_PLAN`,
+      `ACTION_SCHEMA`, `SECURITY_CHECKLIST`, `SMOKE_TESTS`,
+      README, PROJECT_CONTEXT, CHANGELOG.
+
 ## 17. Known limitations (single source of truth)
 
 See [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md). Highlights:

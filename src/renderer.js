@@ -53,6 +53,7 @@ const btnBack = document.getElementById('btn-back');
 const MAX_VISIBLE_LOGS = 5;
 let advancedLogFilter = "all";
 let lastAdapterSelfTestResult = null; // Step 18: in-memory last result
+let currentDryRunPlan = null;        // Step 19: in-memory dry-run plan
 
 
 // --- Views ---
@@ -702,6 +703,33 @@ function renderAdvancedSafety() {
   adCard.appendChild(stBtn);
   c.appendChild(adCard);
 
+  // --- Step 19: Real action sandbox card ---
+  const sbCard = document.createElement('div'); sbCard.className = 'adv-card';
+  const sbTitle = document.createElement('div'); sbTitle.className = 'adv-card-title'; sbTitle.textContent = t('realActionSandbox'); sbCard.appendChild(sbTitle);
+  let sbStatus = { simulationOnly: true, realActionsImplemented: false, realActionsAllowed: false, dryRunAvailable: true, lastDryRunAt: null, lastDryRunActionCount: 0 };
+  if (typeof getSandboxStatus === 'function') sbStatus = getSandboxStatus();
+  addCardRow(sbCard, t('realActionsImplemented'), sbStatus.realActionsImplemented ? t('yes') : t('no'));
+  addCardRow(sbCard, t('realExecutionAllowed'),   sbStatus.realActionsAllowed ? t('yes') : t('no'));
+  addCardRow(sbCard, t('dryRunAvailable'),        sbStatus.dryRunAvailable ? t('yes') : t('no'));
+  if (sbStatus.lastDryRunAt) {
+    addCardRow(sbCard, t('dryRunPlanCreated'), sbStatus.lastDryRunAt + ' (' + sbStatus.lastDryRunActionCount + ')');
+  }
+  // Note for the user: no real actions will ever be executed by this card.
+  const sbNote = document.createElement('div'); sbNote.className = 'adv-warning';
+  sbNote.textContent = t('realActionsDisabledDryRunOnly'); sbCard.appendChild(sbNote);
+  // Action: Create dry-run preview
+  const sbBtn = document.createElement('button');
+  sbBtn.className = 'adv-btn'; sbBtn.textContent = t('createDryRunPreview');
+  sbBtn.addEventListener('click', createDryRunPreviewUi);
+  sbCard.appendChild(sbBtn);
+  c.appendChild(sbCard);
+
+  // If a preview was just created, render it inline.
+  if (currentDryRunPlan) {
+    const pv = renderDryRunPreviewCard(currentDryRunPlan);
+    c.appendChild(pv);
+  }
+
   // Error history
   const eCard = document.createElement('div'); eCard.className = 'adv-card';
   const eTitle = document.createElement('div'); eTitle.className = 'adv-card-title'; eTitle.textContent = `${t('errorHistory')} (${getErrorCount()})`; eCard.appendChild(eTitle);
@@ -737,15 +765,26 @@ async function copyDiagnostics() {
   const adLine = reg
     ? `Adapter: active=${reg.activeId}, realRegistered=${reg.realAdapterRegistered}, realAvailable=${reg.realAdapterAvailable}, realActionsAllowed=${reg.realActionsAllowed}, simulationOnly=${reg.simulationOnly}`
     : 'Adapter: unavailable';
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
+  // Step 19: sandbox line.
+  const sb = (typeof getSandboxStatus === 'function') ? getSandboxStatus() : null;
+  let sbLine = 'Sandbox: unavailable';
+  if (sb) {
+    let blockedCount = 0;
+    let readyCount = 0;
+    try {
+      if (typeof getRealActionBlockedReasons === 'function') blockedCount = getRealActionBlockedReasons(state.settings).length;
+      if (typeof createPermissionChecklist === 'function') readyCount = createPermissionChecklist(state.settings).filter(i => i.status === 'ready').length;
+    } catch (e) {}
+    sbLine = `Sandbox: dryRunAvailable=${sb.dryRunAvailable}, realActionsAllowed=${sb.realActionsAllowed}, realActionsImplemented=${sb.realActionsImplemented}, blockedReasons=${blockedCount}, checklistReady=${readyCount}, lastDryRunAt=${sb.lastDryRunAt || 'none'}, lastDryRunActionCount=${sb.lastDryRunActionCount}`;
+  }
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
 }
 
 // Step 18: run the active adapter's self-test from UI. Pure-JS, no IPC.
-function runAdapterSelfTestUi() {
-  addLogEntry(createLog('info', t('adapterSelfTestStarted')));
+function runAdapterSelfTestUi() {  addLogEntry(createLog('info', t('adapterSelfTestStarted')));
   let result;
   try {
     result = (typeof runActiveAdapterSelfTest === 'function')
@@ -762,6 +801,146 @@ function runAdapterSelfTestUi() {
     addLogEntry(createLog('error', t('adapterSelfTestFailed') + detail));
     reportError({ code: 'ADAPTER_SELFTEST', message: t('adapterSelfTestFailed') + detail }, 'adapter');
   }
+  renderAdvancedSafety();
+}
+
+// =====================================================================
+// Step 19: Real action sandbox / dry-run preview UI
+// =====================================================================
+
+function _statusBadgeClass(status) {
+  if (status === 'ready')   return 'readiness-ready';
+  if (status === 'planned') return 'readiness-planned';
+  // Both "blocked" and "missing" use the same neutral missing badge.
+  return 'readiness-missing';
+}
+
+function _statusLabel(status) {
+  if (status === 'ready')   return t('statusReady');
+  if (status === 'planned') return t('statusPlanned');
+  if (status === 'blocked') return t('statusBlocked');
+  return t('statusMissing');
+}
+
+// Build the inline preview card after a dry-run plan was created.
+function renderDryRunPreviewCard(plan) {
+  const card = document.createElement('div'); card.className = 'adv-card';
+  const title = document.createElement('div'); title.className = 'adv-card-title';
+  title.textContent = t('dryRunPreview'); card.appendChild(title);
+
+  // Top-level summary
+  addCardRow(card, t('scenarioName'),     plan.scenarioName || t('none2'));
+  addCardRow(card, t('actionCount'),      String(plan.actionCount));
+  addCardRow(card, t('estimatedDuration'),plan.estimatedDurationMs + ' ms');
+  addCardRow(card, t('realExecutionAllowed'), plan.realExecution ? t('yes') : t('no'));
+
+  // Reminder warning — no real actions will be executed.
+  const warn = document.createElement('div'); warn.className = 'adv-warning';
+  warn.textContent = t('noRealActionsExecuted'); card.appendChild(warn);
+
+  // Actions preview list (capped, rendered with textContent only)
+  const apTitle = document.createElement('div'); apTitle.className = 'adv-card-title';
+  apTitle.textContent = t('actionsPreview') + (plan.truncated ? ' — ' + t('previewTruncated') : '');
+  card.appendChild(apTitle);
+  const list = document.createElement('div'); list.className = 'readiness-list';
+  plan.actionsPreview.forEach(a => {
+    const item = document.createElement('div'); item.className = 'readiness-item';
+    const lbl = document.createElement('span'); lbl.className = 'readiness-item-label';
+    lbl.textContent = '#' + a.index + '  click x=' + a.x + ' y=' + a.y + ' ' + a.button;
+    const badge = document.createElement('span'); badge.className = 'readiness-badge readiness-planned';
+    badge.textContent = t('statusPlanned');
+    item.appendChild(lbl); item.appendChild(badge); list.appendChild(item);
+  });
+  if (plan.actionsPreview.length === 0) {
+    const empty = document.createElement('div'); empty.className = 'readiness-item';
+    const lbl = document.createElement('span'); lbl.className = 'readiness-item-label'; lbl.textContent = t('noData');
+    empty.appendChild(lbl); list.appendChild(empty);
+  }
+  card.appendChild(list);
+
+  // Permission checklist
+  const pcTitle = document.createElement('div'); pcTitle.className = 'adv-card-title';
+  pcTitle.textContent = t('permissionChecklist'); card.appendChild(pcTitle);
+  const pcList = document.createElement('div'); pcList.className = 'readiness-list';
+  plan.permissionChecklist.forEach(it => {
+    const row = document.createElement('div'); row.className = 'readiness-item';
+    const lbl = document.createElement('span'); lbl.className = 'readiness-item-label'; lbl.textContent = it.label;
+    const badge = document.createElement('span'); badge.className = 'readiness-badge ' + _statusBadgeClass(it.status);
+    badge.textContent = _statusLabel(it.status);
+    row.appendChild(lbl); row.appendChild(badge); pcList.appendChild(row);
+  });
+  card.appendChild(pcList);
+
+  // Blocked reasons
+  const brTitle = document.createElement('div'); brTitle.className = 'adv-card-title';
+  brTitle.textContent = t('blockedReasons'); card.appendChild(brTitle);
+  const brList = document.createElement('div'); brList.className = 'readiness-list';
+  plan.blockedReasons.forEach(r => {
+    const row = document.createElement('div'); row.className = 'readiness-item';
+    const lbl = document.createElement('span'); lbl.className = 'readiness-item-label'; lbl.textContent = r.label;
+    const badge = document.createElement('span'); badge.className = 'readiness-badge readiness-missing';
+    badge.textContent = t('statusBlocked');
+    row.appendChild(lbl); row.appendChild(badge); brList.appendChild(row);
+  });
+  card.appendChild(brList);
+
+  // Confirm / Cancel buttons
+  const btnGroup = document.createElement('div'); btnGroup.className = 'adv-btn-group';
+  const okBtn = document.createElement('button'); okBtn.className = 'adv-btn'; okBtn.textContent = t('confirmDryRun');
+  okBtn.addEventListener('click', confirmDryRunUi);
+  const cancelBtn = document.createElement('button'); cancelBtn.className = 'adv-btn adv-btn-secondary'; cancelBtn.textContent = t('cancelDryRun');
+  cancelBtn.addEventListener('click', cancelDryRunUi);
+  btnGroup.appendChild(okBtn); btnGroup.appendChild(cancelBtn);
+  card.appendChild(btnGroup);
+
+  return card;
+}
+
+function createDryRunPreviewUi() {
+  const state = getState();
+  const sc = getScenarioById(state.selectedScenarioId);
+  if (!sc) {
+    addLogEntry(createLog('warning', t('noActiveScenarioForDryRun')));
+    renderState();
+    return;
+  }
+  if (typeof createRealActionPreview !== 'function') {
+    addLogEntry(createLog('error', 'real-action-sandbox not loaded'));
+    renderState();
+    return;
+  }
+  const result = createRealActionPreview(sc, null, state.settings);
+  if (!result.ok) {
+    addLogEntry(createLog('error', result.error || 'dry-run failed'));
+    renderAdvancedSafety();
+    return;
+  }
+  currentDryRunPlan = result.plan;
+  addLogEntry(createLog('info', t('dryRunPlanCreated') + ': ' + result.plan.actionCount + ' ' + t('actionCount').toLowerCase()));
+  renderAdvancedSafety();
+}
+
+function confirmDryRunUi() {
+  if (!currentDryRunPlan) return;
+  let result = { ok: false };
+  if (typeof confirmDryRunPlan === 'function') {
+    result = confirmDryRunPlan(currentDryRunPlan);
+  }
+  if (result.ok) {
+    addLogEntry(createLog('success', t('dryRunConfirmed')));
+    addLogEntry(createLog('info', t('dryRunCompletedSafely')));
+  } else {
+    addLogEntry(createLog('error', result.error || 'dry-run confirm failed'));
+  }
+  currentDryRunPlan = null;
+  renderAdvancedSafety();
+}
+
+function cancelDryRunUi() {
+  if (!currentDryRunPlan) return;
+  if (typeof cancelDryRunPlan === 'function') cancelDryRunPlan(currentDryRunPlan);
+  addLogEntry(createLog('info', t('dryRunCancelled')));
+  currentDryRunPlan = null;
   renderAdvancedSafety();
 }
 

@@ -7,17 +7,18 @@
 
 ## Текущий шаг
 
-**Шаг 18 завершён.** Проект находится в стадии
+**Шаг 19 завершён.** Проект находится в стадии
 `0.1.0-beta preparation` (simulation-only). Готовится `v0.1.0-beta`
-GitHub pre-release. На шаге 18 добавлен desktop adapter interface,
-mock adapter (единственный available), adapter registry (real
-adapter `available: false`, `planned: true`), self-test и
-карточка Desktop adapter status в Advanced → Safety.
-**Реальные действия по-прежнему отключены: `realDesktopActions = false`,
-`simulationOnly = true`, `isRealActionAllowed()` всегда `false`,
-`isRealAdapterAllowed()` всегда `false`,
-`setActiveAdapter("real-desktop")` всегда блокируется,
-`executionMode === "real"` блокируется в `executeAction()`.**
+GitHub pre-release. На шаге 19 добавлен **real-action sandbox**:
+read-only dry-run preview слой
+(`src/real-action-sandbox.js`) с permission checklist и
+blocked reasons; pipeline теперь распознаёт `executionMode === "dry-run"`
+как no-op. **Реальные действия по-прежнему отключены:
+`realDesktopActions = false`, `simulationOnly = true`,
+`isRealActionAllowed() → false`, `isRealAdapterAllowed() → false`,
+`setActiveAdapter("real-desktop")` блокируется,
+`executionMode === "real"` блокируется в `executeAction()`,
+`evaluateRealActionReadiness() → { allowed: false, ... }`.**
 
 ## Стек
 
@@ -49,7 +50,7 @@ adapter `available: false`, `planned: true`), self-test и
     Нет UI / IPC / env-vars, которые могут их перевернуть. Любое
     изменение проходит `docs/REAL_ACTIONS_GO_NO_GO.md`.
 
-## Статус реализации (на конец шага 18)
+## Статус реализации (на конец шага 19)
 
 ### Реализовано
 - Electron-приложение, главное минималистичное меню.
@@ -173,6 +174,41 @@ adapter `available: false`, `planned: true`), self-test и
     source-инвариантов: registry содержимое, mock invariants,
     interface contract, расширенный allowlist audit-событий.
 
+- **Real-action sandbox (шаг 19):**
+  - `src/real-action-sandbox.js` — read-only preview слой.
+    `getSandboxStatus()` → `{ simulationOnly: true,
+    realActionsImplemented: false, realActionsAllowed: false,
+    dryRunAvailable: true, ... }`.
+    `evaluateRealActionReadiness()` — всегда `{ allowed: false }`.
+    `getRealActionBlockedReasons()` — 7 stable ID причин.
+    `createPermissionChecklist()` — 11 пунктов с
+    `ready / missing / planned / blocked`.
+    `createDryRunPlan()` — описание-only с превью до 10 действий
+    и `truncated`-флагом.
+    `createRealActionPreview()`, `confirmDryRunPlan()`,
+    `cancelDryRunPlan()` — все возвращают `realExecution: false`.
+  - `src/action-pipeline.js` — добавлен `executeDryRunAction()` для
+    `executionMode === "dry-run"`. Сообщение блокировки real-mode:
+    `Real desktop actions are disabled. Dry-run preview is available only.`
+  - `src/audit-events.js` — allowlist расширен 6 sandbox-типами:
+    `real.sandbox.preview.created`, `real.sandbox.dryrun.confirmed`,
+    `real.sandbox.dryrun.cancelled`, `real.sandbox.blocked`,
+    `real.permission.checklist.created`,
+    `real.blocked.reason.generated`.
+  - Карточка **Real action sandbox** в Advanced → Safety с кнопкой
+    **Create dry-run preview**. Inline preview-карточка показывает
+    scenario name / action count / estimated duration / превью
+    действий (max 10) / permission checklist (11 пунктов) /
+    blocked reasons (7 ID) / Confirm/Cancel кнопки + warning
+    «No real actions will be executed».
+  - `Copy diagnostics` содержит строку `Sandbox:`.
+  - `docs/REAL_ACTION_SANDBOX.md` — отдельный документ.
+  - 28 новых i18n-ключей RU + EN.
+  - `npm run smoke` проверяет наличие нового файла и документа,
+    source-инварианты, расширенный allowlist audit-событий,
+    обновлённый pipeline block message и упоминание dry-run/sandbox
+    в README/PROJECT_CONTEXT.
+
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
   `node-key-sender`, нет нативных модулей ввода.
@@ -199,7 +235,8 @@ adapter `available: false`, `planned: true`), self-test и
   Включает `feature-flags.js`, `action-pipeline.js`, `safety-gates.js`,
   `audit-events.js` (Step 16-17), а также
   `desktop-adapter-interface.js`, `mock-desktop-adapter.js`,
-  `adapter-registry.js` (Step 18).
+  `adapter-registry.js` (Step 18) и
+  `real-action-sandbox.js` (Step 19).
 - `assets/` — packaging resources, локальный SVG-икон.
 - `docs/` — TEST_PLAN, MVP_CHECKLIST, SECURITY_CHECKLIST,
   SMOKE_TESTS, PACKAGING, DESKTOP_ADAPTER_PLAN, ACTION_SCHEMA,
@@ -235,11 +272,12 @@ adapter `available: false`, `planned: true`), self-test и
 | 16 | Handoff design: feature flags, go/no-go, audit log plan, privacy doc, next safety milestone UI. |
 | 17 | Controlled action pipeline + safety gates + in-memory audit events. Real actions blocked. |
 | 18 | Desktop adapter interface + mock adapter + registry. Mock active. Real adapter blocked. |
+| 19 | Real-action sandbox: dry-run preview, permission checklist, blocked reasons. No real execution. |
 
-## Что логично делать на шаге 19
+## Что логично делать на шаге 20
 
 - **Подготовка `v0.1.0-beta` GitHub pre-release**: тэг,
-  `npm run dist` артефакты, README → release notes.
+  `npm run dist` артефакты, README → release notes на GitHub.
 - **Реальные иконки** для tray и packaged-builds (PNG/ICO/ICNS),
   сгенерированные из `assets/icons/clickflow-icon.svg`.
 - **Code signing notes** (Windows + macOS) и первый подписанный build.
@@ -252,12 +290,13 @@ adapter `available: false`, `planned: true`), self-test и
   Electron headless и проверяющая «no real input fires», RU/EN
   переключение, dark theme, CSP не ослаблен, отказ
   `executionMode: "real"` на уровне DevTools, отказ
-  `setActiveAdapter("real-desktop")`.
+  `setActiveAdapter("real-desktop")`, корректное возвращение
+  `executionMode: "dry-run"`.
 - **Audit events UI 1.0** — отдельный sub-tab «Audit» с фильтрами,
   экспортом в JSON / JSONL (всё ещё in-memory; file persistence
   только в шаге, который реализует требования
   `REAL_ACTIONS_GO_NO_GO.md` §4).
-- **Adapter selection UI** (только для available adapter'ов) —
-  если когда-либо появятся дополнительные mock-варианты
-  (`mock-fast`, `mock-slow`), переключение между ними; real adapter
-  должен оставаться заблокированным.
+- **Dry-run replay viewer** — UI, который показывает сохранённый
+  список dry-run планов (in-memory), позволяет повторно
+  открыть preview и сравнить два плана. Без реального
+  выполнения.

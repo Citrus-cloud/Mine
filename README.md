@@ -29,7 +29,7 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox).
 - Версия: **`0.1.0-beta`**.
 - Состояние: simulation-only MVP, готов к публичному beta-тестированию,
   GitHub pre-release-ready.
@@ -48,14 +48,21 @@ safety review).
     `src/action-pipeline.js`, `src/safety-gates.js`,
     `src/audit-events.js`. Карточки Action pipeline / Safety
     gates / Real actions readiness / Audit events.
-  - **Шаг 18 — desktop adapter interface + mock adapter:**
-    `src/desktop-adapter-interface.js` (контракт),
-    `src/mock-desktop-adapter.js` (единственный available adapter,
-    self-test), `src/adapter-registry.js` (mock active по
-    умолчанию; `setActiveAdapter("real-desktop")` блокируется).
-    Карточка **Desktop adapter status** в Advanced → Safety с
-    кнопкой Run adapter self-test. **Реальные клики по-прежнему
-    не реализованы.**
+  - Шаг 18 — desktop adapter interface + mock adapter:
+    `src/desktop-adapter-interface.js`,
+    `src/mock-desktop-adapter.js`, `src/adapter-registry.js`.
+    Карточка Desktop adapter status с кнопкой
+    Run adapter self-test.
+  - **Шаг 19 — real-action sandbox / dry-run:**
+    `src/real-action-sandbox.js` — read-only preview layer.
+    `getSandboxStatus()` возвращает `dryRunAvailable: true`,
+    `realActionsAllowed: false`, `realActionsImplemented: false`.
+    `evaluateRealActionReadiness()` всегда `allowed: false`.
+    Карточка **Real action sandbox** с кнопкой
+    **Create dry-run preview** + inline preview-карточка с
+    permission checklist (11 пунктов) и blocked reasons (7 ID).
+    `executionMode === "dry-run"` обрабатывается в pipeline без
+    OS-вызовов. **Реальные клики по-прежнему не реализованы.**
 
 ---
 
@@ -90,6 +97,9 @@ Safety, Future. Diagnostics, история ошибок, профили, имп
 **Audit events** (count + last event) в Advanced → Safety.
 **Step 18:** карточка **Desktop adapter status** с кнопкой
 **Run adapter self-test**.
+**Step 19:** карточка **Real action sandbox** с кнопкой
+**Create dry-run preview** + inline preview-карточка с
+permission checklist и blocked reasons.
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -246,6 +256,7 @@ npm run dist     # релизные артефакты в dist/
 │   ├── logger.js
 │   ├── mock-desktop-adapter.js
 │   ├── profile-manager.js
+│   ├── real-action-sandbox.js
 │   ├── renderer.js
 │   ├── safety-gates.js
 │   ├── scenario-manager.js
@@ -284,6 +295,7 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/PRIVACY.md`](./docs/PRIVACY.md) — что хранится локально,
   что не отправляется в сеть.
 - [`docs/ADAPTER_INTERFACE.md`](./docs/ADAPTER_INTERFACE.md) — контракт desktop adapter, описание mock adapter и блокировки real adapter (Step 18).
+- [`docs/REAL_ACTION_SANDBOX.md`](./docs/REAL_ACTION_SANDBOX.md) — sandbox для будущего real adapter, dry-run preview, permission checklist, blocked reasons (Step 19).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
@@ -338,6 +350,7 @@ npm run dist     # релизные артефакты в dist/
 | 16 | Handoff design | Feature flags, go/no-go, audit log plan, privacy doc. |
 | 17 | Action pipeline | `action-pipeline.js`, `safety-gates.js`, `audit-events.js` (in-memory). Real actions blocked. |
 | 18 | Adapter interface | `desktop-adapter-interface.js`, `mock-desktop-adapter.js`, `adapter-registry.js`. Mock active. Real adapter blocked. |
+| 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |
 
 ---
 

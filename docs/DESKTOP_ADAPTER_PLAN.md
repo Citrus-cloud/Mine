@@ -49,6 +49,26 @@ Step 18 split the adapter responsibility out of the pipeline into a dedicated in
 
 When the future real-input branch lands, it will register `available: true` on the `real-desktop` adapter only after passing the four-layer flip described in `docs/ADAPTER_INTERFACE.md` §10.
 
+## 1.7. Step 19 preparation — real-action sandbox / dry-run
+
+Step 19 added a **read-only preview layer** on top of the adapter interface. **No real input is performed.** What was added:
+
+- **`src/real-action-sandbox.js`** — pure JS module:
+  - `getSandboxStatus()` → `{ simulationOnly: true, realActionsImplemented: false, realActionsAllowed: false, dryRunAvailable: true, ... }`.
+  - `evaluateRealActionReadiness(settings, flags)` — **always** returns `{ allowed: false, ... }`.
+  - `getRealActionBlockedReasons(settings, flags)` — enumerated stable ids.
+  - `createPermissionChecklist(settings, flags)` — 11 items with `ready / missing / planned / blocked` status.
+  - `createDryRunPlan(scenario, actions, settings)` — returns a description-only plan (capped to 10 actions in the preview).
+  - `createRealActionPreview(scenario, actions, settings)` — wraps `createDryRunPlan()` and emits the audit event.
+  - `confirmDryRunPlan(plan)` — records `real.sandbox.dryrun.confirmed`; **never** asks any adapter to execute.
+  - `cancelDryRunPlan(plan)` — records `real.sandbox.dryrun.cancelled`.
+- **`src/action-pipeline.js`** — added `executeDryRunAction()` for `executionMode === "dry-run"`. The block message for `executionMode === "real"` is now: `Real desktop actions are disabled. Dry-run preview is available only.`
+- **`src/audit-events.js`** — allowlist gained six sandbox event types (`real.sandbox.preview.created`, `real.sandbox.dryrun.confirmed`, `real.sandbox.dryrun.cancelled`, `real.sandbox.blocked`, `real.permission.checklist.created`, `real.blocked.reason.generated`).
+- **Renderer** — Advanced → Safety has a new **Real action sandbox** card and an inline **Dry-run preview** card with action list, permission checklist, blocked reasons, and Confirm / Cancel buttons. `Copy diagnostics` includes a `Sandbox:` line.
+- **Docs** — `docs/REAL_ACTION_SANDBOX.md` is the new dedicated document.
+
+The future real-input branch will inherit this UI verbatim, then add a *separate* explicit-confirmation flow before the first real action.
+
 ## 2. Why Real Clicks Are NOT Implemented Yet
 
 - Architecture validation is still in progress

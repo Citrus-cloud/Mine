@@ -31,7 +31,14 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   AdapterSelfTestFailed:    'adapter.selftest.failed',
   AdapterSelectionBlocked:  'adapter.selection.blocked',
   AdapterMockExecuted:      'adapter.mock.executed',
-  AdapterRealUnavailable:   'adapter.real.unavailable'
+  AdapterRealUnavailable:   'adapter.real.unavailable',
+  // Step 19: real-action sandbox / dry-run events
+  RealSandboxPreviewCreated:        'real.sandbox.preview.created',
+  RealSandboxDryRunConfirmed:       'real.sandbox.dryrun.confirmed',
+  RealSandboxDryRunCancelled:       'real.sandbox.dryrun.cancelled',
+  RealSandboxBlocked:               'real.sandbox.blocked',
+  RealPermissionChecklistCreated:   'real.permission.checklist.created',
+  RealBlockedReasonGenerated:       'real.blocked.reason.generated'
 });
 
 var KNOWN_TYPES = Object.freeze(

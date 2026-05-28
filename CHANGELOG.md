@@ -8,6 +8,97 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-19
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding (controlled action pipeline, safety gates, in-memory
+audit events), the Step 18 desktop adapter interface plus mock
+adapter, and the Step 19 real-action sandbox with dry-run preview.
+**Still simulation-only.**
+
+### Added (Step 19 — real-action sandbox / dry-run preview)
+
+- `src/real-action-sandbox.js` — read-only preview module:
+  - `getSandboxStatus()` returns
+    `{ simulationOnly: true, realActionsImplemented: false,
+    realActionsAllowed: false, dryRunAvailable: true, ... }`.
+  - `evaluateRealActionReadiness(settings, flags)` — **always**
+    returns `{ allowed: false, ... }` in 0.1.x.
+  - `getRealActionBlockedReasons(settings, flags)` — 7 stable ids
+    (`realDesktopActionsFlagDisabled`, `simulationOnlyEnabled`,
+    `realAdapterNotInstalled`, `osPermissionsNotVerified`,
+    `finalSafetyReviewNotPassed`, `auditPersistenceNotImplemented`,
+    `realActionsIntentionallyDisabled`).
+  - `createPermissionChecklist(settings, flags)` — 11 items with
+    `ready / missing / planned / blocked` status.
+  - `createDryRunPlan(scenario, actions, settings)` — description
+    only. Capped at 10 preview items; reports `truncated`.
+  - `createRealActionPreview()`, `confirmDryRunPlan(plan)`,
+    `cancelDryRunPlan(plan)` — sandbox lifecycle, **all return
+    `realExecution: false`**.
+- `src/action-pipeline.js` — added `executeDryRunAction()` for
+  `executionMode === "dry-run"`. The block message for
+  `executionMode === "real"` is now
+  `Real desktop actions are disabled. Dry-run preview is available only.`
+- `src/audit-events.js` — allowlist gained six sandbox event types:
+  `real.sandbox.preview.created`,
+  `real.sandbox.dryrun.confirmed`,
+  `real.sandbox.dryrun.cancelled`,
+  `real.sandbox.blocked`,
+  `real.permission.checklist.created`,
+  `real.blocked.reason.generated`.
+- Renderer — Advanced → Safety has a new **Real action sandbox**
+  card and an inline **Dry-run preview** panel (action list capped
+  at 10 with "First actions shown" hint, permission checklist,
+  blocked reasons, Confirm / Cancel buttons).
+- `Copy diagnostics` includes a new `Sandbox:` line.
+- `src/index.html` loads `real-action-sandbox.js` after
+  `adapter-registry.js` and before `action-pipeline.js`.
+- `scripts/smoke-check.js` — verifies the new file and doc, that
+  `getSandboxStatus()` reports `realActionsAllowed: false`,
+  `dryRunAvailable: true`; that
+  `evaluateRealActionReadiness()` returns `allowed: false`; that
+  `confirmDryRunPlan` never sets `realExecution: true`; that the
+  audit allowlist contains all six new event types; that
+  README/PROJECT_CONTEXT mentions dry-run/sandbox; that the
+  pipeline block message mentions dry-run preview.
+- `docs/REAL_ACTION_SANDBOX.md` — new dedicated document.
+- 28 new RU + EN i18n keys covering the sandbox UI surfaces.
+
+### Changed (Step 19)
+
+- `src/action-pipeline.js` — `dry-run` mode now takes priority
+  over the simulate path; both paths still never reach any OS
+  API. The block message is updated.
+- `src/audit-events.js` — six new types added to the frozen
+  allowlist; everything else unchanged.
+- Docs updated: `DESKTOP_ADAPTER_PLAN` (§1.7),
+  `REAL_ACTIONS_GO_NO_GO` (§0ter), `AUDIT_LOG_PLAN`
+  (in-memory model now also covers sandbox events),
+  `ACTION_SCHEMA` (preview ≠ execution),
+  `SECURITY_CHECKLIST`, `SMOKE_TESTS` (#0j, #0k, #101–#114),
+  `MVP_CHECKLIST` (§19), README, PROJECT_CONTEXT.
+
+### Security (Step 19)
+
+- The sandbox is read-only with respect to the OS. Six layers
+  (feature flags, safety gates, adapter interface, adapter
+  registry, action pipeline, sandbox readiness) all independently
+  refuse real input.
+- `evaluateRealActionReadiness()` is hard-coded to deny. The
+  reference predicate is preserved in a comment but is unreachable
+  in 0.1.x.
+- Sandbox event payloads carry only ids, counts, and small enums.
+  No PII, no filesystem paths.
+- `package.json` still declares no `robotjs` / `nut.js` / `iohook` /
+  `uiohook-napi` / `node-key-sender`. Verified by `npm run smoke`.
+- `node --check` passes for every new and modified file.
+- `npm run smoke` passes (existing tests still green, new Step 19
+  rows green).
+
+---
+
 ## [Unreleased] — Steps 15-18
 
 Final stabilization of the simulation-only beta, design-only handoff
@@ -427,3 +518,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 16 | Handoff design | Feature flags, go/no-go, audit log plan, privacy doc. |
 | 17 | Action pipeline | `action-pipeline.js`, `safety-gates.js`, `audit-events.js` (in-memory). Real actions blocked. |
 | 18 | Adapter interface | `desktop-adapter-interface.js`, `mock-desktop-adapter.js`, `adapter-registry.js`. Mock active. Real adapter blocked. |
+| 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |

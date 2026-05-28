@@ -125,7 +125,30 @@ function blockRealAction(action, context) {
     ok: false,
     mode: 'real',
     blocked: true,
-    error: 'Real desktop actions are disabled in this build',
+    error: 'Real desktop actions are disabled. Dry-run preview is available only.',
+    action: action,
+    timestamp: new Date().toISOString()
+  };
+}
+
+// --- Dry-run path (Step 19). ---
+// Build a single-action dry-run preview without touching the OS and
+// without going through the simulate path. Returns a synthetic result
+// that callers can ignore (the click engine never asks for "dry-run").
+function executeDryRunAction(action, context) {
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('real.sandbox.preview.created', {
+      scenarioId: context && context.scenarioId,
+      actionType: action && action.type,
+      mode: 'pipeline-dry-run'
+    });
+  }
+  return {
+    ok: true,
+    mode: 'dry-run',
+    simulated: false,
+    realExecution: false,
+    blocked: false,
     action: action,
     timestamp: new Date().toISOString()
   };
@@ -166,6 +189,11 @@ function executeAction(action, context) {
   var mode = (context && typeof context.executionMode === 'string')
     ? context.executionMode
     : 'simulation';
+
+  // Step 19: dry-run path takes priority, never reaches the OS.
+  if (mode === 'dry-run') {
+    return executeDryRunAction(action, context);
+  }
 
   if (mode === 'simulation' || mode === 'simulate' || mode === '') {
     // Step 18: defensive — never use an adapter that claims real actions.
