@@ -9,6 +9,7 @@ const appState = {
   scenarioFormMode: null,
   editingScenarioId: null,
   activeAdvancedTab: "overview",
+  importPreview: null,
   execution: {
     isRunning: false,
     progressCurrent: 0,
@@ -45,67 +46,35 @@ function getState() {
       hotkeys: { ...appState.settings.hotkeys },
       safety: { ...appState.settings.safety }
     },
-    activeAdvancedTab: appState.activeAdvancedTab
+    activeAdvancedTab: appState.activeAdvancedTab,
+    importPreview: appState.importPreview
   };
 }
 
-function setRunning(isRunning) {
-  appState.isRunning = isRunning;
-}
-
+function setRunning(isRunning) { appState.isRunning = isRunning; }
 function setSelectedScenario(scenario) {
   appState.selectedScenarioId = scenario.id;
   appState.selectedScenarioName = scenario.name;
 }
-
-function setCurrentView(view) {
-  appState.currentView = view;
-}
-
-function addLogEntry(logEntry) {
-  appState.logs.push(logEntry);
-}
-
-function clearLogs() {
-  appState.logs = [];
-}
-
-function setScenarioFormMode(mode) {
-  appState.scenarioFormMode = mode;
-}
-
-function setEditingScenarioId(id) {
-  appState.editingScenarioId = id;
-}
-
-function setActiveAdvancedTab(tab) {
-  appState.activeAdvancedTab = tab;
-}
+function setCurrentView(view) { appState.currentView = view; }
+function addLogEntry(logEntry) { appState.logs.push(logEntry); }
+function clearLogs() { appState.logs = []; }
+function setScenarioFormMode(mode) { appState.scenarioFormMode = mode; }
+function setEditingScenarioId(id) { appState.editingScenarioId = id; }
+function setActiveAdvancedTab(tab) { appState.activeAdvancedTab = tab; }
+function setImportPreview(data) { appState.importPreview = data; }
+function clearImportPreview() { appState.importPreview = null; }
 
 // --- Execution state ---
-
-function setExecutionRunning(isRunning) {
-  appState.execution.isRunning = isRunning;
-}
-
+function setExecutionRunning(isRunning) { appState.execution.isRunning = isRunning; }
 function setExecutionProgress(current, total) {
   appState.execution.progressCurrent = current;
   appState.execution.progressTotal = total;
   appState.execution.progressPercent = total > 0 ? Math.round((current / total) * 100) : 0;
 }
-
-function setExecutionLastAction(action) {
-  appState.execution.lastAction = action;
-}
-
-function setExecutionStartedAt(value) {
-  appState.execution.startedAt = value;
-}
-
-function setExecutionFinishedAt(value) {
-  appState.execution.finishedAt = value;
-}
-
+function setExecutionLastAction(action) { appState.execution.lastAction = action; }
+function setExecutionStartedAt(value) { appState.execution.startedAt = value; }
+function setExecutionFinishedAt(value) { appState.execution.finishedAt = value; }
 function resetExecution() {
   appState.execution.isRunning = false;
   appState.execution.progressCurrent = 0;
@@ -117,7 +86,6 @@ function resetExecution() {
 }
 
 // --- Settings state ---
-
 function setSettings(settings) {
   appState.settings = {
     language: settings.language || "ru",
@@ -126,30 +94,17 @@ function setSettings(settings) {
     safety: { ...(settings.safety || appState.settings.safety) }
   };
 }
-
 function updateSettings(partial) {
   if (partial.language !== undefined) appState.settings.language = partial.language;
   if (partial.theme !== undefined) appState.settings.theme = partial.theme;
-  if (partial.hotkeys) {
-    appState.settings.hotkeys = { ...appState.settings.hotkeys, ...partial.hotkeys };
-  }
-  if (partial.safety) {
-    appState.settings.safety = { ...appState.settings.safety, ...partial.safety };
-  }
+  if (partial.hotkeys) appState.settings.hotkeys = { ...appState.settings.hotkeys, ...partial.hotkeys };
+  if (partial.safety) appState.settings.safety = { ...appState.settings.safety, ...partial.safety };
 }
-
-function setLanguageSetting(language) {
-  appState.settings.language = language;
-}
-
-function setThemeSetting(theme) {
-  appState.settings.theme = theme;
-}
-
+function setLanguageSetting(language) { appState.settings.language = language; }
+function setThemeSetting(theme) { appState.settings.theme = theme; }
 function updateSafetySettings(partialSafety) {
   appState.settings.safety = { ...appState.settings.safety, ...partialSafety };
 }
-
 function getSettings() {
   return {
     ...appState.settings,

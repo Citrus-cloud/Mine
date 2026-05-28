@@ -108,9 +108,9 @@ const translations = {
     ocrTextDetection: "OCR-распознавание текста",
     imageRecognition: "Распознавание изображений",
     visualActionBuilder: "Визуальный конструктор действий",
-    profiles: "Профили",
-    importExport: "Импорт/экспорт",
     realDesktopClicks: "Реальные desktop-клики",
+    globalHotkeysPlanned: "Глобальные горячие клавиши",
+    desktopActionAdapter: "Desktop action adapter",
 
     // Настройки
     settingsTitle: "Настройки",
@@ -150,7 +150,75 @@ const translations = {
     logScenariosOpened: "Открыт список сценариев",
     logAdvancedOpened: "Открыт расширенный режим",
     logMainOpened: "Открыто главное меню",
-    logSettingsOpened: "Открыты настройки"
+    logSettingsOpened: "Открыты настройки",
+
+    // Импорт/экспорт (Step 7)
+    importExport: "Импорт/экспорт",
+    exportSelected: "Экспорт выбранного",
+    exportAll: "Экспорт всех",
+    exportCustom: "Экспорт пользовательских",
+    backupScenarios: "Резервная копия",
+    importScenarios: "Импорт сценариев",
+    importPreview: "Предварительный просмотр",
+    confirmImport: "Подтвердить импорт",
+    cancelImport: "Отмена",
+    importedScenarios: "Сценарии импортированы",
+    exportedScenarios: "Сценарии экспортированы",
+    operationCancelled: "Операция отменена",
+    invalidImportFile: "Неверный формат файла",
+    conflictDetected: "Обнаружены конфликты имён",
+    scenariosToImport: "Сценариев для импорта",
+
+    // Профили (Step 7)
+    profiles: "Профили",
+    activeProfile: "Активный профиль",
+    createProfile: "Создать профиль",
+    editProfile: "Изменить профиль",
+    deleteProfile: "Удалить профиль",
+    profileName: "Название профиля",
+    profileDescription: "Описание профиля",
+    profileScenarioCount: "Сценариев в профиле",
+    allProfiles: "Все профили",
+    defaultProfile: "Основной",
+    workProfile: "Работа",
+    testingProfile: "Тестирование",
+    personalProfile: "Личное",
+    profileCount: "Профилей",
+    confirmDeleteProfile: "Удалить профиль?",
+
+    // Настройки backup (Step 7)
+    exportSettings: "Экспорт настроек",
+    importSettings: "Импорт настроек",
+    resetSettings: "Сброс настроек",
+    settingsExported: "Настройки экспортированы",
+    settingsImported: "Настройки импортированы",
+    settingsReset: "Настройки сброшены",
+    confirmResetSettings: "Сбросить настройки?",
+    confirmImportSettings: "Импортировать настройки?",
+
+    // Горячие клавиши (Step 8)
+    hotkeysFocusedOnly: "Горячие клавиши работают, когда окно ClickFlow активно. Глобальные горячие клавиши будут добавлены позже.",
+    emergencyStopHint: "Escape мгновенно останавливает выполнение",
+
+    // Ошибки и диагностика (Step 8)
+    diagnostics: "Диагностика",
+    copyDiagnostics: "Скопировать диагностику",
+    diagnosticsCopied: "Диагностика скопирована",
+    diagnosticsCopyFailed: "Не удалось скопировать",
+    errorHistory: "История ошибок",
+    clearErrors: "Очистить ошибки",
+    noErrors: "Нет ошибок",
+    errorCount: "Ошибок",
+    settingsLoaded: "Настройки загружены",
+    scenariosLoaded: "Сценарии загружены",
+    profilesLoaded: "Профили загружены",
+    currentView: "Текущий вид",
+    executionRunning: "Выполнение",
+
+    // Future (Step 8)
+    simulationOnly: "Только имитация",
+    notImplemented: "Не реализовано",
+    confirmClearLogs: "Очистить все логи?"
   },
   en: {
     // Main screen
@@ -259,9 +327,9 @@ const translations = {
     ocrTextDetection: "OCR text detection",
     imageRecognition: "Image recognition",
     visualActionBuilder: "Visual action builder",
-    profiles: "Profiles",
-    importExport: "Import/export",
     realDesktopClicks: "Real desktop clicks",
+    globalHotkeysPlanned: "Global hotkeys",
+    desktopActionAdapter: "Desktop action adapter",
 
     // Settings
     settingsTitle: "Settings",
@@ -301,7 +369,75 @@ const translations = {
     logScenariosOpened: "Scenario list opened",
     logAdvancedOpened: "Advanced mode opened",
     logMainOpened: "Main menu opened",
-    logSettingsOpened: "Settings opened"
+    logSettingsOpened: "Settings opened",
+
+    // Import/export (Step 7)
+    importExport: "Import/export",
+    exportSelected: "Export selected",
+    exportAll: "Export all",
+    exportCustom: "Export custom",
+    backupScenarios: "Backup",
+    importScenarios: "Import scenarios",
+    importPreview: "Import preview",
+    confirmImport: "Confirm import",
+    cancelImport: "Cancel",
+    importedScenarios: "Scenarios imported",
+    exportedScenarios: "Scenarios exported",
+    operationCancelled: "Operation cancelled",
+    invalidImportFile: "Invalid file format",
+    conflictDetected: "Name conflicts detected",
+    scenariosToImport: "Scenarios to import",
+
+    // Profiles (Step 7)
+    profiles: "Profiles",
+    activeProfile: "Active profile",
+    createProfile: "Create profile",
+    editProfile: "Edit profile",
+    deleteProfile: "Delete profile",
+    profileName: "Profile name",
+    profileDescription: "Profile description",
+    profileScenarioCount: "Scenarios in profile",
+    allProfiles: "All profiles",
+    defaultProfile: "Default",
+    workProfile: "Work",
+    testingProfile: "Testing",
+    personalProfile: "Personal",
+    profileCount: "Profiles",
+    confirmDeleteProfile: "Delete this profile?",
+
+    // Settings backup (Step 7)
+    exportSettings: "Export settings",
+    importSettings: "Import settings",
+    resetSettings: "Reset settings",
+    settingsExported: "Settings exported",
+    settingsImported: "Settings imported",
+    settingsReset: "Settings reset",
+    confirmResetSettings: "Reset settings to defaults?",
+    confirmImportSettings: "Import these settings?",
+
+    // Hotkeys (Step 8)
+    hotkeysFocusedOnly: "Hotkeys work while the ClickFlow window is focused. Global hotkeys will be added later.",
+    emergencyStopHint: "Escape instantly stops execution",
+
+    // Errors and diagnostics (Step 8)
+    diagnostics: "Diagnostics",
+    copyDiagnostics: "Copy diagnostics",
+    diagnosticsCopied: "Diagnostics copied",
+    diagnosticsCopyFailed: "Copy failed",
+    errorHistory: "Error history",
+    clearErrors: "Clear errors",
+    noErrors: "No errors",
+    errorCount: "Errors",
+    settingsLoaded: "Settings loaded",
+    scenariosLoaded: "Scenarios loaded",
+    profilesLoaded: "Profiles loaded",
+    currentView: "Current view",
+    executionRunning: "Execution",
+
+    // Future (Step 8)
+    simulationOnly: "Simulation only",
+    notImplemented: "Not implemented",
+    confirmClearLogs: "Clear all logs?"
   }
 };
 
@@ -329,13 +465,10 @@ function getAvailableLanguages() {
 }
 
 function applyTranslations() {
-  // Обновить элементы с data-i18n (textContent)
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     el.textContent = t(key);
   });
-
-  // Обновить placeholder
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     el.placeholder = t(key);
