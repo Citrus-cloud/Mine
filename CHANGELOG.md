@@ -8,6 +8,106 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-18
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding (controlled action pipeline, safety gates, in-memory
+audit events), and the Step 18 desktop adapter interface plus
+mock adapter. **Still simulation-only.**
+
+### Added (Step 18 — desktop adapter interface, mock adapter, registry)
+
+- `src/desktop-adapter-interface.js` — adapter contract.
+  `getAdapterContract()` returns
+  `{ version: 1, supportedActions: ["click"], realActionsAllowed: false,
+  simulationOnly: true, requiresMainProcess: true,
+  requiresUserConfirmation: true, requiresEmergencyStop: true }`.
+  Helpers: `getSupportedAdapterActions()`, `validateAdapterAction(action)`,
+  `normalizeAdapterAction(action)`, `createAdapterResult(success, data, error)`.
+  `isRealAdapterAllowed(flags, settings)` is **hard-coded `false`**.
+- `src/mock-desktop-adapter.js` — the only `available: true`
+  adapter. `getMockAdapterInfo()`, `checkMockAdapterAvailability()`,
+  `executeMockAction(action, context)` (validate → emit
+  `adapter.mock.executed` → return structured result),
+  `runMockAdapterSelfTest()` (4 pure-JS checks; emits
+  `adapter.selftest.started` and either
+  `adapter.selftest.completed` or `adapter.selftest.failed`),
+  `getMockAdapterStatus()`. **No OS input.**
+- `src/adapter-registry.js` — registry of adapters with the mock
+  active by default. `getAvailableAdapters`, `getAdapterById`,
+  `getActiveAdapter`, `setActiveAdapter`, `getAdapterRegistryStatus`,
+  `runActiveAdapterSelfTest`, `isRealAdapterRegistered`,
+  `isRealAdapterAvailable`. `setActiveAdapter("real-desktop")`
+  returns `{ success: false, blocked: true, error:
+  "Real desktop actions are not implemented in this build" }` and
+  emits `adapter.selection.blocked` plus `adapter.real.unavailable`.
+- `src/action-pipeline.js` — simulate path now routes through the
+  active adapter. Mock adapter calls `executeMockAction()`. The
+  pipeline still rejects any real-action attempt via
+  `blockRealAction()`. The legacy `executeSimulatedAction()`
+  remains as a fallback.
+- `src/audit-events.js` — allowlist gained six new types:
+  `adapter.selftest.started`, `adapter.selftest.completed`,
+  `adapter.selftest.failed`, `adapter.selection.blocked`,
+  `adapter.mock.executed`, `adapter.real.unavailable`.
+- Renderer — Advanced → Safety has a new **Desktop adapter status**
+  card with rows for active adapter, mock available, real
+  available, real registered, real actions allowed, simulation
+  only, last self-test result, and a **Run adapter self-test**
+  button. `Copy diagnostics` includes a new `Adapter:` line.
+- `src/index.html` loads `desktop-adapter-interface.js`,
+  `mock-desktop-adapter.js`, and `adapter-registry.js` between
+  `safety-gates.js` and `action-pipeline.js`.
+- `scripts/smoke-check.js` — verifies new files and source-level
+  invariants: registry contents (mock + real-desktop, the latter
+  unavailable / planned with the disabled reason), block messages,
+  audit allowlist (all six adapter types), mock adapter flags,
+  adapter interface contract.
+- `docs/ADAPTER_INTERFACE.md` — new dedicated document.
+- 21 new i18n keys in RU and EN: `desktopAdapterStatus`,
+  `activeAdapter`, `mockAdapter`, `realDesktopAdapter`,
+  `mockAdapterAvailable`, `realAdapterAvailable`,
+  `realAdapterRegistered`, `realActionsAllowed`,
+  `runAdapterSelfTest`, `adapterSelfTestStarted`,
+  `adapterSelfTestCompleted`, `adapterSelfTestFailed`,
+  `adapterSelectionBlocked`, `adapterMockExecuted`,
+  `adapterRealUnavailable`, `lastSelfTestResult`,
+  `selfTestPassed`, `selfTestFailed`, `realAdapterDisabledReason`,
+  `mockModeOnly`, `selfTestNeverRun`.
+
+### Changed (Step 18)
+
+- `src/action-pipeline.js` simulate path goes through the active
+  adapter. Defensive: even if the active adapter ever claimed
+  `realActions: true`, the pipeline still calls `blockRealAction()`.
+- `src/audit-events.js` allowlist extended; everything else
+  unchanged (capacity 500, defensive copies, `getAuditSummary()`).
+- `docs/DESKTOP_ADAPTER_PLAN.md` — new section 1.6.
+- `docs/REAL_ACTIONS_GO_NO_GO.md` — new section 0bis "What step 18
+  changed". Real adapter remains No-Go.
+- `docs/ACTION_SCHEMA.md` — Step 18 update note.
+- `docs/SECURITY_CHECKLIST.md` — five new Step 18 rows.
+- `docs/SMOKE_TESTS.md` — tests #0h, #0i, and #93–#100.
+- `docs/MVP_CHECKLIST.md` — section 18.
+- README + PROJECT_CONTEXT updated to step 18.
+
+### Security (Step 18)
+
+- Four independent layers must reject real input — feature flags,
+  safety gates, adapter interface, adapter registry, action
+  pipeline. Each is hard-coded false / blocked. None can be flipped
+  by a user-facing path.
+- The mock adapter never imports Node modules and never calls any
+  OS API. Verified by `node --check` and a vm-based unit-style
+  harness.
+- `package.json` still declares no `robotjs` / `nut.js` / `iohook` /
+  `uiohook-napi` / `node-key-sender`. Verified by `npm run smoke`.
+- The audit allowlist remains a fixed set; the new adapter event
+  payloads carry only ids and small enums — no PII, no paths.
+
+---
+
 ## [Unreleased] — Steps 15-17
 
 Final stabilization of the simulation-only beta, design-only handoff
@@ -326,3 +426,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 15 | Final stabilization | Smoke helper, beta health, JSON corruption guard. |
 | 16 | Handoff design | Feature flags, go/no-go, audit log plan, privacy doc. |
 | 17 | Action pipeline | `action-pipeline.js`, `safety-gates.js`, `audit-events.js` (in-memory). Real actions blocked. |
+| 18 | Adapter interface | `desktop-adapter-interface.js`, `mock-desktop-adapter.js`, `adapter-registry.js`. Mock active. Real adapter blocked. |

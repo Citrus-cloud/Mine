@@ -52,6 +52,7 @@ const btnBack = document.getElementById('btn-back');
 
 const MAX_VISIBLE_LOGS = 5;
 let advancedLogFilter = "all";
+let lastAdapterSelfTestResult = null; // Step 18: in-memory last result
 
 
 // --- Views ---
@@ -669,6 +670,38 @@ function renderAdvancedSafety() {
     auditSummary.last ? (auditSummary.last.type + ' @ ' + auditSummary.last.timestamp) : t('none2'));
   c.appendChild(aeCard);
 
+  // --- Step 18: Desktop adapter status ---
+  const adCard = document.createElement('div'); adCard.className = 'adv-card';
+  const adTitle = document.createElement('div'); adTitle.className = 'adv-card-title'; adTitle.textContent = t('desktopAdapterStatus'); adCard.appendChild(adTitle);
+  let regStatus = null;
+  if (typeof getAdapterRegistryStatus === 'function') regStatus = getAdapterRegistryStatus();
+  if (regStatus) {
+    const activeName = regStatus.activeAdapter ? regStatus.activeAdapter.name : t('none2');
+    addCardRow(adCard, t('activeAdapter'),         activeName);
+    addCardRow(adCard, t('mockAdapterAvailable'),  regStatus.available.some(a => a.id === 'mock') ? t('yes') : t('no'));
+    addCardRow(adCard, t('realAdapterAvailable'),  regStatus.realAdapterAvailable ? t('yes') : t('no'));
+    addCardRow(adCard, t('realAdapterRegistered'), regStatus.realAdapterRegistered ? t('yes') : t('no'));
+    addCardRow(adCard, t('realActionsAllowed'),    regStatus.realActionsAllowed ? t('yes') : t('no'));
+    addCardRow(adCard, t('simulationOnly'),        regStatus.simulationOnly ? t('flagEnabled') : t('flagDisabled'));
+  } else {
+    addCardRow(adCard, '', t('noData'));
+  }
+  // Last self-test result line (in-memory only).
+  let stLine = t('selfTestNeverRun');
+  if (lastAdapterSelfTestResult) {
+    const r = lastAdapterSelfTestResult;
+    const total = r.tests ? r.tests.length : 0;
+    const passed = r.tests ? r.tests.filter(t => t.passed).length : 0;
+    stLine = (r.success ? t('selfTestPassed') : t('selfTestFailed')) + ' (' + passed + '/' + total + ')';
+  }
+  addCardRow(adCard, t('lastSelfTestResult'), stLine);
+  // Run self-test button.
+  const stBtn = document.createElement('button');
+  stBtn.className = 'adv-btn'; stBtn.textContent = t('runAdapterSelfTest');
+  stBtn.addEventListener('click', runAdapterSelfTestUi);
+  adCard.appendChild(stBtn);
+  c.appendChild(adCard);
+
   // Error history
   const eCard = document.createElement('div'); eCard.className = 'adv-card';
   const eTitle = document.createElement('div'); eTitle.className = 'adv-card-title'; eTitle.textContent = `${t('errorHistory')} (${getErrorCount()})`; eCard.appendChild(eTitle);
@@ -699,10 +732,37 @@ async function copyDiagnostics() {
     : 'Safety gates: unavailable';
   const auditSummary = (typeof getAuditSummary === 'function') ? getAuditSummary() : { count: 0, last: null };
   const auLine = `Audit events: count=${auditSummary.count}, lastType=${auditSummary.last ? auditSummary.last.type : 'none'}`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
+  // Step 18: adapter line.
+  const reg = (typeof getAdapterRegistryStatus === 'function') ? getAdapterRegistryStatus() : null;
+  const adLine = reg
+    ? `Adapter: active=${reg.activeId}, realRegistered=${reg.realAdapterRegistered}, realAvailable=${reg.realAdapterAvailable}, realActionsAllowed=${reg.realActionsAllowed}, simulationOnly=${reg.simulationOnly}`
+    : 'Adapter: unavailable';
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
+}
+
+// Step 18: run the active adapter's self-test from UI. Pure-JS, no IPC.
+function runAdapterSelfTestUi() {
+  addLogEntry(createLog('info', t('adapterSelfTestStarted')));
+  let result;
+  try {
+    result = (typeof runActiveAdapterSelfTest === 'function')
+      ? runActiveAdapterSelfTest()
+      : { success: false, errors: ['Adapter registry not loaded'] };
+  } catch (e) {
+    result = { success: false, errors: [e && e.message ? e.message : String(e)] };
+  }
+  lastAdapterSelfTestResult = result;
+  if (result.success) {
+    addLogEntry(createLog('success', t('adapterSelfTestCompleted')));
+  } else {
+    const detail = result.errors && result.errors.length ? (': ' + result.errors.join('; ')) : '';
+    addLogEntry(createLog('error', t('adapterSelfTestFailed') + detail));
+    reportError({ code: 'ADAPTER_SELFTEST', message: t('adapterSelfTestFailed') + detail }, 'adapter');
+  }
+  renderAdvancedSafety();
 }
 
 function renderAdvancedFuture() {

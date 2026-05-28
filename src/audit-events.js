@@ -24,7 +24,14 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   SafetyValidationFailed:  'safety.validation.failed',
   SettingsChanged:         'settings.changed',
   ImportCompleted:         'import.completed',
-  ExportCompleted:         'export.completed'
+  ExportCompleted:         'export.completed',
+  // Step 18: adapter lifecycle events
+  AdapterSelfTestStarted:   'adapter.selftest.started',
+  AdapterSelfTestCompleted: 'adapter.selftest.completed',
+  AdapterSelfTestFailed:    'adapter.selftest.failed',
+  AdapterSelectionBlocked:  'adapter.selection.blocked',
+  AdapterMockExecuted:      'adapter.mock.executed',
+  AdapterRealUnavailable:   'adapter.real.unavailable'
 });
 
 var KNOWN_TYPES = Object.freeze(

@@ -30,6 +30,11 @@
 - [x] **Step 17:** `src/safety-gates.js` exposes the gate predicates; `isRealActionAllowed()` is hard-coded to return `false`
 - [x] **Step 17:** `src/audit-events.js` provides an in-memory audit event model (no file persistence yet); allowlist only — no PII, no paths
 - [x] **Step 17:** `npm run smoke` verifies action-pipeline / safety-gates / feature-flags sources contain the simulation-only invariants and that `package.json` declares no real-input modules (including `uiohook-napi`)
+- [x] **Step 18:** Mock adapter only (`src/mock-desktop-adapter.js`) — the only `available: true` adapter in the registry, `realActions: false`, `simulationOnly: true`
+- [x] **Step 18:** Real adapter unavailable — `src/adapter-registry.js` lists `real-desktop` as `available: false`, `planned: true`, with `disabledReason` set
+- [x] **Step 18:** Adapter registry blocks real adapter — `setActiveAdapter("real-desktop")` returns `{ success: false, blocked: true, ... }` and emits `adapter.selection.blocked` + `adapter.real.unavailable`
+- [x] **Step 18:** `src/desktop-adapter-interface.js`'s `isRealAdapterAllowed()` is hard-coded to return `false`
+- [x] **Step 18:** No real-input dependencies — `package.json` declares no `robotjs` / `nut.js` / `iohook` / `uiohook-napi` / `node-key-sender` (verified by `npm run smoke`)
 
 ## Global Hotkeys
 
