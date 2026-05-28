@@ -5,9 +5,8 @@ const appState = {
   selectedScenarioId: "basic-clicker",
   selectedScenarioName: "Быстрый кликер",
   currentView: "main",
-  theme: "system",
   logs: [],
-  scenarioFormMode: null,   // "create" | "edit" | null
+  scenarioFormMode: null,
   editingScenarioId: null,
   execution: {
     isRunning: false,
@@ -17,6 +16,21 @@ const appState = {
     lastAction: null,
     startedAt: null,
     finishedAt: null
+  },
+  settings: {
+    language: "ru",
+    theme: "system",
+    hotkeys: {
+      start: "Ctrl+Alt+S",
+      stop: "Ctrl+Alt+X",
+      emergencyStop: "Escape"
+    },
+    safety: {
+      safeMode: true,
+      emergencyStopEnabled: true,
+      minIntervalMs: 50,
+      maxRepeatCount: 100000
+    }
   }
 };
 
@@ -24,7 +38,12 @@ function getState() {
   return {
     ...appState,
     logs: [...appState.logs],
-    execution: { ...appState.execution }
+    execution: { ...appState.execution },
+    settings: {
+      ...appState.settings,
+      hotkeys: { ...appState.settings.hotkeys },
+      safety: { ...appState.settings.safety }
+    }
   };
 }
 
@@ -39,10 +58,6 @@ function setSelectedScenario(scenario) {
 
 function setCurrentView(view) {
   appState.currentView = view;
-}
-
-function setTheme(theme) {
-  appState.theme = theme;
 }
 
 function addLogEntry(logEntry) {
@@ -93,4 +108,46 @@ function resetExecution() {
   appState.execution.lastAction = null;
   appState.execution.startedAt = null;
   appState.execution.finishedAt = null;
+}
+
+// --- Settings state ---
+
+function setSettings(settings) {
+  appState.settings = {
+    language: settings.language || "ru",
+    theme: settings.theme || "system",
+    hotkeys: { ...(settings.hotkeys || appState.settings.hotkeys) },
+    safety: { ...(settings.safety || appState.settings.safety) }
+  };
+}
+
+function updateSettings(partial) {
+  if (partial.language !== undefined) appState.settings.language = partial.language;
+  if (partial.theme !== undefined) appState.settings.theme = partial.theme;
+  if (partial.hotkeys) {
+    appState.settings.hotkeys = { ...appState.settings.hotkeys, ...partial.hotkeys };
+  }
+  if (partial.safety) {
+    appState.settings.safety = { ...appState.settings.safety, ...partial.safety };
+  }
+}
+
+function setLanguageSetting(language) {
+  appState.settings.language = language;
+}
+
+function setThemeSetting(theme) {
+  appState.settings.theme = theme;
+}
+
+function updateSafetySettings(partialSafety) {
+  appState.settings.safety = { ...appState.settings.safety, ...partialSafety };
+}
+
+function getSettings() {
+  return {
+    ...appState.settings,
+    hotkeys: { ...appState.settings.hotkeys },
+    safety: { ...appState.settings.safety }
+  };
 }

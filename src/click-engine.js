@@ -1,5 +1,5 @@
 // Безопасный движок выполнения сценариев ClickFlow
-// На этом этапе выполняет только имитацию кликов (без реальных системных действий)
+// Имитация кликов без реальных системных действий
 
 const clickEngineState = {
   isRunning: false,
@@ -48,7 +48,7 @@ function simulateClick(action) {
   };
 }
 
-function validateRunnableScenario(scenario) {
+function validateRunnableScenario(scenario, safetySettings) {
   if (!scenario) {
     return { ok: false, message: 'Сценарий не найден' };
   }
@@ -77,6 +77,16 @@ function validateRunnableScenario(scenario) {
     return { ok: false, message: 'Кнопка мыши: left, right или middle' };
   }
 
+  // Проверка безопасных лимитов
+  if (safetySettings && safetySettings.safeMode) {
+    if (s.intervalMs < safetySettings.minIntervalMs) {
+      return { ok: false, message: `Интервал ниже безопасного минимума (${safetySettings.minIntervalMs} мс)` };
+    }
+    if (s.repeatCount > safetySettings.maxRepeatCount) {
+      return { ok: false, message: `Повторы превышают безопасный максимум (${safetySettings.maxRepeatCount})` };
+    }
+  }
+
   return { ok: true };
 }
 
@@ -88,11 +98,12 @@ function stopEngine() {
   return true;
 }
 
-async function runScenario(scenario, callbacks) {
+async function runScenario(scenario, callbacks, options) {
   const cb = callbacks || {};
+  const safetySettings = (options && options.safety) || null;
 
-  // Валидация
-  const validation = validateRunnableScenario(scenario);
+  // Валидация с учётом безопасных лимитов
+  const validation = validateRunnableScenario(scenario, safetySettings);
   if (!validation.ok) {
     if (cb.onError) cb.onError(validation.message);
     return;
@@ -119,7 +130,6 @@ async function runScenario(scenario, callbacks) {
     const total = scenario.settings.repeatCount;
 
     for (let i = 1; i <= total; i++) {
-      // Проверка остановки
       if (clickEngineState.shouldStop) {
         if (cb.onStop) cb.onStop();
         return;
@@ -127,20 +137,17 @@ async function runScenario(scenario, callbacks) {
 
       clickEngineState.currentIteration = i;
 
-      // Выполнение действия
       const action = buildClickActionFromScenario(scenario);
       simulateClick(action);
 
       if (cb.onAction) cb.onAction(action, i, total);
       if (cb.onProgress) cb.onProgress(i, total);
 
-      // Пауза между действиями (кроме последнего)
       if (i < total) {
         await delay(scenario.settings.intervalMs);
       }
     }
 
-    // Успешное завершение
     if (cb.onComplete) cb.onComplete();
 
   } catch (err) {
