@@ -50,8 +50,67 @@ const translations = {
 
     // Расширенный режим
     advancedTitle: "Расширенный режим",
-    advancedDescription: "Здесь позже появятся сценарии, OCR, изображения, логи и безопасность.",
+    advancedDescription: "Панель управления и мониторинга ClickFlow",
     advancedPlaceholder: "Этот раздел находится в разработке.",
+
+    // Вкладки advanced
+    tabOverview: "Обзор",
+    tabScenarios: "Сценарии",
+    tabExecution: "Выполнение",
+    tabLogs: "Логи",
+    tabSettings: "Настройки",
+    tabSafety: "Безопасность",
+    tabFuture: "Будущее",
+
+    // Overview
+    activeScenario: "Активный сценарий",
+    executionStatus: "Статус выполнения",
+    settingsSummary: "Сводка настроек",
+    statistics: "Статистика",
+    recentEvents: "Последние события",
+    scenarioCount: "Сценариев",
+    logCount: "Записей в логе",
+    noData: "Нет данных",
+    type: "Тип",
+    coordinates: "Координаты",
+    interval: "Интервал",
+    repeats: "Повторы",
+
+    // Scenarios tab
+    openScenarioList: "Открыть список сценариев",
+
+    // Execution tab
+    executionMode: "Режим выполнения",
+    simulationMode: "Имитация",
+    startedAt: "Начало",
+    finishedAt: "Завершение",
+
+    // Logs tab
+    fullLogs: "Полный журнал",
+    clearLogs: "Очистить логи",
+    logFilterAll: "Все",
+    logFilterInfo: "Инфо",
+    logFilterSuccess: "Успех",
+    logFilterWarning: "Внимание",
+    logFilterError: "Ошибки",
+    noLogs: "Нет записей",
+
+    // Settings tab
+    openSettings: "Открыть настройки",
+
+    // Safety tab
+    safetyOverview: "Обзор безопасности",
+    simulationModeNotice: "ClickFlow сейчас работает в безопасном режиме имитации. Реальные системные клики пока не реализованы.",
+
+    // Future tab
+    futureFeatures: "Будущие возможности",
+    planned: "Запланировано",
+    ocrTextDetection: "OCR-распознавание текста",
+    imageRecognition: "Распознавание изображений",
+    visualActionBuilder: "Визуальный конструктор действий",
+    profiles: "Профили",
+    importExport: "Импорт/экспорт",
+    realDesktopClicks: "Реальные desktop-клики",
 
     // Настройки
     settingsTitle: "Настройки",
@@ -142,8 +201,67 @@ const translations = {
 
     // Advanced mode
     advancedTitle: "Advanced mode",
-    advancedDescription: "Scenarios, OCR, images, logs and security will appear here later.",
+    advancedDescription: "ClickFlow control and monitoring panel",
     advancedPlaceholder: "This section is under development.",
+
+    // Advanced tabs
+    tabOverview: "Overview",
+    tabScenarios: "Scenarios",
+    tabExecution: "Execution",
+    tabLogs: "Logs",
+    tabSettings: "Settings",
+    tabSafety: "Safety",
+    tabFuture: "Future",
+
+    // Overview
+    activeScenario: "Active scenario",
+    executionStatus: "Execution status",
+    settingsSummary: "Settings summary",
+    statistics: "Statistics",
+    recentEvents: "Recent events",
+    scenarioCount: "Scenarios",
+    logCount: "Log entries",
+    noData: "No data",
+    type: "Type",
+    coordinates: "Coordinates",
+    interval: "Interval",
+    repeats: "Repeats",
+
+    // Scenarios tab
+    openScenarioList: "Open scenario list",
+
+    // Execution tab
+    executionMode: "Execution mode",
+    simulationMode: "Simulation",
+    startedAt: "Started at",
+    finishedAt: "Finished at",
+
+    // Logs tab
+    fullLogs: "Full log",
+    clearLogs: "Clear logs",
+    logFilterAll: "All",
+    logFilterInfo: "Info",
+    logFilterSuccess: "Success",
+    logFilterWarning: "Warning",
+    logFilterError: "Error",
+    noLogs: "No entries",
+
+    // Settings tab
+    openSettings: "Open settings",
+
+    // Safety tab
+    safetyOverview: "Safety overview",
+    simulationModeNotice: "ClickFlow currently runs in safe simulation mode. Real system clicks are not implemented yet.",
+
+    // Future tab
+    futureFeatures: "Future features",
+    planned: "Planned",
+    ocrTextDetection: "OCR text detection",
+    imageRecognition: "Image recognition",
+    visualActionBuilder: "Visual action builder",
+    profiles: "Profiles",
+    importExport: "Import/export",
+    realDesktopClicks: "Real desktop clicks",
 
     // Settings
     settingsTitle: "Settings",

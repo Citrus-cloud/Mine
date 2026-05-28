@@ -212,15 +212,31 @@
       </div>
     </div>
 
-    <!-- Расширенный режим (заглушка) -->
-    <div id="view-advanced" class="view view-hidden">
+    <!-- Расширенный режим — Dashboard -->
+    <div id="view-advanced" class="view view-hidden view-wide">
       <header class="header">
         <h1 class="app-title" data-i18n="advancedTitle">Расширенный режим</h1>
-        <p class="app-description" data-i18n="advancedDescription">Здесь позже появятся сценарии, OCR, изображения, логи и безопасность.</p>
+        <p class="app-description" data-i18n="advancedDescription">Панель управления и мониторинга ClickFlow</p>
       </header>
 
-      <div class="advanced-placeholder">
-        <p class="placeholder-text" data-i18n="advancedPlaceholder">Этот раздел находится в разработке.</p>
+      <div class="advanced-tabs" id="advanced-tabs">
+        <button class="adv-tab active" data-advanced-tab="overview" data-i18n="tabOverview">Обзор</button>
+        <button class="adv-tab" data-advanced-tab="scenarios" data-i18n="tabScenarios">Сценарии</button>
+        <button class="adv-tab" data-advanced-tab="execution" data-i18n="tabExecution">Выполнение</button>
+        <button class="adv-tab" data-advanced-tab="logs" data-i18n="tabLogs">Логи</button>
+        <button class="adv-tab" data-advanced-tab="settings" data-i18n="tabSettings">Настройки</button>
+        <button class="adv-tab" data-advanced-tab="safety" data-i18n="tabSafety">Безопасность</button>
+        <button class="adv-tab" data-advanced-tab="future" data-i18n="tabFuture">Будущее</button>
+      </div>
+
+      <div class="advanced-content" id="advanced-content">
+        <section id="advanced-tab-overview" class="adv-section"></section>
+        <section id="advanced-tab-scenarios" class="adv-section adv-section-hidden"></section>
+        <section id="advanced-tab-execution" class="adv-section adv-section-hidden"></section>
+        <section id="advanced-tab-logs" class="adv-section adv-section-hidden"></section>
+        <section id="advanced-tab-settings" class="adv-section adv-section-hidden"></section>
+        <section id="advanced-tab-safety" class="adv-section adv-section-hidden"></section>
+        <section id="advanced-tab-future" class="adv-section adv-section-hidden"></section>
       </div>
 
       <button class="btn btn-back" id="btn-back" data-i18n="back">← Назад</button>
