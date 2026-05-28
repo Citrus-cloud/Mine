@@ -218,7 +218,33 @@ const translations = {
     // Future (Step 8)
     simulationOnly: "Только имитация",
     notImplemented: "Не реализовано",
-    confirmClearLogs: "Очистить все логи?"
+    confirmClearLogs: "Очистить все логи?",
+
+    // Steps 9-10: Readiness, accessibility, UX
+    desktopAdapterReadiness: "Готовность desktop adapter",
+    readinessChecklist: "Чеклист готовности",
+    safeModeEnabledCheck: "Безопасный режим включён",
+    emergencyStopEnabledCheck: "Аварийная остановка включена",
+    safetyLimitsConfigured: "Лимиты безопасности настроены",
+    userConfirmationRequired: "Требуется подтверждение пользователя",
+    simulationModeActive: "Режим имитации активен",
+    adapterNotInstalled: "Адаптер не установлен",
+    realClicksNotImplemented: "Реальные клики не реализованы",
+    auditLogsPlanned: "Аудит-логи запланированы",
+    osPermissionsPlanned: "Разрешения ОС запланированы",
+    ready: "Готово",
+    missing: "Отсутствует",
+    fieldRequired: "Обязательное поле",
+    minValueHint: "Мин: ",
+    maxValueHint: "Макс: ",
+    safetyLimitHint: "Ограничено настройками безопасности",
+    formHasErrors: "Форма содержит ошибки",
+    testPlan: "Тест-план",
+    mvpChecklist: "MVP чеклист",
+    documentation: "Документация",
+    statusUpdated: "Статус обновлён",
+    executionModeSimulation: "Режим: только имитация",
+    realModePlanned: "Реальный режим запланирован"
   },
   en: {
     // Main screen
@@ -437,7 +463,33 @@ const translations = {
     // Future (Step 8)
     simulationOnly: "Simulation only",
     notImplemented: "Not implemented",
-    confirmClearLogs: "Clear all logs?"
+    confirmClearLogs: "Clear all logs?",
+
+    // Steps 9-10: Readiness, accessibility, UX
+    desktopAdapterReadiness: "Desktop adapter readiness",
+    readinessChecklist: "Readiness checklist",
+    safeModeEnabledCheck: "Safe mode enabled",
+    emergencyStopEnabledCheck: "Emergency stop enabled",
+    safetyLimitsConfigured: "Safety limits configured",
+    userConfirmationRequired: "User confirmation required",
+    simulationModeActive: "Simulation mode active",
+    adapterNotInstalled: "Adapter not installed",
+    realClicksNotImplemented: "Real clicks not implemented",
+    auditLogsPlanned: "Audit logs planned",
+    osPermissionsPlanned: "OS permissions planned",
+    ready: "Ready",
+    missing: "Missing",
+    fieldRequired: "Required field",
+    minValueHint: "Min: ",
+    maxValueHint: "Max: ",
+    safetyLimitHint: "Limited by safety settings",
+    formHasErrors: "Form has errors",
+    testPlan: "Test plan",
+    mvpChecklist: "MVP checklist",
+    documentation: "Documentation",
+    statusUpdated: "Status updated",
+    executionModeSimulation: "Mode: simulation only",
+    realModePlanned: "Real mode planned"
   }
 };
 

@@ -205,7 +205,7 @@ async function saveSettingsFromForm() {
     safety: { safeMode: true, emergencyStopEnabled: true, minIntervalMs: Math.max(50, Number(settingsMinInterval.value) || 50), maxRepeatCount: Math.min(100000, Math.max(1, Number(settingsMaxRepeats.value) || 100000)) }
   };
   setSettings(newSettings); await saveSettings(newSettings);
-  setLanguage(newSettings.language); applyTranslations();
+  setLanguage(newSettings.language); applyTranslations(); applyTheme(newSettings.theme);
   addLogEntry(createLog('success', t('logSettingsSaved'))); showView('main'); renderState();
 }
 function goBackFromSettings() { addLogEntry(createLog('info', t('logMainOpened'))); showView('main'); renderState(); }
@@ -538,8 +538,53 @@ function renderAdvancedFuture() {
     card.appendChild(name); card.appendChild(badge); grid.appendChild(card);
   });
   c.appendChild(grid);
+
+  // Desktop Adapter Readiness Checklist
+  const rCard = document.createElement('div'); rCard.className = 'adv-card';
+  const rTitle = document.createElement('div'); rTitle.className = 'adv-card-title'; rTitle.textContent = t('desktopAdapterReadiness'); rCard.appendChild(rTitle);
+  const rList = document.createElement('div'); rList.className = 'readiness-list';
+  const state = getState();
+  const checks = [
+    { label: t('safeModeEnabledCheck'), status: state.settings.safety.safeMode ? 'ready' : 'missing' },
+    { label: t('emergencyStopEnabledCheck'), status: state.settings.safety.emergencyStopEnabled ? 'ready' : 'missing' },
+    { label: t('safetyLimitsConfigured'), status: 'ready' },
+    { label: t('userConfirmationRequired'), status: 'planned' },
+    { label: t('simulationModeActive'), status: 'ready' },
+    { label: t('adapterNotInstalled'), status: 'planned' },
+    { label: t('realClicksNotImplemented'), status: 'planned' },
+    { label: t('auditLogsPlanned'), status: 'planned' },
+    { label: t('osPermissionsPlanned'), status: 'planned' }
+  ];
+  checks.forEach(ch => {
+    const item = document.createElement('div'); item.className = 'readiness-item';
+    const lbl = document.createElement('span'); lbl.className = 'readiness-item-label'; lbl.textContent = ch.label;
+    const badge = document.createElement('span');
+    badge.className = 'readiness-badge readiness-' + ch.status;
+    badge.textContent = ch.status === 'ready' ? t('ready') : ch.status === 'planned' ? t('planned') : t('missing');
+    item.appendChild(lbl); item.appendChild(badge); rList.appendChild(item);
+  });
+  rCard.appendChild(rList);
+  const modeBadge = document.createElement('div'); modeBadge.className = 'execution-mode-badge'; modeBadge.textContent = t('executionModeSimulation');
+  rCard.appendChild(modeBadge);
+  c.appendChild(rCard);
 }
 
+
+// --- Theme ---
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else if (theme === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    // system: check prefers-color-scheme
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }
+}
 
 // --- Hotkeys ---
 function handleGlobalHotkeys(event) {
@@ -584,6 +629,7 @@ document.getElementById('advanced-tabs').addEventListener('click', (e) => {
 async function init() {
   const settings = await loadSettings();
   setSettings(settings); setLanguage(settings.language); applyTranslations();
+  applyTheme(settings.theme);
   await initScenarios();
   await initProfiles();
   const def = getDefaultScenario(); setSelectedScenario(def);
