@@ -7,18 +7,22 @@
 
 ## Текущий шаг
 
-**Шаг 19 завершён.** Проект находится в стадии
-`0.1.0-beta preparation` (simulation-only). Готовится `v0.1.0-beta`
-GitHub pre-release. На шаге 19 добавлен **real-action sandbox**:
-read-only dry-run preview слой
-(`src/real-action-sandbox.js`) с permission checklist и
-blocked reasons; pipeline теперь распознаёт `executionMode === "dry-run"`
-как no-op. **Реальные действия по-прежнему отключены:
+**Шаг 20 завершён.** Final beta QA and bugfix pass. Проект остаётся
+в стадии `0.1.0-beta preparation` (simulation-only). Готовится
+`v0.1.0-beta` GitHub pre-release. На шаге 20:
+структурный аудит (0 дубликатов id, 0 broken refs, 0 forbidden
+module imports, perfect i18n parity 342/342); smoke-check расширен
+(теперь 96 проверок); добавлены [`docs/BETA_QA_REPORT.md`](./docs/BETA_QA_REPORT.md)
+и [`docs/I18N_CHECKLIST.md`](./docs/I18N_CHECKLIST.md);
+обновлены `SMOKE_TESTS.md`, `MVP_CHECKLIST.md`, `README.md`,
+`CHANGELOG.md`. **Реальные действия по-прежнему отключены:
 `realDesktopActions = false`, `simulationOnly = true`,
 `isRealActionAllowed() → false`, `isRealAdapterAllowed() → false`,
 `setActiveAdapter("real-desktop")` блокируется,
 `executionMode === "real"` блокируется в `executeAction()`,
 `evaluateRealActionReadiness() → { allowed: false, ... }`.**
+Перед beta-релизом нужен ручной smoke-тест по
+`docs/SMOKE_TESTS.md` Step 20.
 
 ## Стек
 
@@ -50,7 +54,7 @@ blocked reasons; pipeline теперь распознаёт `executionMode === "
     Нет UI / IPC / env-vars, которые могут их перевернуть. Любое
     изменение проходит `docs/REAL_ACTIONS_GO_NO_GO.md`.
 
-## Статус реализации (на конец шага 19)
+## Статус реализации (на конец шага 20)
 
 ### Реализовано
 - Electron-приложение, главное минималистичное меню.
@@ -209,6 +213,52 @@ blocked reasons; pipeline теперь распознаёт `executionMode === "
     обновлённый pipeline block message и упоминание dry-run/sandbox
     в README/PROJECT_CONTEXT.
 
+- **Final beta QA and bugfix pass (шаг 20):**
+  - **Структурный аудит:** 0 дубликатов DOM id, 0 broken
+    `getElementById` ссылок (renderer ↔ index.html), 0
+    forbidden-module imports, все 9 `innerHTML` — только `= ''`.
+  - **i18n parity:** 342 ключа в `ru` = 342 ключа в `en`, 0
+    mismatches. Все 55 атрибутов `data-i18n` и все 220 вызовов
+    `t()` определены в обоих локалях.
+  - **smoke-check расширен** до 96 проверок: добавлены
+    `preload.js does not expose ipcRenderer directly`
+    (через regex без false-positive на import-строку),
+    `all <script src="…"> in index.html resolve on disk`,
+    `Step 20 doc exists: docs/BETA_QA_REPORT.md`,
+    `Step 20 doc exists: docs/I18N_CHECKLIST.md`,
+    `README or PROJECT_CONTEXT mentions step 20`.
+  - **Corrupted-JSON fallback** перепроверен на изолированном
+    temp-dir сценарии: missing → `{success:true, data:null,
+    corrupted:false}`; valid → `{success:true, data:<parsed>,
+    corrupted:false}`; corrupted → переименование в
+    `<file>.broken-<timestamp>` + `{success:true, data:null,
+    corrupted:true}`. Поведение в renderer (`init()` → warning log
+    + `CORRUPT_*_JSON` в error history) сохранено.
+  - **Адаптер self-test** прогнан через vm-харнес — 4/4 passing.
+  - **Dry-run preview** прогнан через vm-харнес — короткие
+    сценарии не помечаются `truncated`, длинные (50000) корректно
+    капаются до 10. `confirmDryRunPlan()` всегда возвращает
+    `realExecution: false`. `executionMode: "real"` блокируется
+    с буквальным сообщением `Real desktop actions are disabled.
+    Dry-run preview is available only.`. `executionMode: "dry-run"`
+    возвращает `{ ok: true, mode: "dry-run", simulated: false,
+    realExecution: false, blocked: false }`.
+  - **`docs/BETA_QA_REPORT.md`** — финальный QA-отчёт с разделами
+    Scope / What was checked / Smoke-check status / Manual test
+    status / Security status / Localization status / Known issues
+    / Blockers / Release recommendation = "Ready for beta after
+    manual testing".
+  - **`docs/I18N_CHECKLIST.md`** — manual review checklist для
+    RU/EN-локализации.
+  - **`docs/SMOKE_TESTS.md`** — добавлен раздел Step 20 с тестами
+    #115–#134 (npm install / smoke / start / основной флоу /
+    self-test / dry-run / corrupted JSON / DevTools real-mode
+    блокирован).
+  - **`docs/MVP_CHECKLIST.md`** — секция 20 со списком проверок и
+    их результатов.
+  - README, PROJECT_CONTEXT, CHANGELOG обновлены до шага 20.
+  - **Релиз-рекомендация:** ready for beta after manual testing.
+
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
   `node-key-sender`, нет нативных модулей ввода.
@@ -273,30 +323,30 @@ blocked reasons; pipeline теперь распознаёт `executionMode === "
 | 17 | Controlled action pipeline + safety gates + in-memory audit events. Real actions blocked. |
 | 18 | Desktop adapter interface + mock adapter + registry. Mock active. Real adapter blocked. |
 | 19 | Real-action sandbox: dry-run preview, permission checklist, blocked reasons. No real execution. |
+| 20 | Final beta QA and bugfix pass: structural audit, expanded smoke-check (96 checks), BETA_QA_REPORT, I18N_CHECKLIST. Manual smoke required before tag. |
 
-## Что логично делать на шаге 20
+## Что логично делать на шаге 21
 
-- **Подготовка `v0.1.0-beta` GitHub pre-release**: тэг,
-  `npm run dist` артефакты, README → release notes на GitHub.
+- **`v0.1.0-beta` GitHub pre-release**: тэг + прикреплённые
+  `npm run dist` артефакты + README → release notes на GitHub.
+  **Гейт:** ручной smoke-run по `docs/SMOKE_TESTS.md` Step 20.
 - **Реальные иконки** для tray и packaged-builds (PNG/ICO/ICNS),
   сгенерированные из `assets/icons/clickflow-icon.svg`.
 - **Code signing notes** (Windows + macOS) и первый подписанный build.
-- **Автоматический CI** — GitHub Actions, который запускает
-  `npm run smoke` на push и PR.
+- **GitHub Actions CI**: `npm run smoke` на каждый push и PR
+  (запустить через `actions/setup-node` + `npm install` + `npm run
+  smoke`). Никаких реальных Electron-харнесов в CI пока что.
 - **Accessibility-аудит**: `aria-label` на icon-only кнопках,
-  `aria-live="polite"` на статусе выполнения, полная клавиатурная
+  `aria-live="polite"` на статусе и preview, полная клавиатурная
   навигация по 7 вкладкам Advanced.
-- **Smoke-harness 2.0** — Playwright или альтернатива, поднимающая
-  Electron headless и проверяющая «no real input fires», RU/EN
-  переключение, dark theme, CSP не ослаблен, отказ
-  `executionMode: "real"` на уровне DevTools, отказ
-  `setActiveAdapter("real-desktop")`, корректное возвращение
-  `executionMode: "dry-run"`.
-- **Audit events UI 1.0** — отдельный sub-tab «Audit» с фильтрами,
-  экспортом в JSON / JSONL (всё ещё in-memory; file persistence
-  только в шаге, который реализует требования
-  `REAL_ACTIONS_GO_NO_GO.md` §4).
-- **Dry-run replay viewer** — UI, который показывает сохранённый
-  список dry-run планов (in-memory), позволяет повторно
-  открыть preview и сравнить два плана. Без реального
+- **Smoke-harness 2.0** (Playwright или альтернатива):
+  поднимает Electron headless и проверяет — no real input fires;
+  DevTools-попытки `executionMode:'real'`, `setActiveAdapter('real-desktop')`,
+  `evaluateRealActionReadiness()` блокируются;
+  `executionMode:'dry-run'` корректно отрабатывает; RU↔EN; dark
+  theme; CSP не ослаблен.
+- **Audit events UI 1.0**: отдельный sub-tab «Audit» в Advanced с
+  фильтрами и экспортом в JSON/JSONL (всё ещё in-memory).
+- **Dry-run replay viewer**: in-memory история dry-run планов с
+  возможностью повторно открыть и сравнить два плана. Без реального
   выполнения.

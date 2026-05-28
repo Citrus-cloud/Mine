@@ -1,6 +1,6 @@
 # ClickFlow — MVP Checklist
 
-Status as of `0.1.0-beta` (Step 14).
+Status as of `0.1.0-beta` (Step 20 — Final beta QA and bugfix pass).
 
 ## 1. Core functionality
 
@@ -279,6 +279,46 @@ Status as of `0.1.0-beta` (Step 14).
       `REAL_ACTIONS_GO_NO_GO`, `AUDIT_LOG_PLAN`,
       `ACTION_SCHEMA`, `SECURITY_CHECKLIST`, `SMOKE_TESTS`,
       README, PROJECT_CONTEXT, CHANGELOG.
+
+## 20. Final beta QA and bugfix pass (Step 20)
+
+- [x] `npm run smoke` passes (96 checks, exit 0).
+- [x] No prohibited dependencies — `package.json` declares no
+      `robotjs` / `nut.js` / `iohook` / `uiohook-napi` /
+      `node-key-sender`.
+- [x] Simulation-only confirmed at six independent layers
+      (feature flags, safety gates, adapter interface, adapter
+      registry, action pipeline, sandbox readiness).
+- [x] Real actions disabled — `realDesktopActions: false`,
+      `isRealActionAllowed: false`, `isRealAdapterAllowed: false`,
+      `setActiveAdapter("real-desktop")` blocked,
+      `executionMode: "real"` blocked,
+      `evaluateRealActionReadiness: { allowed: false }`.
+- [x] OCR not implemented; image recognition not implemented.
+- [x] Main UI flow works (verified statically; manual smoke
+      required per `docs/SMOKE_TESTS.md` Step 20 section).
+- [x] RU / EN works — 342 keys in each, 0 mismatches; all
+      `data-i18n` and `t()` references resolve in both locales.
+- [x] DOM ids: 0 dups; renderer references 0 missing ids.
+- [x] All `<script src="…">` in `src/index.html` resolve on disk.
+- [x] `preload.js` does not expose `ipcRenderer` directly.
+- [x] CSP unchanged (`default-src 'self'; script-src 'self';
+      style-src 'self';`).
+- [x] Corrupted-JSON fallback verified end-to-end: file renamed
+      to `<file>.broken-<timestamp>`, defaults loaded, localized
+      warning + `CORRUPT_*_JSON` error-history entry.
+- [x] Adapter self-test = 4 / 4 passing.
+- [x] Dry-run preview never sets `realExecution: true`; preview
+      capped at 10 with `truncated` flag for long scenarios.
+- [x] `docs/BETA_QA_REPORT.md` created.
+- [x] `docs/I18N_CHECKLIST.md` created.
+- [x] `docs/SMOKE_TESTS.md` Step 20 section added (#115–#134).
+- [x] `docs/MVP_CHECKLIST.md` Step 20 section (this section) added.
+- [x] README, PROJECT_CONTEXT, CHANGELOG updated to Step 20.
+- [x] Release notes (`RELEASE_NOTES.md`) and known limitations
+      (`docs/KNOWN_LIMITATIONS.md`) reviewed; no new entries
+      required for Step 20 (it is a QA pass with no functional
+      changes that would break the existing release notes).
 
 ## 17. Known limitations (single source of truth)
 

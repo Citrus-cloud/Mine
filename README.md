@@ -29,10 +29,12 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA).
 - Версия: **`0.1.0-beta`**.
 - Состояние: simulation-only MVP, готов к публичному beta-тестированию,
-  GitHub pre-release-ready.
+  GitHub pre-release-ready после ручного smoke-теста (см.
+  [`docs/BETA_QA_REPORT.md`](./docs/BETA_QA_REPORT.md) и
+  `docs/SMOKE_TESTS.md` Step 20).
 - Последние шаги развития:
   - Шаг 13 — визуальная полировка, дизайн-токены, тёмная тема,
     `assets/`.
@@ -63,6 +65,18 @@ safety review).
     permission checklist (11 пунктов) и blocked reasons (7 ID).
     `executionMode === "dry-run"` обрабатывается в pipeline без
     OS-вызовов. **Реальные клики по-прежнему не реализованы.**
+  - **Шаг 20 — Final beta QA and bugfix pass:**
+    структурный аудит проекта (0 dup ids, 0 missing refs, 0
+    forbidden module imports, perfect i18n parity 342/342);
+    расширенный smoke-check (теперь 96 проверок: добавлены
+    проверки `preload.js does not expose ipcRenderer directly`,
+    `all <script src="…"> in index.html resolve on disk`,
+    `Step 20 doc exists: …`, `README or PROJECT_CONTEXT mentions
+    step 20`); новые документы
+    [`docs/BETA_QA_REPORT.md`](./docs/BETA_QA_REPORT.md) и
+    [`docs/I18N_CHECKLIST.md`](./docs/I18N_CHECKLIST.md);
+    SMOKE_TESTS.md и MVP_CHECKLIST.md дополнены секциями для
+    шага 20. Перед beta-релизом нужен ручной smoke-тест.
 
 ---
 
@@ -296,6 +310,8 @@ npm run dist     # релизные артефакты в dist/
   что не отправляется в сеть.
 - [`docs/ADAPTER_INTERFACE.md`](./docs/ADAPTER_INTERFACE.md) — контракт desktop adapter, описание mock adapter и блокировки real adapter (Step 18).
 - [`docs/REAL_ACTION_SANDBOX.md`](./docs/REAL_ACTION_SANDBOX.md) — sandbox для будущего real adapter, dry-run preview, permission checklist, blocked reasons (Step 19).
+- [`docs/BETA_QA_REPORT.md`](./docs/BETA_QA_REPORT.md) — финальный QA-отчёт перед beta-релизом (Step 20).
+- [`docs/I18N_CHECKLIST.md`](./docs/I18N_CHECKLIST.md) — manual checklist для review RU/EN-локализации (Step 20).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
@@ -351,6 +367,7 @@ npm run dist     # релизные артефакты в dist/
 | 17 | Action pipeline | `action-pipeline.js`, `safety-gates.js`, `audit-events.js` (in-memory). Real actions blocked. |
 | 18 | Adapter interface | `desktop-adapter-interface.js`, `mock-desktop-adapter.js`, `adapter-registry.js`. Mock active. Real adapter blocked. |
 | 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |
+| 20 | Final beta QA | Structural audit (0 dup ids, perfect i18n parity 342/342), expanded smoke-check (96 checks), `BETA_QA_REPORT.md`, `I18N_CHECKLIST.md`. Manual testing required before tag. |
 
 ---
 

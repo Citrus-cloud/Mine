@@ -443,6 +443,58 @@ record(
   apTxt.indexOf('Dry-run preview is available only') !== -1
 );
 
+// 20. Step 20: preload.js does not expose `ipcRenderer` directly via contextBridge.
+var preloadTxt = readText('preload.js');
+// Find the contextBridge expose call and verify the exposed object never names `ipcRenderer`.
+// We accept any line of the contextBridge.exposeInMainWorld(...) body that contains
+// `ipcRenderer:` (a key) or `ipcRenderer,` (a shorthand), but NOT the import line.
+var exposesRaw = false;
+// Strip the import line to avoid false positives.
+var preloadAfterImport = preloadTxt.replace(/const\s*\{\s*[^}]*ipcRenderer[^}]*\}\s*=\s*require\(['"]electron['"]\);?/, '');
+if (/\bipcRenderer\s*:/.test(preloadAfterImport) || /\bipcRenderer\s*,/.test(preloadAfterImport)) {
+  exposesRaw = true;
+}
+record(
+  'preload.js does not expose ipcRenderer directly',
+  !exposesRaw
+);
+
+// 21. Step 20: every renderer-side script tag listed in index.html exists on disk.
+var htmlTxt2 = readText('src/index.html');
+var scriptRe = /<script\s+src=['"]([^'"]+)['"]\s*>/g;
+var missingScripts = [];
+var sm;
+while ((sm = scriptRe.exec(htmlTxt2)) !== null) {
+  var srcAttr = sm[1];
+  if (/^https?:/.test(srcAttr)) {
+    // CSP forbids remote, but let's surface it just in case.
+    missingScripts.push('REMOTE: ' + srcAttr);
+    continue;
+  }
+  var rel = path.posix.join('src', srcAttr);
+  if (!fileExists(rel)) missingScripts.push(rel);
+}
+record(
+  'all <script src=...> in index.html resolve on disk',
+  missingScripts.length === 0,
+  missingScripts.length ? missingScripts.join(', ') : ''
+);
+
+// 22. Step 20: docs explicitly required by the Step 20 prompt exist.
+[
+  'docs/BETA_QA_REPORT.md',
+  'docs/I18N_CHECKLIST.md'
+].forEach(function (rel) {
+  record('Step 20 doc exists: ' + rel, fileExists(rel));
+});
+
+// 23. Step 20: README/PROJECT_CONTEXT acknowledge step 20.
+record(
+  'README or PROJECT_CONTEXT mentions step 20',
+  /step\s*20|шаг\s*20|Step 20|Шаг 20/.test(readText('README.md')) ||
+  /step\s*20|шаг\s*20|Step 20|Шаг 20/.test(readText('PROJECT_CONTEXT.md'))
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

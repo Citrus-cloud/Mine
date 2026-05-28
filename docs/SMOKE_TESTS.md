@@ -1,7 +1,7 @@
 # ClickFlow — Smoke Tests
 
 Quick verification checklist before release or major changes.
-Status: aligned with `0.1.0-beta` (Step 14).
+Status: aligned with `0.1.0-beta` (Step 20 — Final beta QA and bugfix pass).
 
 ## Pre-requisites
 
@@ -187,3 +187,33 @@ This MUST pass before tagging any release.
 | 112  | Simulation still works                | Press Start                                                                                                  | Progress fills, status indicator pulses, no real cursor movement, no real input. Existing `byType['action.simulated']` and `byType['adapter.mock.executed']` continue to grow.    |
 | 113  | No active scenario for dry-run        | Manually clear `state.selectedScenarioId` (DevTools), then click "Create dry-run preview"                    | Log entry "No active scenario for dry-run".                                                                       |
 | 114  | No real-input modules (final)         | `npm run smoke`                                                                                              | `OK no real-input native modules required in source` and `OK package.json declares no real-input modules`.        |
+
+
+## Step 20 — Final beta QA checklist
+
+This is the **end-to-end** manual smoke-run that must be performed
+before any GitHub pre-release tag is published. Do all of it on at
+least one platform.
+
+| #    | Test                                  | Expected                                                                                                          |
+|------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| 115  | `npm install`                         | Completes without errors.                                                                                         |
+| 116  | `npm run smoke`                       | All checks `OK`. **Failed: 0**.                                                                                    |
+| 117  | `npm start`                           | App window opens.                                                                                                  |
+| 118  | Open main screen                      | Status / Scenario / Progress cards render. "Simulation mode" badge present. Version badge populated.              |
+| 119  | Create scenario                       | Scenarios → Create → fill form → Save. Scenario appears in list.                                                  |
+| 120  | Run simulation                        | Select scenario → Start. Progress fills. **No real cursor movement, no input arrives in any other application.** |
+| 121  | Stop simulation                       | Click Stop during run. State returns to Stopped.                                                                  |
+| 122  | Emergency Stop                        | Start, then press `Escape`. Run aborts. Repeat with `CmdOrCtrl+Alt+E` while another window is focused.            |
+| 123  | Switch language                       | Settings → English → Save. UI switches to English. Restart → preserved. Switch back to Russian.                    |
+| 124  | Open advanced dashboard               | Click Advanced mode. All 7 tabs cycle without console errors.                                                     |
+| 125  | Open diagnostics                      | Advanced → Safety. Diagnostics card visible. Beta health rows show `simulationOnly=true`. Action pipeline / Safety gates / Audit events / Adapter / Sandbox cards visible. |
+| 126  | Run adapter self-test                 | Click "Run adapter self-test". Log: `Adapter self-test started` then `Adapter self-test passed`. Card row shows `Passed (4/4)`. |
+| 127  | Create dry-run preview                | Click "Create dry-run preview". Inline preview card appears with scenario name, action count, estimated duration, capped action list, permission checklist (11 items), blocked reasons (7 items), Confirm / Cancel. |
+| 128  | Confirm dry-run                       | Click Confirm. Log: `Dry-run confirmed. No real actions executed.` followed by `Dry-run completed safely`. **No real actions performed.** |
+| 129  | Verify no real click happens          | While running any scenario for 60 s and after the dry-run confirm, watch the cursor and a focused text editor: cursor unchanged, editor receives no input. |
+| 130  | Import / export scenarios             | Advanced → Scenarios → Export All. Save JSON. Then Import → choose the same file → Confirm. Counts match. Try importing a non-JSON file → friendly error. |
+| 131  | Reset settings                        | Advanced → Settings → Reset settings → Confirm. Defaults restored. Language and theme reset accordingly.          |
+| 132  | Corrupted JSON fallback               | Quit. Manually corrupt `userData/scenarios.json` (write `{not json`). Relaunch. App boots; default scenario shown; warning log; broken file renamed to `<file>.broken-<timestamp>` next to the original location. Repeat for `settings.json` and `profiles.json`. |
+| 133  | Check real actions disabled           | DevTools console: `executeAction({type:'click',x:1,y:1,button:'left'},{executionMode:'real'})` returns `{ ok: false, mode: 'real', blocked: true, error: 'Real desktop actions are disabled. Dry-run preview is available only.' }`. `setActiveAdapter('real-desktop')` returns `{ success: false, blocked: true, ... }`. |
+| 134  | Diagnostics line                      | Copy diagnostics → paste. Output contains `Sandbox: dryRunAvailable=true, realActionsAllowed=false, realActionsImplemented=false`. |

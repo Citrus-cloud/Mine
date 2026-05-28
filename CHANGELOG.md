@@ -8,6 +8,95 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-20
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding (controlled action pipeline, safety gates, in-memory
+audit events), the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, and
+the Step 20 final beta QA and bugfix pass.
+**Still simulation-only.**
+
+### Added (Step 20 — Final beta QA and bugfix pass)
+
+- `docs/BETA_QA_REPORT.md` — final QA report with sections
+  Scope / What was checked / Smoke-check status / Manual test
+  status / Security status / Localization status / Known issues
+  / Blockers / Release recommendation. Recommendation:
+  **Ready for beta after manual testing.**
+- `docs/I18N_CHECKLIST.md` — manual RU / EN review checklist
+  covering language switch, main screen, scenarios, settings,
+  Advanced dashboard tabs, forms, errors, diagnostics, sandbox,
+  and "no mixed language" guard.
+- `docs/SMOKE_TESTS.md` — new "Step 20 — Final beta QA checklist"
+  section with end-to-end manual tests #115–#134 (npm install /
+  smoke / start / scenarios / simulation / emergency stop /
+  language / advanced dashboard / diagnostics / adapter
+  self-test / dry-run / corrupted JSON / DevTools real-mode
+  blocked / diagnostics line).
+- `docs/MVP_CHECKLIST.md` — new section 20 documenting all
+  Step 20 verification results.
+- `scripts/smoke-check.js` — five new structural checks
+  (now 96 total, exit 0):
+  - `preload.js does not expose ipcRenderer directly` (regex check
+    that ignores the import line and looks for `ipcRenderer:` or
+    `ipcRenderer,` in the contextBridge expose call).
+  - `all <script src="…"> in index.html resolve on disk` (parses
+    every `<script src="...">` and confirms the file exists under
+    `src/` and is not a remote URL).
+  - `Step 20 doc exists: docs/BETA_QA_REPORT.md`.
+  - `Step 20 doc exists: docs/I18N_CHECKLIST.md`.
+  - `README or PROJECT_CONTEXT mentions step 20`.
+
+### Changed (Step 20)
+
+- `docs/MVP_CHECKLIST.md` and `docs/SMOKE_TESTS.md` headers
+  updated to "Step 20 — Final beta QA and bugfix pass".
+- `README.md`, `PROJECT_CONTEXT.md` updated to Step 20.
+
+### Verified (Step 20 — no code changes required)
+
+- 0 duplicate DOM ids in `src/index.html`.
+- 0 missing references — every `getElementById(...)` in
+  `src/renderer.js` resolves.
+- 0 forbidden runtime modules — `package.json` and source files
+  declare no `robotjs` / `nut.js` / `iohook` / `uiohook-napi` /
+  `node-key-sender`.
+- All 9 `innerHTML` assignments in `src/renderer.js` are `= ''`
+  (clear-only).
+- 342 keys in `ru` = 342 keys in `en` in `src/i18n.js`.
+  All 55 `data-i18n` attributes in `src/index.html` resolve in
+  both locales. All 220 `t()` calls in source resolve in both
+  locales.
+- Adapter self-test passes 4 / 4 (vm-based unit-style harness).
+- Sandbox dry-run preview never sets `realExecution: true` and
+  caps preview at 10 with `truncated` flag for long scenarios.
+- Pipeline block message for `executionMode: "real"` is
+  `Real desktop actions are disabled. Dry-run preview is
+  available only.`
+- Pipeline `executionMode: "dry-run"` returns
+  `{ ok: true, mode: "dry-run", simulated: false,
+  realExecution: false, blocked: false }`.
+- Corrupted-JSON fallback verified in temp-dir harness:
+  missing → `{ success: true, data: null, corrupted: false }`;
+  valid → parsed; corrupt → renamed to
+  `<file>.broken-<timestamp>` and `{ success: true, data: null,
+  corrupted: true }`.
+
+### Security (Step 20)
+
+- All six independent layers (feature flags, safety gates,
+  adapter interface, adapter registry, action pipeline, sandbox
+  readiness) verified to refuse real input both at source level
+  (smoke check) and at runtime (vm harness).
+- `preload.js` does not expose `ipcRenderer`. The renderer never
+  receives a raw `ipcRenderer`. Verified by smoke check.
+- CSP unchanged. `contextIsolation: true`, `nodeIntegration: false`
+  unchanged.
+
+---
+
 ## [Unreleased] — Steps 15-19
 
 Final stabilization of the simulation-only beta, design-only handoff
@@ -519,3 +608,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 17 | Action pipeline | `action-pipeline.js`, `safety-gates.js`, `audit-events.js` (in-memory). Real actions blocked. |
 | 18 | Adapter interface | `desktop-adapter-interface.js`, `mock-desktop-adapter.js`, `adapter-registry.js`. Mock active. Real adapter blocked. |
 | 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |
+| 20 | Final beta QA | Structural audit (0 dup ids, perfect i18n parity 342/342), expanded smoke-check (96 checks), `BETA_QA_REPORT.md`, `I18N_CHECKLIST.md`. Manual testing required before tag. |
