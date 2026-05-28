@@ -63,13 +63,19 @@ function normalizeSettings(settings) {
 }
 
 async function loadSettings() {
+  let corrupted = false;
   try {
     const result = await window.clickflow.settings.load();
+    if (result && result.corrupted) corrupted = true;
     if (result.success && result.data) {
-      return normalizeSettings(result.data);
+      const out = normalizeSettings(result.data);
+      out.__corrupted = corrupted;
+      return out;
     }
   } catch (e) {}
-  return getDefaultSettings();
+  const defaults = getDefaultSettings();
+  defaults.__corrupted = corrupted;
+  return defaults;
 }
 
 async function saveSettings(settings) {

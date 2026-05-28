@@ -33,10 +33,12 @@ const DEFAULT_PROFILES = [
 
 let profiles = [];
 let activeProfileId = "default";
+let profilesCorrupted = false; // Step 15: track JSON corruption fallback
 
 async function initProfiles() {
   try {
     const result = await window.clickflow.profiles.load();
+    profilesCorrupted = !!(result && result.corrupted);
     if (result.success && result.data && Array.isArray(result.data.profiles)) {
       profiles = result.data.profiles;
       activeProfileId = result.data.activeProfileId || "default";
@@ -51,8 +53,11 @@ async function initProfiles() {
   } catch (e) {
     profiles = JSON.parse(JSON.stringify(DEFAULT_PROFILES));
     activeProfileId = "default";
+    profilesCorrupted = true;
   }
 }
+
+function getProfilesCorrupted() { return profilesCorrupted; }
 
 function getProfiles() { return [...profiles]; }
 

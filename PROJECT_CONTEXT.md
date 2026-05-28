@@ -7,8 +7,9 @@
 
 ## Текущий шаг
 
-**Шаг 14 завершён.** Проект находится в стадии
-`0.1.0-beta preparation`.
+**Шаг 16 завершён.** Проект находится в стадии
+`0.1.0-beta preparation` (simulation-only). Готовится `v0.1.0-beta`
+GitHub pre-release.
 
 ## Стек
 
@@ -35,8 +36,12 @@
    Advanced — 940px (1000x700-friendly).
 10. Любая работа над реальным вводом / OCR / image recognition
     проходит **отдельный safety review** до начала кодинга.
+11. **Feature flags safety-sensitive флаги (`realDesktopActions`,
+    `ocr`, `imageRecognition`) — frozen в `src/feature-flags.js`.**
+    Нет UI / IPC / env-vars, которые могут их перевернуть. Любое
+    изменение проходит `docs/REAL_ACTIONS_GO_NO_GO.md`.
 
-## Статус реализации (на конец шага 14)
+## Статус реализации (на конец шага 16)
 
 ### Реализовано
 - Electron-приложение, главное минималистичное меню.
@@ -63,6 +68,30 @@
   `.github/pull_request_template.md`,
   `docs/BETA_TESTING_GUIDE.md`, `docs/KNOWN_LIMITATIONS.md`,
   `docs/ROADMAP.md`.
+- **Final stabilization (шаг 15):**
+  - `scripts/smoke-check.js` + `npm run smoke` (без зависимостей,
+    без Electron).
+  - Beta-health card в Advanced → Safety
+    (simulationOnly, realClicksImplemented, ocrImplemented,
+    imageRecognitionImplemented, docsReady, packagingConfigured,
+    securityChecklistPresent, actionSchemaPresent).
+  - IPC `system:get-beta-health` (read-only, без приватных путей).
+  - Corruption-safe загрузка JSON в main: повреждённый файл
+    переименовывается в `<file>.broken-<ts>` и используются
+    дефолты, без падения. Renderer показывает warning-лог и
+    запись `CORRUPT_*_JSON` в error history.
+  - `docs/FINAL_BETA_REVIEW.md`.
+- **Handoff design (шаг 16):**
+  - `src/feature-flags.js` — `Object.freeze`-d safe defaults
+    (`realDesktopActions: false`, `ocr: false`,
+    `imageRecognition: false`, `simulationOnly: true`,
+    `globalHotkeys: true`, `profiles: true`, `importExport: true`).
+  - Feature flags card в Advanced → Safety.
+  - Next safety milestone card в Advanced → Future.
+  - Diagnostics включают строку Feature flags и Beta health.
+  - `docs/REAL_ACTIONS_GO_NO_GO.md`, `docs/FEATURE_FLAGS.md`,
+    `docs/AUDIT_LOG_PLAN.md`, `docs/PRIVACY.md`.
+  - 25 новых i18n-ключей RU + EN.
 
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
@@ -90,7 +119,12 @@
 - `assets/` — packaging resources, локальный SVG-икон.
 - `docs/` — TEST_PLAN, MVP_CHECKLIST, SECURITY_CHECKLIST,
   SMOKE_TESTS, PACKAGING, DESKTOP_ADAPTER_PLAN, ACTION_SCHEMA,
-  BETA_TESTING_GUIDE, KNOWN_LIMITATIONS, ROADMAP.
+  BETA_TESTING_GUIDE, KNOWN_LIMITATIONS, ROADMAP,
+  **FINAL_BETA_REVIEW** (15), **REAL_ACTIONS_GO_NO_GO** (16),
+  **FEATURE_FLAGS** (16), **AUDIT_LOG_PLAN** (16),
+  **PRIVACY** (16).
+- `scripts/` — `smoke-check.js` (без зависимостей, без Electron) +
+  `README.md` с правилами для будущих helper-скриптов.
 - `.github/` — issue + PR templates.
 - `CHANGELOG.md`, `RELEASE_NOTES.md`, `CONTRIBUTING.md`, `README.md`,
   `PROJECT_CONTEXT.md` — release-уровневые документы.
@@ -113,16 +147,21 @@
 | 12 | `electron-builder`, PACKAGING, SECURITY_CHECKLIST, SMOKE_TESTS, system info. |
 | 13 | Beta polish: дизайн-токены, dark theme, assets. |
 | 14 | Release prep: CHANGELOG / RELEASE_NOTES / CONTRIBUTING / templates / docs. |
+| 15 | Final stabilization: `npm run smoke`, Beta health, JSON corruption guard, `FINAL_BETA_REVIEW`. |
+| 16 | Handoff design: feature flags, go/no-go, audit log plan, privacy doc, next safety milestone UI. |
 
-## Что логично делать на шаге 15
+## Что логично делать на шаге 17
 
-- Accessibility-аудит: `aria-label` на icon-only кнопках,
-  `aria-live` на статусе, полная клавиатурная навигация по
-  Advanced dashboard.
-- Автоматический smoke-harness (Playwright / альтернатива):
-  app boots, no real input fires, dark theme стабильна, RU/EN
-  переключается, CSP не ослаблен.
-- Реальные иконки для tray и packaged-builds (PNG/ICO/ICNS).
-- Заметки по code signing (Windows + macOS) и первый подписанный
-  build.
-- Подготовка тэга `v0.1.0-beta` и первый GitHub pre-release.
+- **Подготовка `v0.1.0-beta` GitHub pre-release**: тэг, прикреплённые
+  артефакты `npm run dist`, README → release notes.
+- **Реальные иконки** для tray и packaged-builds (PNG/ICO/ICNS),
+  сгенерированные из `assets/icons/clickflow-icon.svg`.
+- **Code signing notes** (Windows + macOS) и первый подписанный build.
+- **Автоматический CI** — GitHub Actions, который запускает
+  `npm run smoke` на push и PR.
+- **Accessibility-аудит**: `aria-label` на icon-only кнопках,
+  `aria-live="polite"` на статусе выполнения, полная клавиатурная
+  навигация по 7 вкладкам Advanced.
+- **Smoke-harness 2.0** — Playwright или альтернатива, поднимающая
+  Electron headless и проверяющая «no real input fires», RU/EN
+  переключение, dark theme, CSP не ослаблен.

@@ -8,6 +8,98 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-16
+
+Final stabilization of the simulation-only beta and design-only handoff
+to the future real-input release line. **Still simulation-only.**
+
+### Added
+
+- **Final stabilization** (Step 15)
+  - `scripts/smoke-check.js` — dependency-free static smoke check
+    that verifies file presence, security flags, CSP, package.json
+    wiring, and the absence of forbidden real-input modules.
+  - `npm run smoke` script.
+  - `scripts/README.md` describing the rules for repo helper scripts.
+  - `docs/FINAL_BETA_REVIEW.md` — single-page go/no-go review for the
+    `v0.1.0-beta` GitHub pre-release.
+  - **Beta health** card in Advanced → Safety, showing
+    `simulationOnly`, `realClicksImplemented`, `ocrImplemented`,
+    `imageRecognitionImplemented`, `docsReady`, `packagingConfigured`,
+    `securityChecklistPresent`, `actionSchemaPresent`.
+  - New IPC handler `system:get-beta-health` (read-only, looks up
+    docs presence inside the app installation only — never user paths).
+  - **Corrupted-JSON guard** in main.js: `scenarios.json`,
+    `settings.json`, `profiles.json` loaders quarantine unparseable
+    files as `<file>.broken-<timestamp>` and fall back to defaults
+    without crashing. Renderer surfaces a localized warning log and
+    a `CORRUPT_*_JSON` entry in the error history.
+  - Smoke-tests #54-#77 covering Beta health, feature flags, next
+    safety milestone, corrupted-JSON behavior, reset / import
+    failures, and final no-real-clicks verification.
+
+- **Handoff to next branch** (Step 16)
+  - `src/feature-flags.js` — frozen safe defaults
+    (`realDesktopActions: false`, `ocr: false`, `imageRecognition: false`,
+    `simulationOnly: true`, `globalHotkeys: true`, `profiles: true`,
+    `importExport: true`). Helpers `getFeatureFlags()`,
+    `isFeatureEnabled()`, `getFeatureFlagsForDiagnostics()`. **No UI
+    can flip safety-sensitive flags.**
+  - **Feature flags** card in Advanced → Safety.
+  - **Next safety milestone** card in Advanced → Future
+    (final safety review, adapter availability check, global
+    emergency stop verified, audit logs planned, user confirmation
+    flow — all `Planned`; `Real mode disabled` is `Ready`).
+  - `Copy diagnostics` now includes a `Feature flags` line and a
+    `Beta health` line.
+  - `docs/REAL_ACTIONS_GO_NO_GO.md` — mandatory checklist before any
+    real-input shipping.
+  - `docs/FEATURE_FLAGS.md` — runtime flag layer documentation.
+  - `docs/AUDIT_LOG_PLAN.md` — design-only audit log plan.
+  - `docs/PRIVACY.md` — single-page privacy policy.
+  - 25 new i18n keys in RU and EN: `betaHealth`, `docsReady`,
+    `packagingConfigured`, `securityChecklistPresent`,
+    `actionSchemaPresent`, `realClicksImplemented`, `ocrImplemented`,
+    `imageRecognitionImplemented`, `featureFlags`,
+    `nextSafetyMilestone`, `finalSafetyReview`,
+    `adapterAvailabilityCheck`, `globalEmergencyStopVerified`,
+    `userConfirmationFlow`, `realModeDisabled`,
+    `corruptedDataFallback`, `resetCompleted`, `smokeCheck`,
+    `flagDisabled`, `flagEnabled`, plus the supporting labels.
+
+### Changed
+
+- `package.json` — added `scripts.smoke = node scripts/smoke-check.js`.
+  **Version stays `0.1.0`.**
+- `src/index.html` — loads `feature-flags.js` before `renderer.js`.
+- `main.js` — `scenarios:load`, `settings:load`, `profiles:load`
+  now route through a single `safeLoadJsonFile` helper.
+- `src/scenario-manager.js`, `src/profile-manager.js`,
+  `src/settings-manager.js` — track corruption fallback and expose
+  it to the renderer init.
+- `docs/MVP_CHECKLIST.md` and `docs/SMOKE_TESTS.md` extended.
+
+### Security
+
+- New IPC `system:get-beta-health` is read-only, reads only from
+  `app.getAppPath()`, and never returns absolute filesystem paths
+  to the renderer.
+- Feature flags object is `Object.freeze`-d. There is no mutation
+  path, no IPC mutation, no setting persistence for the
+  safety-sensitive flags.
+- Corrupted JSON files are **renamed**, not deleted, so a user can
+  forensically inspect what went wrong without losing data.
+- CSP unchanged. `contextIsolation: true`, `nodeIntegration: false`
+  unchanged.
+
+### Not included yet
+
+Same as the `0.1.0-beta` baseline: no real clicks, no OCR, no image
+recognition, no mobile, no cloud sync, no auto-update, no code
+signing.
+
+---
+
 ## [0.1.0-beta] — 2026-05-28
 
 First public beta of ClickFlow. Safe MVP with simulation execution,
@@ -130,3 +222,5 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 12 | Packaging | `electron-builder`, packaging & security docs. |
 | 13 | Beta polish | UI / dark theme / assets / CSS structure. |
 | 14 | Release prep | This release scaffolding. |
+| 15 | Final stabilization | Smoke helper, beta health, JSON corruption guard. |
+| 16 | Handoff design | Feature flags, go/no-go, audit log plan, privacy doc. |

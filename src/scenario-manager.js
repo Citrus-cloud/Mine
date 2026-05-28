@@ -10,9 +10,11 @@ const DEFAULT_SCENARIO = {
 };
 
 let scenarios = [{ ...DEFAULT_SCENARIO }];
+let scenariosCorrupted = false; // Step 15: track JSON corruption fallback
 
 async function initScenarios() {
   const result = await window.clickflow.scenarios.load();
+  scenariosCorrupted = !!(result && result.corrupted);
   if (result.success && result.data && Array.isArray(result.data)) {
     scenarios = result.data;
     if (!scenarios.some(s => s.id === DEFAULT_SCENARIO.id)) {
@@ -23,6 +25,7 @@ async function initScenarios() {
   }
 }
 
+function getScenariosCorrupted() { return scenariosCorrupted; }
 function getScenarios() { return [...scenarios]; }
 function getScenarioById(id) { return scenarios.find(s => s.id === id) || null; }
 function getDefaultScenario() { return scenarios.find(s => s.id === DEFAULT_SCENARIO.id) || DEFAULT_SCENARIO; }

@@ -163,19 +163,113 @@ ipcMain.handle('system:get-info', async () => ({
   trayAvailable: tray !== null
 }));
 
+// --- IPC: Beta health (Step 15) ---
+// Returns runtime health flags about ClickFlow beta state.
+// All paths checked here are *inside* the app installation (app.getAppPath()),
+// not the user's home directory, so no private paths leak.
+function fileExistsInApp(relPath) {
+  try {
+    const p = path.join(app.getAppPath(), relPath);
+    return fs.existsSync(p);
+  } catch (err) {
+    return false;
+  }
+}
+
+ipcMain.handle('system:get-beta-health', async () => {
+  // Hard-coded simulation guarantees — these reflect what the codebase ships.
+  // They are NOT user-controllable feature flags.
+  const simulationOnly = true;
+  const realClicksImplemented = false;
+  const ocrImplemented = false;
+  const imageRecognitionImplemented = false;
+
+  // Doc / config presence checks (paths relative to app dir, no user paths).
+  const securityChecklistPresent = fileExistsInApp(path.join('docs', 'SECURITY_CHECKLIST.md'));
+  const actionSchemaPresent      = fileExistsInApp(path.join('docs', 'ACTION_SCHEMA.md'));
+  const knownLimitationsPresent  = fileExistsInApp(path.join('docs', 'KNOWN_LIMITATIONS.md'));
+  const privacyPresent           = fileExistsInApp(path.join('docs', 'PRIVACY.md'));
+  const goNoGoPresent            = fileExistsInApp(path.join('docs', 'REAL_ACTIONS_GO_NO_GO.md'));
+  const featureFlagsDocPresent   = fileExistsInApp(path.join('docs', 'FEATURE_FLAGS.md'));
+  const auditLogPlanPresent      = fileExistsInApp(path.join('docs', 'AUDIT_LOG_PLAN.md'));
+  const finalReviewPresent       = fileExistsInApp(path.join('docs', 'FINAL_BETA_REVIEW.md'));
+
+  const docsReady = securityChecklistPresent && actionSchemaPresent &&
+    knownLimitationsPresent && privacyPresent && goNoGoPresent &&
+    featureFlagsDocPresent && auditLogPlanPresent && finalReviewPresent;
+
+  // Packaging is considered configured if package.json declares a `build` block.
+  let packagingConfigured = false;
+  try {
+    const pkgPath = path.join(app.getAppPath(), 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      packagingConfigured = !!(pkg && pkg.build && typeof pkg.build === 'object');
+    }
+  } catch (err) {
+    packagingConfigured = false;
+  }
+
+  return {
+    simulationOnly,
+    realClicksImplemented,
+    ocrImplemented,
+    imageRecognitionImplemented,
+    docsReady,
+    packagingConfigured,
+    securityChecklistPresent,
+    actionSchemaPresent,
+    knownLimitationsPresent,
+    privacyPresent,
+    goNoGoPresent,
+    featureFlagsDocPresent,
+    auditLogPlanPresent,
+    finalReviewPresent
+  };
+});
+
 // --- IPC: Execution status from renderer ---
 ipcMain.handle('app-state:set-execution-running-status', async (event, running) => {
   isExecutionRunning = !!running;
   return { success: true };
 });
 
+// --- Helper: safe JSON load with corruption handling (Step 15) ---
+// If the file exists but is unparseable, rename it to <file>.broken-<timestamp>
+// so it is preserved (not overwritten on next save) and return data: null.
+// Caller then falls back to defaults. The renderer can also see `corrupted`.
+function safeLoadJsonFile(filePath, label) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { success: true, data: null, corrupted: false };
+    }
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    try {
+      const parsed = JSON.parse(raw);
+      return { success: true, data: parsed, corrupted: false };
+    } catch (parseErr) {
+      // Quarantine the broken file so it isn't silently overwritten.
+      let brokenPath = '';
+      try {
+        brokenPath = filePath + '.broken-' + Date.now();
+        fs.renameSync(filePath, brokenPath);
+      } catch (renameErr) {
+        // If rename fails (e.g. permissions) — still don't crash. Fall back.
+        brokenPath = '';
+      }
+      // We use console.warn here so we never crash. No PII is logged
+      // (only the label and basename, never the full path).
+      try { console.warn('[ClickFlow] corrupted ' + label + ' JSON, falling back to defaults'); } catch (e) {}
+      return { success: true, data: null, corrupted: true, brokenFileName: brokenPath ? path.basename(brokenPath) : '' };
+    }
+  } catch (err) {
+    return { success: false, error: 'Failed to load ' + label, corrupted: false };
+  }
+}
+
 // --- IPC: Сценарии ---
 ipcMain.handle('scenarios:load', async () => {
-  try {
-    const filePath = getScenariosPath();
-    if (!fs.existsSync(filePath)) return { success: true, data: null };
-    return { success: true, data: JSON.parse(fs.readFileSync(filePath, 'utf-8')) };
-  } catch (err) { return { success: false, error: 'Failed to load scenarios' }; }
+  return safeLoadJsonFile(getScenariosPath(), 'scenarios');
 });
 
 ipcMain.handle('scenarios:save', async (event, scenarios) => {
@@ -218,10 +312,7 @@ ipcMain.handle('scenarios:import-file', async () => {
 
 // --- IPC: Настройки ---
 ipcMain.handle('settings:load', async () => {
-  try {
-    const fp = getSettingsPath(); if (!fs.existsSync(fp)) return { success: true, data: null };
-    return { success: true, data: JSON.parse(fs.readFileSync(fp, 'utf-8')) };
-  } catch (err) { return { success: false, error: 'Failed to load settings' }; }
+  return safeLoadJsonFile(getSettingsPath(), 'settings');
 });
 
 ipcMain.handle('settings:save', async (event, settings) => {
@@ -259,10 +350,7 @@ ipcMain.handle('settings:import-file', async () => {
 
 // --- IPC: Профили ---
 ipcMain.handle('profiles:load', async () => {
-  try {
-    const fp = getProfilesPath(); if (!fs.existsSync(fp)) return { success: true, data: null };
-    return { success: true, data: JSON.parse(fs.readFileSync(fp, 'utf-8')) };
-  } catch (err) { return { success: false, error: 'Failed to load profiles' }; }
+  return safeLoadJsonFile(getProfilesPath(), 'profiles');
 });
 
 ipcMain.handle('profiles:save', async (event, data) => {
