@@ -7,9 +7,13 @@
 
 ## Текущий шаг
 
-**Шаг 16 завершён.** Проект находится в стадии
+**Шаг 17 завершён.** Проект находится в стадии
 `0.1.0-beta preparation` (simulation-only). Готовится `v0.1.0-beta`
-GitHub pre-release.
+GitHub pre-release. На шаге 17 добавлена архитектура controlled
+action pipeline + safety gates + in-memory audit events.
+**Реальные действия по-прежнему отключены: `realDesktopActions = false`,
+`simulationOnly = true`, `isRealActionAllowed()` всегда `false`,
+`executionMode === "real"` блокируется в `executeAction()`.**
 
 ## Стек
 
@@ -41,7 +45,7 @@ GitHub pre-release.
     Нет UI / IPC / env-vars, которые могут их перевернуть. Любое
     изменение проходит `docs/REAL_ACTIONS_GO_NO_GO.md`.
 
-## Статус реализации (на конец шага 16)
+## Статус реализации (на конец шага 17)
 
 ### Реализовано
 - Electron-приложение, главное минималистичное меню.
@@ -92,6 +96,38 @@ GitHub pre-release.
   - `docs/REAL_ACTIONS_GO_NO_GO.md`, `docs/FEATURE_FLAGS.md`,
     `docs/AUDIT_LOG_PLAN.md`, `docs/PRIVACY.md`.
   - 25 новых i18n-ключей RU + EN.
+- **Controlled action pipeline (шаг 17):**
+  - `src/action-pipeline.js` — централизованный `executeAction()`,
+    `validateAction()`, `evaluateActionSafety()`,
+    `createActionContext()`, `executeSimulatedAction()`,
+    `blockRealAction()`, `canExecuteRealAction()` (always false),
+    `getActionPipelineStatus()`. **Любая попытка
+    `executionMode === "real"` блокируется** с сообщением
+    "Real desktop actions are disabled in this build" и audit-событием
+    `action.real.blocked`.
+  - `src/safety-gates.js` — `getSafetyGateStatus`,
+    `validateScenarioSafety`, `validateActionSafety`,
+    `getRealActionRequirements` (9 пунктов),
+    `getMissingRealActionRequirements`, `isSimulationAllowed`,
+    `isRealActionAllowed` (always false на этом шаге).
+  - `src/audit-events.js` — in-memory модель audit-событий с фиксированным
+    allowlist'ом типов (`scenario.start.requested`, `scenario.start.approved`,
+    `scenario.stop.requested`, `scenario.completed`, `emergency.stop`,
+    `action.simulated`, `action.real.blocked`,
+    `safety.validation.failed`, `settings.changed`,
+    `import.completed`, `export.completed`). **File persistence НЕ
+    реализована** — план в `AUDIT_LOG_PLAN.md`.
+  - `click-engine.js` теперь вызывает `executeAction()` вместо прямого
+    `simulateClick()`. Прежнее поведение сценариев сохранено;
+    `simulateClick()` оставлен как обёртка для обратной совместимости.
+  - Карточки Action pipeline / Safety gates / Real actions readiness /
+    Audit events в Advanced → Safety. Локализованный warning
+    "Real desktop actions are disabled".
+  - Расширен `Copy diagnostics`: добавлены строки `Action pipeline`,
+    `Safety gates`, `Audit events`.
+  - 22 новых i18n-ключа RU + EN.
+  - `npm run smoke` проверяет существование новых файлов и
+    инвариантов в исходниках.
 
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
@@ -116,6 +152,8 @@ GitHub pre-release.
 - `main.js` — Electron main, IPC, menu, tray, hotkeys, lifecycle.
 - `preload.js` — contextBridge `window.clickflow.*`.
 - `src/` — renderer modules + `index.html` + `styles.css` + `i18n.js`.
+  Включает `feature-flags.js`, `action-pipeline.js`, `safety-gates.js`,
+  `audit-events.js` (Step 16-17).
 - `assets/` — packaging resources, локальный SVG-икон.
 - `docs/` — TEST_PLAN, MVP_CHECKLIST, SECURITY_CHECKLIST,
   SMOKE_TESTS, PACKAGING, DESKTOP_ADAPTER_PLAN, ACTION_SCHEMA,
@@ -149,11 +187,12 @@ GitHub pre-release.
 | 14 | Release prep: CHANGELOG / RELEASE_NOTES / CONTRIBUTING / templates / docs. |
 | 15 | Final stabilization: `npm run smoke`, Beta health, JSON corruption guard, `FINAL_BETA_REVIEW`. |
 | 16 | Handoff design: feature flags, go/no-go, audit log plan, privacy doc, next safety milestone UI. |
+| 17 | Controlled action pipeline + safety gates + in-memory audit events. Real actions blocked. |
 
-## Что логично делать на шаге 17
+## Что логично делать на шаге 18
 
-- **Подготовка `v0.1.0-beta` GitHub pre-release**: тэг, прикреплённые
-  артефакты `npm run dist`, README → release notes.
+- **Подготовка `v0.1.0-beta` GitHub pre-release**: тэг,
+  `npm run dist` артефакты, README → release notes.
 - **Реальные иконки** для tray и packaged-builds (PNG/ICO/ICNS),
   сгенерированные из `assets/icons/clickflow-icon.svg`.
 - **Code signing notes** (Windows + macOS) и первый подписанный build.
@@ -164,4 +203,9 @@ GitHub pre-release.
   навигация по 7 вкладкам Advanced.
 - **Smoke-harness 2.0** — Playwright или альтернатива, поднимающая
   Electron headless и проверяющая «no real input fires», RU/EN
-  переключение, dark theme, CSP не ослаблен.
+  переключение, dark theme, CSP не ослаблен, отказ
+  `executionMode: "real"` на уровне DevTools.
+- **Audit events UI 1.0** — отдельный sub-tab «Audit» с фильтрами,
+  экспортом в JSON / JSONL (всё ещё in-memory; file persistence
+  только в шаге, который реализует требования
+  `REAL_ACTIONS_GO_NO_GO.md` §4).

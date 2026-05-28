@@ -25,6 +25,11 @@
 - [x] Emergency stop available (Escape + CmdOrCtrl+Alt+E)
 - [x] Safety limits enforced (minInterval, maxRepeat)
 - [x] Quit confirmation when execution is running
+- [x] **Step 17:** Real desktop actions disabled (`feature-flags.js → realDesktopActions: false`)
+- [x] **Step 17:** `src/action-pipeline.js` blocks any `executionMode === "real"` request with the explicit error `Real desktop actions are disabled in this build` and emits an `action.real.blocked` audit event
+- [x] **Step 17:** `src/safety-gates.js` exposes the gate predicates; `isRealActionAllowed()` is hard-coded to return `false`
+- [x] **Step 17:** `src/audit-events.js` provides an in-memory audit event model (no file persistence yet); allowlist only — no PII, no paths
+- [x] **Step 17:** `npm run smoke` verifies action-pipeline / safety-gates / feature-flags sources contain the simulation-only invariants and that `package.json` declares no real-input modules (including `uiohook-napi`)
 
 ## Global Hotkeys
 

@@ -82,7 +82,12 @@ function safeJson(rel) {
   'src/click-engine.js',
   'src/error-manager.js',
   'src/logger.js',
-  'src/app-state.js'
+  'src/app-state.js',
+  // Step 17 modules
+  'src/action-pipeline.js',
+  'src/safety-gates.js',
+  'src/audit-events.js',
+  'src/feature-flags.js'
 ].forEach(function (rel) {
   record('file exists: ' + rel, fileExists(rel));
 });
@@ -98,7 +103,13 @@ function safeJson(rel) {
   'docs/ACTION_SCHEMA.md',
   'docs/KNOWN_LIMITATIONS.md',
   'docs/ROADMAP.md',
-  'docs/BETA_TESTING_GUIDE.md'
+  'docs/BETA_TESTING_GUIDE.md',
+  // Step 17 docs / earlier safety docs explicitly required again
+  'docs/REAL_ACTIONS_GO_NO_GO.md',
+  'docs/AUDIT_LOG_PLAN.md',
+  'docs/FEATURE_FLAGS.md',
+  'docs/PRIVACY.md',
+  'docs/FINAL_BETA_REVIEW.md'
 ].forEach(function (rel) {
   record('doc exists: ' + rel, fileExists(rel));
 });
@@ -133,8 +144,19 @@ record(
   readme.indexOf('real clicks not implemented') !== -1
 );
 
+// 4b. Step 17: README or PROJECT_CONTEXT mentions "simulation-only" / "simulation only"
+var projCtxRaw = readText('PROJECT_CONTEXT.md');
+var projCtxLow = projCtxRaw.toLowerCase();
+record(
+  'README or PROJECT_CONTEXT mentions "simulation-only" or "simulation only"',
+  readme.indexOf('simulation-only') !== -1 ||
+  readme.indexOf('simulation only') !== -1 ||
+  projCtxLow.indexOf('simulation-only') !== -1 ||
+  projCtxLow.indexOf('simulation only') !== -1
+);
+
 // 5. PROJECT_CONTEXT mentions security flags
-var projCtx = readText('PROJECT_CONTEXT.md');
+var projCtx = projCtxRaw;
 record(
   'PROJECT_CONTEXT mentions nodeIntegration false',
   /nodeintegration[^a-z]*?:?[^a-z]*?false/i.test(projCtx) ||
@@ -145,6 +167,16 @@ record(
   'PROJECT_CONTEXT mentions contextIsolation true',
   /contextisolation[^a-z]*?:?[^a-z]*?true/i.test(projCtx) ||
   projCtx.indexOf('contextIsolation: true') !== -1
+);
+
+// Step 17: PROJECT_CONTEXT explicitly states real actions disabled
+record(
+  'PROJECT_CONTEXT mentions realDesktopActions=false or real actions disabled',
+  projCtx.indexOf('realDesktopActions=false') !== -1 ||
+  projCtx.indexOf('realDesktopActions: false') !== -1 ||
+  projCtx.indexOf('realDesktopActions всё ещё false') !== -1 ||
+  projCtxLow.indexOf('real actions disabled') !== -1 ||
+  projCtxLow.indexOf('реальные действия отключены') !== -1
 );
 
 // 6. main.js really sets the security flags
@@ -171,7 +203,7 @@ record(
 );
 
 // 8. Forbidden modules: codebase must not import real-input modules
-var forbidden = ['robotjs', 'nut-js', 'nutjs', 'iohook', 'node-key-sender'];
+var forbidden = ['robotjs', 'nut-js', 'nutjs', 'iohook', 'uiohook-napi', 'node-key-sender'];
 var sourceFiles = [
   'main.js',
   'preload.js',
@@ -183,7 +215,11 @@ var sourceFiles = [
   'src/feature-flags.js',
   'src/error-manager.js',
   'src/logger.js',
-  'src/app-state.js'
+  'src/app-state.js',
+  // Step 17 modules
+  'src/action-pipeline.js',
+  'src/safety-gates.js',
+  'src/audit-events.js'
 ];
 var foundForbidden = [];
 sourceFiles.forEach(function (rel) {
@@ -210,7 +246,8 @@ if (pkg) {
     pkg.devDependencies || {},
     pkg.optionalDependencies || {}
   );
-  var pkgForbidden = forbidden.filter(function (m) {
+  // Step 17: explicit list — robotjs / nut.js / iohook / uiohook-napi must not be declared.
+  var pkgForbidden = ['robotjs', 'nut-js', 'nutjs', 'iohook', 'uiohook-napi', 'node-key-sender'].filter(function (m) {
     return Object.prototype.hasOwnProperty.call(allDeps, m);
   });
   record(
@@ -219,6 +256,39 @@ if (pkg) {
     pkgForbidden.length ? pkgForbidden.join(', ') : ''
   );
 }
+
+// 10. Step 17: action-pipeline must declare simulationOnly: true and never call real-input modules.
+var apTxt = readText('src/action-pipeline.js');
+record(
+  'action-pipeline declares simulationOnly: true',
+  /simulationOnly\s*:\s*true/.test(apTxt)
+);
+record(
+  'action-pipeline declares realActionsEnabled: false',
+  /realActionsEnabled\s*:\s*false/.test(apTxt)
+);
+record(
+  'action-pipeline declares realActionsImplemented: false',
+  /realActionsImplemented\s*:\s*false/.test(apTxt)
+);
+record(
+  'action-pipeline blocks real actions with explicit error',
+  apTxt.indexOf('Real desktop actions are disabled in this build') !== -1
+);
+
+// 11. safety-gates: isRealActionAllowed must return false.
+var sgTxt = readText('src/safety-gates.js');
+record(
+  'safety-gates.isRealActionAllowed returns false',
+  /function\s+isRealActionAllowed[\s\S]*?return\s+false/.test(sgTxt)
+);
+
+// 12. feature-flags: realDesktopActions must be false in source.
+var ffTxt = readText('src/feature-flags.js');
+record(
+  'feature-flags.realDesktopActions = false in source',
+  /realDesktopActions\s*:\s*false/.test(ffTxt)
+);
 
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');

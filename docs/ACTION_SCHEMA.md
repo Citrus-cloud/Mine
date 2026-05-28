@@ -1,5 +1,16 @@
 # ClickFlow — Action Schema
 
+> **Step 17 update.** Action validation is now centralized in
+> `src/action-pipeline.js` (`validateAction()` is the single source
+> of truth for the schema, `evaluateActionSafety()` adds safety-gate
+> checks, and `executeAction()` is the only entry point used by the
+> click engine).
+>
+> **Currently supported action: simulated click only.** Every other
+> action type listed in this document is *planned* and will not run.
+> Any caller that requests `executionMode === "real"` is rejected by
+> `blockRealAction()` with an `action.real.blocked` audit event.
+
 ## Overview
 
 This document describes the action format used by ClickFlow's click-engine. Actions represent individual operations that the engine executes (currently in simulation mode only).

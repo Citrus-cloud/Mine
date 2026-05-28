@@ -4,6 +4,26 @@
 
 The Desktop Action Adapter will be a future module responsible for executing real system-level actions (mouse clicks, keyboard input) on behalf of the user. Currently, ClickFlow operates in **simulation mode only** — no real OS interactions occur.
 
+## 1.5. Step 17 preparation (current state)
+
+Step 17 introduced the architectural scaffolding the future adapter will plug into. **No real input is performed.** What was added:
+
+- **`src/action-pipeline.js`** — every action emitted by the click engine now flows through `executeAction(action, context)`. The pipeline validates the schema, evaluates safety, picks a mode, and dispatches:
+  - `executionMode === "simulation"` (or empty / `"simulate"`) → `executeSimulatedAction()` — the only path implemented.
+  - any other value, including `"real"` → `blockRealAction()` with the explicit error `Real desktop actions are disabled in this build` and an `action.real.blocked` audit event.
+  - `canExecuteRealAction()` is hard-coded to return `false`.
+  - `getActionPipelineStatus()` returns `{ simulationOnly: true, realActionsEnabled: false, realActionsImplemented: false, pipelineReady: true }`.
+- **`src/safety-gates.js`** — central safety predicate layer:
+  - `getSafetyGateStatus(settings)` for diagnostics.
+  - `validateScenarioSafety(scenario, settings)` and `validateActionSafety(action, settings)` returning `{ ok, errors, warnings }`.
+  - `getRealActionRequirements()` and `getMissingRealActionRequirements(settings)` — the contract the future adapter must satisfy.
+  - `isSimulationAllowed(settings)` returns `true` for valid settings; `isRealActionAllowed(settings)` is hard-coded `false`.
+- **`src/audit-events.js`** — in-memory audit event store with a fixed allowlist (`scenario.start.requested`, `scenario.start.approved`, `scenario.stop.requested`, `scenario.completed`, `emergency.stop`, `action.simulated`, `action.real.blocked`, `safety.validation.failed`, `settings.changed`, `import.completed`, `export.completed`). **No file persistence in this step** — file-based logs are tracked separately in `AUDIT_LOG_PLAN.md`.
+- The Advanced → Safety panel now shows four new cards: **Action pipeline**, **Safety gates**, **Real actions readiness** (9-row checklist), and **Audit events** (count + last event).
+- `Copy diagnostics` includes new lines for `Action pipeline`, `Safety gates`, and `Audit events`.
+
+When the future real-input branch lands, it will subscribe to `executeAction()` for `executionMode === "real"`. Until every requirement in `REAL_ACTIONS_GO_NO_GO.md` is met, that branch will continue to be the `blockRealAction()` path.
+
 ## 2. Why Real Clicks Are NOT Implemented Yet
 
 - Architecture validation is still in progress

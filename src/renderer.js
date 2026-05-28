@@ -206,6 +206,9 @@ async function saveSettingsFromForm() {
   };
   setSettings(newSettings); await saveSettings(newSettings);
   setLanguage(newSettings.language); applyTranslations(); applyTheme(newSettings.theme);
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('settings.changed', { language: newSettings.language, theme: newSettings.theme });
+  }
   addLogEntry(createLog('success', t('logSettingsSaved'))); showView('main'); renderState();
 }
 function goBackFromSettings() { addLogEntry(createLog('info', t('logMainOpened'))); showView('main'); renderState(); }
@@ -216,24 +219,30 @@ function startScenario() {
   if (state.execution.isRunning) { addLogEntry(createLog('warning', t('logAlreadyRunning'))); renderState(); return; }
   const sc = getScenarioById(state.selectedScenarioId);
   if (!sc) { addLogEntry(createLog('error', t('logNoScenario'))); reportError({ code: 'NO_SCENARIO', message: t('logNoScenario') }, 'start'); renderState(); return; }
+  // Step 17: audit the start request (in-memory).
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('scenario.start.requested', { scenarioId: sc.id, scenarioName: sc.name });
+  }
   runScenario(sc, {
-    onStart: () => { setRunning(true); setExecutionRunning(true); setExecutionProgress(0, sc.settings.repeatCount); setExecutionStartedAt(new Date().toISOString()); setExecutionFinishedAt(null); setExecutionLastAction(null); addLogEntry(createLog('success', `${t('logScenarioStarted')}: ${sc.name}`)); window.clickflow.system.setExecutionRunning(true); renderState(); },
+    onStart: () => { setRunning(true); setExecutionRunning(true); setExecutionProgress(0, sc.settings.repeatCount); setExecutionStartedAt(new Date().toISOString()); setExecutionFinishedAt(null); setExecutionLastAction(null); addLogEntry(createLog('success', `${t('logScenarioStarted')}: ${sc.name}`)); window.clickflow.system.setExecutionRunning(true); if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.start.approved', { scenarioId: sc.id }); renderState(); },
     onAction: (action, c, total) => { setExecutionLastAction(action); if (shouldLogAction(c, total)) addLogEntry(createLog('info', `${c}/${total}: click x=${action.x} y=${action.y}`)); },
     onProgress: (c, total) => { setExecutionProgress(c, total); renderState(); },
     onStop: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('warning', t('logScenarioStopped'))); window.clickflow.system.setExecutionRunning(false); renderState(); },
-    onComplete: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('success', t('logScenarioComplete'))); window.clickflow.system.setExecutionRunning(false); renderState(); },
-    onError: (msg) => { setRunning(false); setExecutionRunning(false); reportError({ code: 'EXEC_ERROR', message: msg }, 'click-engine'); addLogEntry(createLog('error', msg)); window.clickflow.system.setExecutionRunning(false); renderState(); }
+    onComplete: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('success', t('logScenarioComplete'))); window.clickflow.system.setExecutionRunning(false); if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.completed', { scenarioId: sc.id }); renderState(); },
+    onError: (msg) => { setRunning(false); setExecutionRunning(false); reportError({ code: 'EXEC_ERROR', message: msg }, 'click-engine'); addLogEntry(createLog('error', msg)); window.clickflow.system.setExecutionRunning(false); if (typeof recordAuditEvent === 'function') recordAuditEvent('safety.validation.failed', { scenarioId: sc.id, reason: msg }); renderState(); }
   }, { safety: state.settings.safety });
 }
 
 function stopScenario() {
   const state = getState();
   if (!state.execution.isRunning) { addLogEntry(createLog('info', t('logNoActiveStop'))); renderState(); return; }
+  if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.stop.requested', { scenarioId: state.selectedScenarioId });
   stopEngine(); addLogEntry(createLog('info', t('logStopping'))); renderState();
 }
 
 function triggerEmergencyStop() {
   const state = getState(); if (!state.execution.isRunning) return;
+  if (typeof recordAuditEvent === 'function') recordAuditEvent('emergency.stop', { scenarioId: state.selectedScenarioId });
   stopEngine(); setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString());
   addLogEntry(createLog('warning', t('logEmergencyStop'))); window.clickflow.system.setExecutionRunning(false); renderState();
 }
@@ -364,7 +373,7 @@ function renderImportPreview(container, preview) {
 
 async function doExportScenarios(mode) {
   const result = await exportScenarios(mode);
-  if (result.success) { addLogEntry(createLog('success', t('exportedScenarios'))); }
+  if (result.success) { addLogEntry(createLog('success', t('exportedScenarios'))); if (typeof recordAuditEvent === 'function') recordAuditEvent('export.completed', { kind: 'scenarios', mode: mode }); }
   else if (result.cancelled) { addLogEntry(createLog('info', t('operationCancelled'))); }
   else { addLogEntry(createLog('error', result.error || t('invalidImportFile'))); reportError({ code: 'EXPORT_FAIL', message: result.error }, 'export'); }
   renderState();
@@ -383,7 +392,7 @@ async function confirmImport() {
   if (!preview) return;
   const result = importScenarios(preview);
   clearImportPreview();
-  if (result.success) { await saveScenarios(); addLogEntry(createLog('success', `${t('importedScenarios')}: ${result.count}`)); }
+  if (result.success) { await saveScenarios(); addLogEntry(createLog('success', `${t('importedScenarios')}: ${result.count}`)); if (typeof recordAuditEvent === 'function') recordAuditEvent('import.completed', { kind: 'scenarios', count: result.count }); }
   else { addLogEntry(createLog('error', result.error)); }
   renderAdvancedScenarios(); renderState();
 }
@@ -583,6 +592,83 @@ function renderAdvancedSafety() {
 
   // Warning
   const warning = document.createElement('div'); warning.className = 'adv-warning'; warning.textContent = t('simulationModeNotice'); c.appendChild(warning);
+
+  // --- Step 17: Real desktop actions disabled notice (extra, explicit) ---
+  const realWarning = document.createElement('div'); realWarning.className = 'adv-warning';
+  realWarning.textContent = t('realDesktopActionsDisabledNotice'); c.appendChild(realWarning);
+
+  // --- Step 17: Action pipeline card ---
+  const apCard = document.createElement('div'); apCard.className = 'adv-card';
+  const apTitle = document.createElement('div'); apTitle.className = 'adv-card-title'; apTitle.textContent = t('actionPipeline'); apCard.appendChild(apTitle);
+  let pipelineStatus = { simulationOnly: true, realActionsEnabled: false, realActionsImplemented: false, pipelineReady: true };
+  if (typeof getActionPipelineStatus === 'function') pipelineStatus = getActionPipelineStatus();
+  addCardRow(apCard, t('pipelineReady'),            pipelineStatus.pipelineReady ? t('yes') : t('no'));
+  addCardRow(apCard, t('simulationOnly'),           pipelineStatus.simulationOnly ? t('flagEnabled') : t('flagDisabled'));
+  addCardRow(apCard, t('realActionsEnabled'),       pipelineStatus.realActionsEnabled ? t('flagEnabled') : t('flagDisabled'));
+  addCardRow(apCard, t('realActionsImplemented'),   pipelineStatus.realActionsImplemented ? t('yes') : t('no'));
+  let realAllowed = false;
+  if (typeof isRealActionAllowed === 'function') realAllowed = isRealActionAllowed(state.settings);
+  addCardRow(apCard, t('realActionAllowed'), realAllowed ? t('yes') : t('no'));
+  let missingCount = 9;
+  if (typeof getMissingRealActionRequirements === 'function') {
+    missingCount = getMissingRealActionRequirements(state.settings).length;
+  }
+  addCardRow(apCard, t('missingRequirements'), String(missingCount));
+  c.appendChild(apCard);
+
+  // --- Step 17: Safety gates card ---
+  const sgCard = document.createElement('div'); sgCard.className = 'adv-card';
+  const sgTitle = document.createElement('div'); sgTitle.className = 'adv-card-title'; sgTitle.textContent = t('safetyGates'); sgCard.appendChild(sgTitle);
+  let gateStatus = null;
+  if (typeof getSafetyGateStatus === 'function') gateStatus = getSafetyGateStatus(state.settings);
+  if (gateStatus) {
+    addCardRow(sgCard, t('safeMode'),       gateStatus.safeMode      ? t('enabled') : t('disabled'));
+    addCardRow(sgCard, t('emergencyStop'),  gateStatus.emergencyStop ? t('enabled') : t('disabled'));
+    addCardRow(sgCard, t('minInterval'),    gateStatus.minIntervalMs == null ? t('none') : (gateStatus.minIntervalMs + ' ms'));
+    addCardRow(sgCard, t('maxRepeats'),     gateStatus.maxRepeatCount == null ? t('none') : String(gateStatus.maxRepeatCount));
+    addCardRow(sgCard, 'maxRunTimeMs',      gateStatus.maxRunTimeMs == null ? t('none') : (gateStatus.maxRunTimeMs + ' ms'));
+  } else {
+    addCardRow(sgCard, '', t('noData'));
+  }
+  c.appendChild(sgCard);
+
+  // --- Step 17: Real actions readiness checklist ---
+  const rrCard = document.createElement('div'); rrCard.className = 'adv-card';
+  const rrTitle = document.createElement('div'); rrTitle.className = 'adv-card-title'; rrTitle.textContent = t('realActionsReadiness'); rrCard.appendChild(rrTitle);
+  const rrList = document.createElement('div'); rrList.className = 'readiness-list';
+  const ff = (typeof getFeatureFlags === 'function') ? getFeatureFlags() : { realDesktopActions: false, simulationOnly: true };
+  const rrItems = [
+    { label: t('simulationOnlyBuild'),         badge: t('flagEnabled'), status: 'ready' },
+    { label: t('realActionsImplemented'),      badge: t('no'),          status: 'missing' },
+    { label: t('realActionsFeatureFlag'),      badge: ff.realDesktopActions ? t('flagEnabled') : t('flagDisabled'), status: ff.realDesktopActions ? 'ready' : 'missing' },
+    { label: t('safeMode'),                    badge: state.settings.safety.safeMode ? t('enabled') : t('disabled'), status: state.settings.safety.safeMode ? 'ready' : 'missing' },
+    { label: t('emergencyStop'),               badge: state.settings.safety.emergencyStopEnabled ? t('enabled') : t('disabled'), status: state.settings.safety.emergencyStopEnabled ? 'ready' : 'missing' },
+    { label: t('auditLogsPlanned'),            badge: t('planned'),     status: 'planned' },
+    { label: t('desktopAdapterNotInstalled'),  badge: t('notInstalled'), status: 'missing' },
+    { label: t('osPermissionsNotChecked'),     badge: t('notChecked'),  status: 'missing' },
+    { label: t('finalSafetyReviewNotPassed'),  badge: t('notPassed'),   status: 'missing' }
+  ];
+  rrItems.forEach(it => {
+    const item = document.createElement('div'); item.className = 'readiness-item';
+    const lbl = document.createElement('span'); lbl.className = 'readiness-item-label'; lbl.textContent = it.label;
+    const badge = document.createElement('span');
+    badge.className = 'readiness-badge readiness-' + it.status;
+    badge.textContent = it.badge;
+    item.appendChild(lbl); item.appendChild(badge); rrList.appendChild(item);
+  });
+  rrCard.appendChild(rrList);
+  c.appendChild(rrCard);
+
+  // --- Step 17: Audit events summary ---
+  const aeCard = document.createElement('div'); aeCard.className = 'adv-card';
+  const aeTitle = document.createElement('div'); aeTitle.className = 'adv-card-title'; aeTitle.textContent = t('auditEvents'); aeCard.appendChild(aeTitle);
+  let auditSummary = { count: 0, last: null };
+  if (typeof getAuditSummary === 'function') auditSummary = getAuditSummary();
+  addCardRow(aeCard, t('auditEventsCount'), String(auditSummary.count));
+  addCardRow(aeCard, t('lastAuditEvent'),
+    auditSummary.last ? (auditSummary.last.type + ' @ ' + auditSummary.last.timestamp) : t('none2'));
+  c.appendChild(aeCard);
+
   // Error history
   const eCard = document.createElement('div'); eCard.className = 'adv-card';
   const eTitle = document.createElement('div'); eTitle.className = 'adv-card-title'; eTitle.textContent = `${t('errorHistory')} (${getErrorCount()})`; eCard.appendChild(eTitle);
@@ -603,7 +689,17 @@ async function copyDiagnostics() {
   const ffLine = ff
     ? `Feature flags: simulationOnly=${ff.safety.simulationOnly}, realDesktopActions=${ff.safety.realDesktopActions}, ocr=${ff.safety.ocr}, imageRecognition=${ff.safety.imageRecognition}`
     : 'Feature flags: simulationOnly=true, realDesktopActions=false, ocr=false, imageRecognition=false';
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
+  const ap = (typeof getActionPipelineStatus === 'function') ? getActionPipelineStatus() : { simulationOnly: true, realActionsEnabled: false, realActionsImplemented: false, pipelineReady: true };
+  const realAllowed = (typeof isRealActionAllowed === 'function') ? isRealActionAllowed(state.settings) : false;
+  const missingReqs = (typeof getMissingRealActionRequirements === 'function') ? getMissingRealActionRequirements(state.settings) : [];
+  const apLine = `Action pipeline: pipelineReady=${ap.pipelineReady}, simulationOnly=${ap.simulationOnly}, realActionsEnabled=${ap.realActionsEnabled}, realActionsImplemented=${ap.realActionsImplemented}, realActionAllowed=${realAllowed}, missingRequirements=${missingReqs.length}`;
+  const sg = (typeof getSafetyGateStatus === 'function') ? getSafetyGateStatus(state.settings) : null;
+  const sgLine = sg
+    ? `Safety gates: safeMode=${sg.safeMode}, emergencyStop=${sg.emergencyStop}, minIntervalMs=${sg.minIntervalMs}, maxRepeatCount=${sg.maxRepeatCount}, maxRunTimeMs=${sg.maxRunTimeMs == null ? 'none' : sg.maxRunTimeMs}`
+    : 'Safety gates: unavailable';
+  const auditSummary = (typeof getAuditSummary === 'function') ? getAuditSummary() : { count: 0, last: null };
+  const auLine = `Audit events: count=${auditSummary.count}, lastType=${auditSummary.last ? auditSummary.last.type : 'none'}`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();

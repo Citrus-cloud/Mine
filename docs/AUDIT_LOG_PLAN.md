@@ -95,7 +95,12 @@ on the rest of the desktop. Concretely:
 
 ## Implementation status
 
-- 0.1.x — **not implemented** (this document only).
-- 0.2.x — design firm, prototype optional.
+- 0.1.x — **partial**: `src/audit-events.js` ships an **in-memory**
+  audit event model (Step 17). It records every event in the
+  allowlist above with a stable id, a timestamp, a known/unknown
+  flag, and a small payload of safe fields (no PII, no paths).
+  **No file is written.**
+- 0.2.x — design firm, prototype optional. Adds JSONL files under
+  `userData/audit/` per the layout above.
 - 0.3.x — **must be implemented before** `realDesktopActions` flips
   to `true` for any user. See `docs/REAL_ACTIONS_GO_NO_GO.md` §4.

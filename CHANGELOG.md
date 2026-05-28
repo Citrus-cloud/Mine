@@ -8,6 +8,107 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-17
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, and the Step 17 architectural
+scaffolding (controlled action pipeline, safety gates, in-memory
+audit events). **Still simulation-only.**
+
+### Added (Step 17 — controlled action pipeline)
+
+- `src/action-pipeline.js` — central `executeAction(action, context)`
+  used by the click-engine. Validates the action schema, evaluates
+  safety, and dispatches to `executeSimulatedAction()` for the
+  simulate path. Any caller with `executionMode === "real"` is
+  rejected by `blockRealAction()` with the explicit error
+  `Real desktop actions are disabled in this build` and an
+  `action.real.blocked` audit event. `canExecuteRealAction()` is
+  hard-coded `false`. `getActionPipelineStatus()` returns
+  `{ simulationOnly: true, realActionsEnabled: false,
+  realActionsImplemented: false, pipelineReady: true }`.
+- `src/safety-gates.js` — central safety predicates:
+  `getSafetyGateStatus`, `validateScenarioSafety`,
+  `validateActionSafety`, `getRealActionRequirements` (9-item
+  contract), `getMissingRealActionRequirements`,
+  `isSimulationAllowed` (true for valid settings),
+  `isRealActionAllowed` (always `false`).
+- `src/audit-events.js` — in-memory audit event model with a fixed
+  allowlist of types
+  (`scenario.start.requested`, `scenario.start.approved`,
+  `scenario.stop.requested`, `scenario.completed`,
+  `emergency.stop`, `action.simulated`, `action.real.blocked`,
+  `safety.validation.failed`, `settings.changed`,
+  `import.completed`, `export.completed`). Capacity-bounded
+  ring (500 events). `createAuditEvent`, `addAuditEvent`,
+  `recordAuditEvent`, `getAuditEvents`, `clearAuditEvents`,
+  `getAuditSummary`. **No file persistence in this step.**
+- `click-engine.js` — every iteration now dispatches through
+  `executeAction()` from the pipeline. The legacy
+  `simulateClick()` is preserved as a thin wrapper for backward
+  compatibility. `validateRunnableScenario` failures emit
+  `safety.validation.failed`.
+- Renderer audit instrumentation at start, approved-start, stop,
+  completed, emergency-stop, import, export, and settings change.
+- Advanced → Safety: new cards **Action pipeline**, **Safety gates**,
+  **Real actions readiness** (9-row checklist), **Audit events**
+  (count + last event). New explicit warning
+  "Real desktop actions are disabled. ClickFlow still runs in
+  simulation mode only."
+- `Copy diagnostics` now includes `Action pipeline:`,
+  `Safety gates:`, and `Audit events:` lines.
+- `scripts/smoke-check.js` — verifies the new files exist and that
+  source-level invariants hold:
+  `simulationOnly: true`, `realActionsEnabled: false`,
+  `realActionsImplemented: false`, the explicit block message,
+  `isRealActionAllowed` returning `false`, and
+  `realDesktopActions: false`. `uiohook-napi` added to the
+  forbidden-modules list.
+- 22 new i18n keys (RU + EN): `realActionsReadiness`,
+  `realActionsDisabled`, `simulationOnlyBuild`,
+  `realActionsImplemented`, `realActionsFeatureFlag`,
+  `desktopAdapterNotInstalled`, `osPermissionsNotChecked`,
+  `finalSafetyReviewNotPassed`, `actionPipeline`, `pipelineReady`,
+  `realActionsEnabled`, `realActionAllowed`, `missingRequirements`,
+  `safetyGates`, `auditEvents`, `auditEventsCount`,
+  `lastAuditEvent`, `realDesktopActionsDisabledNotice`,
+  `actionRealBlocked`, `safetyValidationFailed`, plus
+  `notImplemented`, `notInstalled`, `notChecked`, `notPassed`.
+- Docs updated: `docs/REAL_ACTIONS_GO_NO_GO.md` (new "What step
+  17 changed" section), `docs/DESKTOP_ADAPTER_PLAN.md` (new
+  "Step 17 preparation" section), `docs/AUDIT_LOG_PLAN.md`
+  (in-memory model now live), `docs/ACTION_SCHEMA.md` (validation
+  centralized), `docs/SECURITY_CHECKLIST.md` (new Step 17 rows),
+  `docs/SMOKE_TESTS.md` (#0f, #0g, #78–#92). README and
+  PROJECT_CONTEXT updated to step 17.
+
+### Changed (Step 17)
+
+- `src/click-engine.js` calls `executeAction()` instead of the
+  direct `simulateClick()` body. Behavior preserved.
+- `src/index.html` loads `audit-events.js`, `safety-gates.js`, and
+  `action-pipeline.js` between `feature-flags.js` and the manager
+  modules.
+- Smoke check now also verifies that `package.json` does not
+  declare `uiohook-napi` and prints the Step 17 invariant rows.
+
+### Security (Step 17)
+
+- The pipeline is the only path to fire any action. There is no
+  source-level escape hatch from the simulate path.
+- The `isRealActionAllowed()` predicate is hard-coded false; the
+  `realDesktopActions` flag is hard-coded false; the pipeline
+  rejects `executionMode === "real"`. All three layers must be
+  flipped — and the requirements in `REAL_ACTIONS_GO_NO_GO.md`
+  must be met — before any real action could run.
+- The audit event allowlist is fixed and contains no PII fields.
+  Payloads are bounded to safe ids and small enums.
+- `node --check` passes for every new file.
+- `npm run smoke` passes (existing tests still green, new Step 17
+  rows green).
+
+---
+
 ## [Unreleased] — Steps 15-16
 
 Final stabilization of the simulation-only beta and design-only handoff
@@ -224,3 +325,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 14 | Release prep | This release scaffolding. |
 | 15 | Final stabilization | Smoke helper, beta health, JSON corruption guard. |
 | 16 | Handoff design | Feature flags, go/no-go, audit log plan, privacy doc. |
+| 17 | Action pipeline | `action-pipeline.js`, `safety-gates.js`, `audit-events.js` (in-memory). Real actions blocked. |
