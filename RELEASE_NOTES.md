@@ -8,7 +8,7 @@ Electron and vanilla JavaScript. It is intended for testing the user
 experience, the safety model, and the persistence layer **without**
 performing any real system input.
 
-This release closes Steps 1 — 23 of the development plan and is
+This release closes Steps 1 — 24 of the development plan and is
 the candidate basis for a public GitHub pre-release.
 
 > **Quick safety summary.** Six independent layers refuse real
@@ -19,7 +19,8 @@ the candidate basis for a public GitHub pre-release.
 >
 > **Beta note.** This is a beta pre-release. **Manual packaged-app
 > testing is recommended before relying on a build for any
-> non-test workflow.** See `docs/PACKAGED_APP_QA.md` and
+> non-test workflow.** See `docs/PACKAGED_APP_QA.md`,
+> `docs/PRE_RELEASE_CHECKLIST.md`, and
 > `docs/RELEASE_BLOCKERS.md`.
 
 ---
@@ -144,6 +145,23 @@ the candidate basis for a public GitHub pre-release.
   `Ready after manual QA`.
 - **Manual packaged-app testing on at least one target OS is
   required before publishing the GitHub release tag.**
+
+### Step 24 — Final beta release preparation
+- `docs/FINAL_RELEASE_SUMMARY.md` — single-page release snapshot
+  with included / not included / safety status / required steps
+  / release recommendation.
+- `docs/PRE_RELEASE_CHECKLIST.md` — the boxes the maintainer
+  ticks before tagging.
+- `docs/RELEASE_TAG_PLAN.md` — the manual command sequence the
+  maintainer follows.
+- `docs/RELEASE_COMMIT_MESSAGE.md` — the recommended commit
+  message for the release-prep commit, including a list of body
+  lines that are forbidden because they would contradict the
+  build (no claims of real input / OCR / image recognition /
+  mobile / `realDesktopActions` flip).
+- Release decision in `docs/RELEASE_BLOCKERS.md`: "Pending
+  manual verification — no automated/static release blockers".
+- Smoke check expanded to 170+ invariants.
 
 ---
 

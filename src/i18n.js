@@ -438,7 +438,16 @@ const translations = {
     manualPackagedTestingRequired: "Требуется ручная проверка собранного приложения",
     packagedAppTested: "Собранное приложение протестировано",
     noKnownReleaseBlockers: "Известные release blockers отсутствуют",
-    releaseBlocked: "Релиз заблокирован"
+    releaseBlocked: "Релиз заблокирован",
+
+    // Step 24: final beta release preparation
+    finalReleaseSummary: "Final release summary",
+    preReleaseChecklist: "Pre-release checklist",
+    releaseTagPlan: "Release tag plan",
+    readyForPreRelease: "Готов к pre-release",
+    manualQaRequired: "Требуется ручная QA",
+    releaseCommitMessage: "Release commit message",
+    readyForPreReleaseAfterManualQa: "Готов к pre-release после ручной QA"
   },
   en: {
     // Main screen
@@ -877,7 +886,16 @@ const translations = {
     manualPackagedTestingRequired: "Manual packaged-app testing required",
     packagedAppTested: "Packaged app tested",
     noKnownReleaseBlockers: "No known release blockers",
-    releaseBlocked: "Release blocked"
+    releaseBlocked: "Release blocked",
+
+    // Step 24: final beta release preparation
+    finalReleaseSummary: "Final release summary",
+    preReleaseChecklist: "Pre-release checklist",
+    releaseTagPlan: "Release tag plan",
+    readyForPreRelease: "Ready for pre-release",
+    manualQaRequired: "Manual QA required",
+    releaseCommitMessage: "Release commit message",
+    readyForPreReleaseAfterManualQa: "Ready for pre-release after manual QA"
   }
 };
 
