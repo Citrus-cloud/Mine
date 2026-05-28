@@ -1,7 +1,13 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow = null;
+
+// Путь к файлу сценариев в userData
+function getScenariosPath() {
+  return path.join(app.getPath('userData'), 'scenarios.json');
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -24,6 +30,49 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// --- IPC-обработчики для сценариев ---
+
+ipcMain.handle('scenarios:load', async () => {
+  try {
+    const filePath = getScenariosPath();
+    if (!fs.existsSync(filePath)) {
+      return { success: true, data: null };
+    }
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const scenarios = JSON.parse(raw);
+    return { success: true, data: scenarios };
+  } catch (err) {
+    return { success: false, error: 'Не удалось загрузить сценарии' };
+  }
+});
+
+ipcMain.handle('scenarios:save', async (event, scenarios) => {
+  try {
+    if (!Array.isArray(scenarios)) {
+      return { success: false, error: 'Данные должны быть массивом' };
+    }
+    const filePath = getScenariosPath();
+    fs.writeFileSync(filePath, JSON.stringify(scenarios, null, 2), 'utf-8');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: 'Не удалось сохранить сценарии' };
+  }
+});
+
+ipcMain.handle('scenarios:reset', async () => {
+  try {
+    const filePath = getScenariosPath();
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: 'Не удалось сбросить сценарии' };
+  }
+});
+
+// --- Lifecycle ---
 
 app.whenReady().then(createWindow);
 

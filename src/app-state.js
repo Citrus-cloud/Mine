@@ -6,10 +6,11 @@ const appState = {
   selectedScenarioName: "Быстрый кликер",
   currentView: "main",
   theme: "system",
-  logs: []
+  logs: [],
+  scenarioFormMode: null,   // "create" | "edit" | null
+  editingScenarioId: null
 };
 
-// Возвращает копию состояния (защита от мутации извне)
 function getState() {
   return { ...appState, logs: [...appState.logs] };
 }
@@ -37,4 +38,12 @@ function addLogEntry(logEntry) {
 
 function clearLogs() {
   appState.logs = [];
+}
+
+function setScenarioFormMode(mode) {
+  appState.scenarioFormMode = mode;
+}
+
+function setEditingScenarioId(id) {
+  appState.editingScenarioId = id;
 }
