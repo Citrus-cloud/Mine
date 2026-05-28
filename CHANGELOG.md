@@ -8,6 +8,103 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-23
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, and the
+Step 23 post-pack QA and release blocker pass.
+**Still simulation-only.**
+
+### Added (Step 23 — Post-pack QA and release blocker pass)
+
+- `docs/RELEASE_BLOCKERS.md` — 6-section release-blocker tracker
+  with **status** ("Pending manual verification"), an empty
+  **Blockers** table, **Non-blocking known issues** (KNI-1..7
+  covering code signing, tray icon, audit persistence, CI,
+  Linux hotkeys, cross-builds), **Verification notes** (smoke,
+  manual QA, packaging, security, localization), and
+  **Release decision** = "Ready after manual packaged-app QA".
+- `docs/PACKAGED_APP_QA.md` — 16-section manual checklist for
+  the packaged binary: build context / launch / main screen /
+  scenarios / simulation start-stop / emergency stop / RU-EN /
+  settings / import-export / advanced dashboard / diagnostics
+  (with the exact `Copy diagnostics` lines to verify) / mock
+  adapter self-test / dry-run sandbox / **no real clicks
+  verification (mandatory)** / quit-reopen / known packaged
+  issues + sign-off.
+- IPC `system:get-release-status` extended with
+  `releaseBlockersPresent`, `packagedAppQaPresent`,
+  `packagedAppTested` (always `false` — manual-only),
+  `readyAfterManualQa`.
+- Renderer — **Release status** card now has 14 rows (added
+  Release blockers, Packaged app QA, Packaged app tested) and
+  switched its bottom badge to `Ready after manual QA` /
+  `Not ready for release`.
+- `Copy diagnostics` includes the new release fields.
+- 7 new RU + EN i18n keys: `releaseBlockers`, `packagedAppQa`,
+  `readyAfterManualQa`, `manualPackagedTestingRequired`,
+  `packagedAppTested`, `noKnownReleaseBlockers`,
+  `releaseBlocked`.
+
+### Changed (Step 23)
+
+- `docs/RELEASE_FINAL_CHECK.md` — updated to Step 23, added
+  packaged-app QA gate; Release decision = "Ready for beta
+  release after packaged app QA".
+- `docs/TAG_AND_RELEASE_GUIDE.md` — new section "0a. Before
+  creating the tag" requiring `npm run pack`, `PACKAGED_APP_QA`
+  walk, no active blockers in `RELEASE_BLOCKERS.md`, and a
+  warning "do not tag from a broken working tree".
+- `docs/GITHUB_RELEASE_DRAFT.md` — new "Beta QA status" section
+  referencing `PACKAGED_APP_QA.md` and `RELEASE_BLOCKERS.md`,
+  explicit "Manual packaged-app testing recommended" and
+  "No real actions are included" notices.
+- `RELEASE_NOTES.md` — references manual packaged-app testing.
+- `scripts/smoke-check.js` — extended from 137 to 168 checks
+  with Step 23 invariants (new docs presence + content sanity,
+  cross-references, `RELEASE_BLOCKERS` "Release decision",
+  README/PROJECT_CONTEXT mention step 23, RELEASE_NOTES mentions
+  packaged, SECURITY_CHECKLIST explicitly asserts
+  `contextIsolation: true` and `nodeIntegration: false`).
+- README, PROJECT_CONTEXT, CHANGELOG updated to step 23.
+
+### Verified (Step 23 — no source-level safety changes required)
+
+- 0 release blockers found by automated / static checks.
+- All six runtime safety layers still hard-coded false (verified
+  by vm-based unit-style harness): feature flags, safety gates,
+  adapter interface, adapter registry, action pipeline, sandbox
+  readiness.
+- `package.json` declares no `robotjs` / `nut.js` / `iohook` /
+  `uiohook-napi` / `node-key-sender`.
+- CSP unchanged. `contextIsolation: true`, `nodeIntegration: false`
+  unchanged.
+- `node --check` passes for every modified or new JS file.
+- `npm run smoke` — 168 / 168 OK, exit 0.
+- i18n parity: 375 ru = 375 en, 0 mismatches.
+
+### Security (Step 23)
+
+- New IPC fields stay inside `app.getAppPath()`. No private user
+  paths flow to the renderer.
+- `docs/RELEASE_BLOCKERS.md` separates "blocker" from "non-blocking
+  known issue" so the next reviewer sees what is intentional and
+  what is not.
+- `docs/PACKAGED_APP_QA.md` makes the no-real-clicks verification
+  a numbered, mandatory check on the packaged binary.
+
+### Not included yet
+
+Same as the `0.1.0-beta` baseline: no real clicks, no OCR, no
+image recognition, no mobile, no cloud sync, no auto-update, no
+code signing.
+
+---
+
 ## [Unreleased] — Steps 15-22
 
 Final stabilization of the simulation-only beta, design-only handoff
@@ -814,3 +911,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 20 | Final beta QA | Structural audit (0 dup ids, perfect i18n parity 342/342), expanded smoke-check (96 checks), `BETA_QA_REPORT.md`, `I18N_CHECKLIST.md`. Manual testing required before tag. |
 | 21 | Beta release packaging | `.gitignore`, extended `package.json` `build` block, `RELEASE_CHECKLIST.md`, `BUILD_ARTIFACTS.md`, `GITHUB_RELEASE_DRAFT.md`, `VERSIONING.md`, Release status diagnostics, smoke-check 113 checks. |
 | 22 | GitHub beta release finalization | `RELEASE_FINAL_CHECK.md`, `TAG_AND_RELEASE_GUIDE.md`, finalized RELEASE_NOTES / GITHUB_RELEASE_DRAFT, expanded Release status card, smoke-check 137 checks. Tag and publication remain manual. |
+| 23 | Post-pack QA and release blocker pass | `RELEASE_BLOCKERS.md`, `PACKAGED_APP_QA.md`, expanded Release status card (14 rows + ready-after-manual-QA badge), smoke-check 168 checks. Manual packaged-app QA remains the last gate. |

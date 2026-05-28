@@ -429,7 +429,16 @@ const translations = {
     githubReleaseDraft: "GitHub release draft",
     betaPrerelease: "Beta pre-release",
     releaseDocsReady: "Release-документы готовы",
-    manualVerificationRequired: "Требуется ручная проверка"
+    manualVerificationRequired: "Требуется ручная проверка",
+
+    // Step 23: post-pack QA and release blocker pass
+    releaseBlockers: "Release blockers",
+    packagedAppQa: "Packaged app QA",
+    readyAfterManualQa: "Готов после ручной QA",
+    manualPackagedTestingRequired: "Требуется ручная проверка собранного приложения",
+    packagedAppTested: "Собранное приложение протестировано",
+    noKnownReleaseBlockers: "Известные release blockers отсутствуют",
+    releaseBlocked: "Релиз заблокирован"
   },
   en: {
     // Main screen
@@ -859,7 +868,16 @@ const translations = {
     githubReleaseDraft: "GitHub release draft",
     betaPrerelease: "Beta pre-release",
     releaseDocsReady: "Release docs ready",
-    manualVerificationRequired: "Manual verification required"
+    manualVerificationRequired: "Manual verification required",
+
+    // Step 23: post-pack QA and release blocker pass
+    releaseBlockers: "Release blockers",
+    packagedAppQa: "Packaged app QA",
+    readyAfterManualQa: "Ready after manual QA",
+    manualPackagedTestingRequired: "Manual packaged-app testing required",
+    packagedAppTested: "Packaged app tested",
+    noKnownReleaseBlockers: "No known release blockers",
+    releaseBlocked: "Release blocked"
   }
 };
 

@@ -5,9 +5,38 @@ pre-release. Every command is run **manually** by the maintainer.
 **Nothing in this repository will create a tag or publish a
 release for you.**
 
-> Read [`RELEASE_FINAL_CHECK.md`](./RELEASE_FINAL_CHECK.md) and
-> [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md) first. Do not
+> Read [`RELEASE_FINAL_CHECK.md`](./RELEASE_FINAL_CHECK.md),
+> [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md),
+> [`PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md), and
+> [`RELEASE_BLOCKERS.md`](./RELEASE_BLOCKERS.md) first. Do not
 > proceed if any blocker is open.
+
+---
+
+## 0a. Before creating the tag
+
+The tag is the point of no return on GitHub. Walk the following
+in order; do not skip:
+
+- [ ] `git status` is clean (see step 1).
+- [ ] `npm run smoke` exits 0.
+- [ ] `npm start` smoke-launch passes the manual main-flow walk
+      (`docs/SMOKE_TESTS.md` Step 20 + Step 22).
+- [ ] `npm run pack` succeeds on the build host.
+- [ ] You have walked
+      [`docs/PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md) against
+      the produced binary on at least one target OS.
+- [ ] [`docs/RELEASE_BLOCKERS.md`](./RELEASE_BLOCKERS.md) is
+      up to date — no active rows in the **Blockers** table; the
+      "Release decision" line says "Ready after manual
+      packaged-app QA" and the QA walk has been signed off.
+- [ ] You have personally confirmed **no real clicks** are fired
+      while the packaged app is running (cursor unchanged,
+      focused editor untouched, no synthetic input events in the
+      OS event log).
+- [ ] **Do not tag from a broken working tree.** If you needed to
+      stash anything to make `git status` clean, do not proceed
+      until those changes are committed or discarded.
 
 ---
 

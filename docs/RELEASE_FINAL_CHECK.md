@@ -22,7 +22,7 @@ Kiro sandbox and must be walked locally on the target OS.
 - **Release type:** beta (`Pre-release` flag must be checked on
   GitHub).
 - **Mode:** **simulation-only**.
-- **Step:** 22 — GitHub beta release finalization.
+- **Step:** 23 — Post-pack QA and release blocker pass.
 
 ## Required checks
 
@@ -35,7 +35,7 @@ git status
 # 2. Install
 npm install
 
-# 3. Static smoke (must be exit 0; should be 130+ checks at step 22)
+# 3. Static smoke (must be exit 0; should be 149+ checks at step 23)
 npm run smoke
 
 # 4. App boots; perform the manual smoke run from
@@ -46,6 +46,10 @@ npm start
 #    (if the build host cannot, document and reschedule)
 npm run pack
 npm run dist
+
+# 6. Walk docs/PACKAGED_APP_QA.md against the produced binary
+#    on the target OS. Any blocker found goes into
+#    docs/RELEASE_BLOCKERS.md.
 ```
 
 If `npm run pack` or `npm run dist` cannot run on the current build
@@ -70,11 +74,11 @@ not** count as failed. Document the deferral in the PR.
 
 ## Documentation checks
 
-- [ ] [`README.md`](../README.md) references step 22 and the
+- [ ] [`README.md`](../README.md) references step 23 and the
       `0.1.0-beta` release.
 - [ ] [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) references
-      step 22.
-- [ ] [`CHANGELOG.md`](../CHANGELOG.md) has the step 22 entry.
+      step 23.
+- [ ] [`CHANGELOG.md`](../CHANGELOG.md) has the step 23 entry.
 - [ ] [`RELEASE_NOTES.md`](../RELEASE_NOTES.md) is consistent
       with the `0.1.0-beta` release.
 - [ ] [`docs/SECURITY_CHECKLIST.md`](./SECURITY_CHECKLIST.md) is
@@ -90,6 +94,13 @@ not** count as failed. Document the deferral in the PR.
       been walked end-to-end.
 - [ ] [`docs/BUILD_ARTIFACTS.md`](./BUILD_ARTIFACTS.md) covers
       every artifact you intend to upload.
+- [ ] [`docs/RELEASE_BLOCKERS.md`](./RELEASE_BLOCKERS.md)
+      "Release decision" line currently says "Ready after manual
+      packaged-app QA". No active rows in the **Blockers**
+      table.
+- [ ] [`docs/PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md) has been
+      walked on at least one target OS and the sign-off line is
+      filled.
 
 ## Manual QA checks
 
@@ -125,12 +136,20 @@ Walk the relevant section of
 
 ## Release decision
 
-- **Release decision:** **Ready after manual verification.**
+- **Release decision:** **Ready for beta release after packaged
+  app QA.**
   - Static checks all pass (`npm run smoke` exit 0; smoke check
     files / docs / security / packaging invariants all OK).
-  - Manual QA on at least one platform must be walked before the
-    tag is created. The maintainer signing off this page records
-    which platform(s) were tested.
+  - **Packaged-app QA from
+    [`docs/PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md) must be
+    walked on at least one target OS** before the tag is
+    created.
+  - Any new blocker discovered during that walk is recorded in
+    [`docs/RELEASE_BLOCKERS.md`](./RELEASE_BLOCKERS.md). Tag is
+    not created while the **Release decision** at the bottom of
+    `RELEASE_BLOCKERS.md` is "Not ready".
+  - The maintainer signing off this page records which platform(s)
+    were tested.
 
 - **Blockers (if any):** record below at sign-off time.
   - [ ] —

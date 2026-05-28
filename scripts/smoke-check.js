@@ -127,7 +127,10 @@ function safeJson(rel) {
   'docs/VERSIONING.md',
   // Step 22 docs
   'docs/RELEASE_FINAL_CHECK.md',
-  'docs/TAG_AND_RELEASE_GUIDE.md'
+  'docs/TAG_AND_RELEASE_GUIDE.md',
+  // Step 23 docs
+  'docs/RELEASE_BLOCKERS.md',
+  'docs/PACKAGED_APP_QA.md'
 ].forEach(function (rel) {
   record('doc exists: ' + rel, fileExists(rel));
 });
@@ -725,6 +728,118 @@ record(
 record(
   'docs/KNOWN_LIMITATIONS.md mentions mock adapter only',
   /mock\s+adapter\s+only/i.test(klTxt)
+);
+
+// --- Step 23: post-pack QA and release blocker pass ---
+
+// 44. Step 23 docs sanity.
+var rbTxt = readText('docs/RELEASE_BLOCKERS.md');
+record(
+  'docs/RELEASE_BLOCKERS.md mentions 0.1.0-beta',
+  rbTxt.indexOf('0.1.0-beta') !== -1
+);
+record(
+  'docs/RELEASE_BLOCKERS.md has a Release decision section',
+  /Release decision/i.test(rbTxt)
+);
+record(
+  'docs/RELEASE_BLOCKERS.md asserts no known blockers from automated checks',
+  /no\s+release\s+blockers|no\s+known\s+release\s+blockers|No release blockers found/i.test(rbTxt)
+);
+
+var pqTxt = readText('docs/PACKAGED_APP_QA.md');
+record(
+  'docs/PACKAGED_APP_QA.md is the manual checklist for npm run pack/dist',
+  /npm run pack/.test(pqTxt) && /npm run dist/.test(pqTxt)
+);
+record(
+  'docs/PACKAGED_APP_QA.md asserts no real clicks verification',
+  /no real cursor movement/i.test(pqTxt) ||
+  /no real clicks verification/i.test(pqTxt)
+);
+record(
+  'docs/PACKAGED_APP_QA.md asks the build to remain simulation-only',
+  /simulation-only|simulation only/i.test(pqTxt)
+);
+
+// 45. RELEASE_FINAL_CHECK references the new docs.
+var rfcTxt2 = readText('docs/RELEASE_FINAL_CHECK.md');
+record(
+  'docs/RELEASE_FINAL_CHECK.md references PACKAGED_APP_QA.md',
+  rfcTxt2.indexOf('PACKAGED_APP_QA.md') !== -1
+);
+record(
+  'docs/RELEASE_FINAL_CHECK.md references RELEASE_BLOCKERS.md',
+  rfcTxt2.indexOf('RELEASE_BLOCKERS.md') !== -1
+);
+record(
+  'docs/RELEASE_FINAL_CHECK.md says ready for beta release after packaged app QA',
+  /Ready\s+for\s+beta\s+release\s+after\s+packaged\s+app\s+QA/i.test(rfcTxt2)
+);
+
+// 46. TAG_AND_RELEASE_GUIDE references PACKAGED_APP_QA / RELEASE_BLOCKERS.
+var tagTxt2 = readText('docs/TAG_AND_RELEASE_GUIDE.md');
+record(
+  'docs/TAG_AND_RELEASE_GUIDE.md references PACKAGED_APP_QA.md',
+  tagTxt2.indexOf('PACKAGED_APP_QA.md') !== -1
+);
+record(
+  'docs/TAG_AND_RELEASE_GUIDE.md references RELEASE_BLOCKERS.md',
+  tagTxt2.indexOf('RELEASE_BLOCKERS.md') !== -1
+);
+record(
+  'docs/TAG_AND_RELEASE_GUIDE.md warns "do not tag from a broken working tree"',
+  /broken working tree/i.test(tagTxt2)
+);
+
+// 47. GITHUB_RELEASE_DRAFT mentions Beta QA status / packaged testing.
+var grTxt = readText('docs/GITHUB_RELEASE_DRAFT.md');
+record(
+  'docs/GITHUB_RELEASE_DRAFT.md has a Beta QA status section',
+  /Beta QA status/i.test(grTxt)
+);
+record(
+  'docs/GITHUB_RELEASE_DRAFT.md mentions Manual packaged-app testing',
+  /Manual packaged-app testing/i.test(grTxt) ||
+  /manual packaged.+testing/i.test(grTxt)
+);
+record(
+  'docs/GITHUB_RELEASE_DRAFT.md mentions known release blockers tracking',
+  /RELEASE_BLOCKERS\.md|known release blockers/i.test(grTxt)
+);
+
+// 48. README / PROJECT_CONTEXT mention step 23.
+record(
+  'README or PROJECT_CONTEXT mentions step 23',
+  /step\s*23|шаг\s*23|Step 23|Шаг 23/.test(readText('README.md')) ||
+  /step\s*23|шаг\s*23|Step 23|Шаг 23/.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 49. RELEASE_NOTES warns the build is beta + simulation-only + no real clicks.
+var rnLow = readText('RELEASE_NOTES.md').toLowerCase();
+record(
+  'RELEASE_NOTES.md mentions beta',
+  rnLow.indexOf('beta') !== -1
+);
+record(
+  'RELEASE_NOTES.md mentions simulation-only / no real clicks',
+  rnLow.indexOf('simulation') !== -1 ||
+  rnLow.indexOf('no real') !== -1
+);
+record(
+  'RELEASE_NOTES.md mentions packaged-app testing',
+  rnLow.indexOf('packaged') !== -1
+);
+
+// 50. SECURITY_CHECKLIST asserts contextIsolation true and nodeIntegration false in source-level wording.
+var scTxtLow = readText('docs/SECURITY_CHECKLIST.md').toLowerCase();
+record(
+  'docs/SECURITY_CHECKLIST.md asserts contextIsolation: true',
+  scTxtLow.indexOf('contextisolation: true') !== -1
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts nodeIntegration: false',
+  scTxtLow.indexOf('nodeintegration: false') !== -1
 );
 
 // --- Report ---

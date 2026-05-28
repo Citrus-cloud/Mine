@@ -8,7 +8,7 @@ Electron and vanilla JavaScript. It is intended for testing the user
 experience, the safety model, and the persistence layer **without**
 performing any real system input.
 
-This release closes Steps 1 — 22 of the development plan and is
+This release closes Steps 1 — 23 of the development plan and is
 the candidate basis for a public GitHub pre-release.
 
 > **Quick safety summary.** Six independent layers refuse real
@@ -16,6 +16,11 @@ the candidate basis for a public GitHub pre-release.
 > adapter registry, action pipeline, and the dry-run sandbox.
 > No real cursor movement and no real keystrokes are produced by
 > this build. See **§ Safety model** below.
+>
+> **Beta note.** This is a beta pre-release. **Manual packaged-app
+> testing is recommended before relying on a build for any
+> non-test workflow.** See `docs/PACKAGED_APP_QA.md` and
+> `docs/RELEASE_BLOCKERS.md`.
 
 ---
 
@@ -126,6 +131,19 @@ the candidate basis for a public GitHub pre-release.
   command sequence.
 - Smoke check expanded; Release status card now also reports the
   presence of the final-check and tag-and-release-guide docs.
+
+### Step 23 — Post-pack QA and release blocker pass
+- `docs/RELEASE_BLOCKERS.md` — release-blocker tracker.
+  No active blockers after automated and static checks.
+- `docs/PACKAGED_APP_QA.md` — manual checklist for the packaged
+  binary, including a mandatory "no real clicks verification"
+  step.
+- Smoke check expanded to 168 invariants.
+- Release status diagnostics card extended with Release blockers
+  / Packaged app QA / Packaged app tested rows; badge now reads
+  `Ready after manual QA`.
+- **Manual packaged-app testing on at least one target OS is
+  required before publishing the GitHub release tag.**
 
 ---
 

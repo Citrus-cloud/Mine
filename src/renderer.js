@@ -754,7 +754,11 @@ function renderAdvancedSafety() {
     { key: 'changelogPresent',          label: t('changelogPresent') },
     { key: 'releaseNotesPresent',       label: t('releaseNotesPresent') },
     { key: 'releaseFinalCheckPresent',  label: t('finalReleaseCheck') },
-    { key: 'tagAndReleaseGuidePresent', label: t('tagAndReleaseGuide') }
+    { key: 'tagAndReleaseGuidePresent', label: t('tagAndReleaseGuide') },
+    // Step 23 rows
+    { key: 'releaseBlockersPresent',    label: t('releaseBlockers') },
+    { key: 'packagedAppQaPresent',      label: t('packagedAppQa') },
+    { key: 'packagedAppTested',         label: t('packagedAppTested') }
   ].forEach(item => {
     const row = document.createElement('div'); row.className = 'adv-card-row';
     const lbl = document.createElement('span'); lbl.className = 'adv-card-label'; lbl.textContent = item.label;
@@ -784,18 +788,22 @@ function renderAdvancedSafety() {
       placeholders.releaseNotesPresent.textContent       = rs.releaseNotesPresent ? t('present') : t('absent');
       placeholders.releaseFinalCheckPresent.textContent  = rs.releaseFinalCheckPresent ? t('present') : t('absent');
       placeholders.tagAndReleaseGuidePresent.textContent = rs.tagAndReleaseGuidePresent ? t('present') : t('absent');
-      // Step 22: badge prefers readyForManualRelease over docs-only readiness.
-      const ready = (typeof rs.readyForManualRelease === 'boolean')
-        ? rs.readyForManualRelease
-        : !!rs.releaseDocsReady;
-      rsBadge.textContent = ready ? t('readyForManualRelease') : t('releaseNotReady');
+      placeholders.releaseBlockersPresent.textContent    = rs.releaseBlockersPresent ? t('present') : t('absent');
+      placeholders.packagedAppQaPresent.textContent      = rs.packagedAppQaPresent ? t('present') : t('absent');
+      placeholders.packagedAppTested.textContent         = rs.packagedAppTested ? t('yes') : t('manualPackagedTestingRequired');
+      // Step 22+23: badge prefers readyAfterManualQa over docs-only readiness.
+      const ready = (typeof rs.readyAfterManualQa === 'boolean')
+        ? rs.readyAfterManualQa
+        : (typeof rs.readyForManualRelease === 'boolean'
+            ? rs.readyForManualRelease
+            : !!rs.releaseDocsReady);
+      rsBadge.textContent = ready ? t('readyAfterManualQa') : t('releaseNotReady');
     }).catch(() => {
       rsVerVal.textContent = '?';
       Object.values(placeholders).forEach(p => p.textContent = '?');
       rsBadge.textContent = '?';
     });
   }
-
   // Error history
   const eCard = document.createElement('div'); eCard.className = 'adv-card';
   const eTitle = document.createElement('div'); eTitle.className = 'adv-card-title'; eTitle.textContent = `${t('errorHistory')} (${getErrorCount()})`; eCard.appendChild(eTitle);
@@ -845,7 +853,7 @@ async function copyDiagnostics() {
     } catch (e) {}
     sbLine = `Sandbox: dryRunAvailable=${sb.dryRunAvailable}, realActionsAllowed=${sb.realActionsAllowed}, realActionsImplemented=${sb.realActionsImplemented}, blockedReasons=${blockedCount}, checklistReady=${readyCount}, lastDryRunAt=${sb.lastDryRunAt || 'none'}, lastDryRunActionCount=${sb.lastDryRunActionCount}`;
   }
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
