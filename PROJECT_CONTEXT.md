@@ -7,32 +7,31 @@
 
 ## Текущий шаг
 
-**Шаг 22 завершён.** GitHub beta release finalization. Проект
-остаётся в стадии `0.1.0-beta preparation` (simulation-only).
-На шаге 22 добавлены [`docs/RELEASE_FINAL_CHECK.md`](./docs/RELEASE_FINAL_CHECK.md)
-(короткий pre-tag sign-off для maintainer'а) и
-[`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md)
-(manual git/GitHub-команды для публикации). Финализированы
-[`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md)
-и [`RELEASE_NOTES.md`](./RELEASE_NOTES.md): explicit «no real
-clicks / no OCR / no image recognition / no mobile / mock adapter
-only / dry-run sandbox does not execute real actions».
-`docs/SECURITY_CHECKLIST.md` дополнен секцией
-«Final release security»; `docs/KNOWN_LIMITATIONS.md` — секцией
-8 (Beta release); `docs/SMOKE_TESTS.md` — секцией
-«Step 22 — Release smoke sequence» (#135–#150). IPC
-`system:get-release-status` дополнен полями
-`releaseTarget`, `releaseFinalCheckPresent`,
-`tagAndReleaseGuidePresent`, `readyForManualRelease`.
-Карточка Release status в Advanced → Safety теперь содержит
-12 строк (включая Final release check и Tag and release guide)
-и переключилась на бейдж `Ready for manual release` /
-`Not ready for release`. `Copy diagnostics` дополнен.
-Smoke-check расширен до **137 проверок**. Добавлено
-9 новых i18n-ключей RU + EN. **Tag и публикация GitHub
-Release остаются ручными действиями** — см.
-`docs/TAG_AND_RELEASE_GUIDE.md`. **Реальные действия
-по-прежнему отключены** на всех шести слоях защиты:
+**Шаг 23 завершён.** Post-pack QA and release blocker pass.
+Проект остаётся в стадии `0.1.0-beta preparation` (simulation-only).
+На шаге 23 выполнен release-blocker аудит: 0 forbidden modules,
+0 dup ids, 0 missing refs, perfect i18n parity 368/368, все
+6 слоёв защиты от реального ввода подтверждены runtime-харнесом,
+смок 141/141 OK на старте → **168/168 OK** после расширения.
+**Release blockers по результатам автоматических проверок не
+найдены.** Добавлены [`docs/RELEASE_BLOCKERS.md`](./docs/RELEASE_BLOCKERS.md)
+(status / blockers table / non-blocking known issues / verification
+notes / release decision = "Ready after manual packaged-app QA")
+и [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (manual
+checklist для проверки собранного `npm run pack` / `npm run dist`
+приложения с обязательной верификацией отсутствия реальных
+кликов). IPC `system:get-release-status` дополнен полями
+`releaseBlockersPresent`, `packagedAppQaPresent`,
+`packagedAppTested`, `readyAfterManualQa`. Карточка Release status
+расширена 3 новыми строками (Release blockers, Packaged app QA,
+Packaged app tested) и переключилась на бейдж
+`Ready after manual QA`. Обновлены `docs/RELEASE_FINAL_CHECK.md`,
+`docs/TAG_AND_RELEASE_GUIDE.md`, `docs/GITHUB_RELEASE_DRAFT.md`,
+`RELEASE_NOTES.md`. Smoke-check расширен на 27 новых проверок
+(теперь 168). Добавлено 7 новых i18n-ключей RU + EN.
+**Tag и публикация GitHub Release остаются ручными действиями.**
+Финальный гейт перед тэгом — manual packaged-app QA. **Реальные
+действия по-прежнему отключены** на всех шести слоях защиты:
 `realDesktopActions = false`, `simulationOnly = true`,
 `isRealActionAllowed() → false`, `isRealAdapterAllowed() → false`,
 `setActiveAdapter("real-desktop")` блокируется,
@@ -69,7 +68,7 @@ Release остаются ручными действиями** — см.
     Нет UI / IPC / env-vars, которые могут их перевернуть. Любое
     изменение проходит `docs/REAL_ACTIONS_GO_NO_GO.md`.
 
-## Статус реализации (на конец шага 22)
+## Статус реализации (на конец шага 23)
 
 ### Реализовано
 - Electron-приложение, главное минималистичное меню.
@@ -415,6 +414,81 @@ Release остаются ручными действиями** — см.
     инструкции; никакой автоматизации тэгирования или загрузки
     артефактов.
 
+- **Post-pack QA and release blocker pass (шаг 23):**
+  - **Audit отделил release blockers от non-blocking known
+    issues**: 0 forbidden modules, 0 dup ids, 0 missing refs,
+    perfect i18n parity 368/368; runtime-харнес подтвердил, что
+    все шесть слоёв защиты по-прежнему refuse real input;
+    смок прошёл 141/141 на старте и 168/168 после расширения.
+    **Release blockers не найдены.**
+  - **Документы (новые):**
+    [`docs/RELEASE_BLOCKERS.md`](./docs/RELEASE_BLOCKERS.md)
+    — 6 секций: Status / Blockers (пустая таблица) /
+    Non-blocking known issues (7 ID: KNI-1..7 — code signing,
+    tray icon, audit persistence, CI, Linux hotkeys,
+    cross-builds) / Verification notes (smoke-check, manual QA,
+    packaging, security, localization) / Release decision =
+    "Ready after manual packaged-app QA".
+    [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md)
+    — 16 секций: Build context / Launch / Main screen /
+    Scenarios / Simulation Start-Stop / Emergency Stop / RU-EN
+    switch / Settings persistence / Import-export / Advanced
+    dashboard / Diagnostics / Mock adapter self-test / Dry-run
+    sandbox / **No real clicks verification (mandatory)** /
+    Quit-reopen / Known packaged issues + Sign-off.
+  - **Финализация существующих docs:**
+    `docs/RELEASE_FINAL_CHECK.md` — обновлён до Step 23,
+    добавлен «Walk PACKAGED_APP_QA» step в Required checks,
+    Release decision = "Ready for beta release after packaged
+    app QA"; добавлены ссылки на RELEASE_BLOCKERS и
+    PACKAGED_APP_QA в Documentation checks.
+    `docs/TAG_AND_RELEASE_GUIDE.md` — добавлена секция
+    «0a. Before creating the tag» с обязательным прохождением
+    PACKAGED_APP_QA и обновлением RELEASE_BLOCKERS, плюс
+    предупреждение «do not tag from a broken working tree».
+    `docs/GITHUB_RELEASE_DRAFT.md` — добавлена секция
+    «Beta QA status» с упоминанием `PACKAGED_APP_QA.md`,
+    `RELEASE_BLOCKERS.md`, явным «No real actions are included»
+    предупреждением и «Manual packaged-app testing
+    recommended».
+    `RELEASE_NOTES.md` — добавлены упоминания manual packaged-app
+    testing, Steps 1—23.
+  - **IPC `system:get-release-status`** дополнен полями
+    `releaseBlockersPresent`, `packagedAppQaPresent`,
+    `packagedAppTested` (всегда `false` — manual-only),
+    `readyAfterManualQa` (= readyForManualRelease, чтобы будущие
+    шаги могли ужесточить условия).
+  - **Карточка Release status** в Advanced → Safety теперь
+    содержит 14 строк (добавлены `Release blockers`,
+    `Packaged app QA`, `Packaged app tested`); бейдж переключился
+    на `Ready after manual QA` / `Not ready for release`.
+  - **`Copy diagnostics`** дополнен полями
+    `releaseBlockersPresent`, `packagedAppQaPresent`,
+    `packagedAppTested`, `readyAfterManualQa`.
+  - **smoke-check расширен до 168 проверок** (с 141): наличие
+    новых документов, content sanity (RELEASE_BLOCKERS упоминает
+    `0.1.0-beta`, имеет «Release decision» секцию, явно говорит
+    об отсутствии known release blockers; PACKAGED_APP_QA
+    содержит `npm run pack` / `npm run dist`, явный «no real
+    cursor movement» check, утверждение simulation-only);
+    cross-references RELEASE_FINAL_CHECK ↔ RELEASE_BLOCKERS /
+    PACKAGED_APP_QA; TAG_AND_RELEASE_GUIDE ↔ RELEASE_BLOCKERS /
+    PACKAGED_APP_QA + warning «do not tag from a broken working
+    tree»; GITHUB_RELEASE_DRAFT имеет «Beta QA status» секцию;
+    README или PROJECT_CONTEXT упоминают шаг 23; RELEASE_NOTES
+    упоминает packaged-app testing; SECURITY_CHECKLIST явно
+    утверждает `contextIsolation: true` и `nodeIntegration: false`.
+  - **i18n**: 7 новых ключей RU + EN (`releaseBlockers`,
+    `packagedAppQa`, `readyAfterManualQa`,
+    `manualPackagedTestingRequired`, `packagedAppTested`,
+    `noKnownReleaseBlockers`, `releaseBlocked`).
+  - **Реальные действия** проверены ещё раз: 6 слоёв защиты,
+    нет prohibited dependencies, нет реального desktop adapter,
+    нет mouse/keyboard system calls, нет OCR/OpenCV. **Release
+    blockers по статическим проверкам отсутствуют.** Финальный
+    гейт — manual packaged-app QA (`docs/PACKAGED_APP_QA.md`)
+    и обновление `docs/RELEASE_BLOCKERS.md`.
+
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
   `node-key-sender`, нет нативных модулей ввода.
@@ -482,15 +556,15 @@ Release остаются ручными действиями** — см.
 | 20 | Final beta QA and bugfix pass: structural audit, expanded smoke-check (96 checks), BETA_QA_REPORT, I18N_CHECKLIST. Manual smoke required before tag. |
 | 21 | Beta release packaging pass: `.gitignore`, extended package.json `build` block, RELEASE_CHECKLIST / BUILD_ARTIFACTS / GITHUB_RELEASE_DRAFT / VERSIONING docs, Release status diagnostics, smoke-check 113 checks. |
 | 22 | GitHub beta release finalization: `RELEASE_FINAL_CHECK.md`, `TAG_AND_RELEASE_GUIDE.md`, finalized RELEASE_NOTES / GITHUB_RELEASE_DRAFT, expanded Release status card (12 rows + manual-release badge), smoke-check 137 checks. Tag and publication remain manual. |
+| 23 | Post-pack QA and release blocker pass: `RELEASE_BLOCKERS.md`, `PACKAGED_APP_QA.md`, expanded Release status card (14 rows + ready-after-manual-QA badge), smoke-check 168 checks. Manual packaged-app QA remains the last gate. |
 
-## Что логично делать на шаге 23
+## Что логично делать на шаге 24
 
-- **Опубликовать `v0.1.0-beta` GitHub Release**, следуя
-  [`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md):
-  пройти `docs/RELEASE_FINAL_CHECK.md`, локально выполнить
-  `npm run dist` хотя бы на одной целевой ОС, переименовать
-  артефакты по `docs/BUILD_ARTIFACTS.md`, опубликовать pre-release
-  c текстом из `docs/GITHUB_RELEASE_DRAFT.md`.
+- **Финальный release commit/tag draft:** прохождение
+  `docs/PACKAGED_APP_QA.md` на целевой ОС, подписание
+  `docs/RELEASE_FINAL_CHECK.md`, обновление
+  `docs/RELEASE_BLOCKERS.md` ("Ready"), создание тэга
+  `v0.1.0-beta`, публикация GitHub pre-release.
 - **Реальные tray-иконки** PNG/ICO/ICNS, сгенерированные из
   `assets/icons/clickflow-icon.svg`.
 - **Code signing notes** (Windows + macOS) и первый подписанный build.

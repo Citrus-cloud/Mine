@@ -243,6 +243,9 @@ ipcMain.handle('system:get-release-status', async () => {
   // Step 22 docs
   const releaseFinalCheckPresent = fileExistsInApp(path.join('docs', 'RELEASE_FINAL_CHECK.md'));
   const tagAndReleaseGuidePresent = fileExistsInApp(path.join('docs', 'TAG_AND_RELEASE_GUIDE.md'));
+  // Step 23 docs
+  const releaseBlockersPresent  = fileExistsInApp(path.join('docs', 'RELEASE_BLOCKERS.md'));
+  const packagedAppQaPresent    = fileExistsInApp(path.join('docs', 'PACKAGED_APP_QA.md'));
 
   let appVersion = '?';
   let packagingConfigured = false;
@@ -269,7 +272,8 @@ ipcMain.handle('system:get-release-status', async () => {
     buildArtifactsPresent && githubReleaseDraftPresent &&
     versioningPresent && changelogPresent && releaseNotesPresent &&
     smokeCheckScript && gitignorePresent &&
-    releaseFinalCheckPresent && tagAndReleaseGuidePresent;
+    releaseFinalCheckPresent && tagAndReleaseGuidePresent &&
+    releaseBlockersPresent && packagedAppQaPresent;
 
   // Step 22: separate aggregate for the "ready for manual release"
   // signal. We keep it separate from releaseDocsReady so a future
@@ -277,6 +281,12 @@ ipcMain.handle('system:get-release-status', async () => {
   // the existing badge.
   const readyForManualRelease = releaseDocsReady &&
     simulationOnly && !realActionsImplemented;
+
+  // Step 23: packaged app QA cannot be confirmed automatically;
+  // it is always a manual gate. We surface it as a flag for the
+  // diagnostics card.
+  const packagedAppTested = false;
+  const readyAfterManualQa = readyForManualRelease;
 
   return {
     appVersion,
@@ -295,6 +305,10 @@ ipcMain.handle('system:get-release-status', async () => {
     gitignorePresent,
     releaseFinalCheckPresent,
     tagAndReleaseGuidePresent,
+    releaseBlockersPresent,
+    packagedAppQaPresent,
+    packagedAppTested,
+    readyAfterManualQa,
     releaseDocsReady,
     readyForManualRelease
   };

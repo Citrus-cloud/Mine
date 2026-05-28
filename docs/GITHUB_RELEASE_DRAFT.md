@@ -21,8 +21,30 @@ OS input.
 The release closes Steps 1 — 21 of the development plan and is the
 first public pre-release.
 
-## Highlights
+## Beta QA status
 
+This is a **beta pre-release.** Static and source-level checks
+all pass at the close of step 23 (`npm run smoke` reports
+`Failed: 0`). Manual packaged-app QA on at least one target OS
+is part of the release gate — see
+[`docs/PACKAGED_APP_QA.md`](../docs/PACKAGED_APP_QA.md) and the
+maintainer sign-off in
+[`docs/RELEASE_FINAL_CHECK.md`](../docs/RELEASE_FINAL_CHECK.md).
+
+Known release blockers (if any at the time you read this) are
+tracked in
+[`docs/RELEASE_BLOCKERS.md`](../docs/RELEASE_BLOCKERS.md). At the
+time of writing: none after automated and static checks. Manual
+QA may add entries.
+
+> **Manual packaged-app testing is recommended before relying on
+> a build for any non-test workflow.** This is a beta tag.
+
+> **No real actions are included in this build.** ClickFlow is
+> simulation-only. The runtime click engine never produces OS
+> input. See **§ Safety model** below for the six-layer guarantee.
+
+## Highlights
 - Electron app shell with `contextIsolation: true`,
   `nodeIntegration: false`, CSP `default-src 'self';
   script-src 'self'; style-src 'self';`.
@@ -47,7 +69,11 @@ first public pre-release.
 - **Step 22:** GitHub beta release finalization. Tag and release
   guide, final-release check, and a Release status diagnostics
   card all confirm the simulation-only invariants once more.
-- Localization RU + EN, parity verified (359 keys each).
+- **Step 23:** post-pack QA and release blocker pass. Added
+  `docs/RELEASE_BLOCKERS.md` and `docs/PACKAGED_APP_QA.md`;
+  smoke-check expanded; release decision is "Ready after manual
+  packaged-app QA".
+- Localization RU + EN, parity verified (368 keys each).
 
 ## Safety model
 
