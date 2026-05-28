@@ -135,7 +135,42 @@ Status as of `0.1.0-beta` (Step 14).
 - [x] `PROJECT_CONTEXT.md` updated to Step 14.
 - [x] No-real-clicks verification path documented.
 
-## 13. Documentation
+## 13. Final stabilization (Step 15)
+
+- [x] `docs/FINAL_BETA_REVIEW.md` — go/no-go style summary.
+- [x] `scripts/README.md` and `scripts/smoke-check.js`.
+- [x] `npm run smoke` wired in `package.json`.
+- [x] Beta health card in Advanced → Safety
+      (simulationOnly, realClicksImplemented, ocrImplemented,
+      imageRecognitionImplemented, docsReady, packagingConfigured,
+      securityChecklistPresent, actionSchemaPresent).
+- [x] Corrupted-JSON guard in `main.js`: scenarios / settings /
+      profiles loaders rename broken files to `<file>.broken-<ts>`
+      and fall back to defaults without crashing.
+- [x] Renderer surfaces corruption fallback as a warning log entry
+      and an entry in the error history (`CORRUPT_*_JSON` codes).
+- [x] Reset / import / export flows always emit a localized log
+      entry on success, cancel, and failure.
+- [x] `docs/SMOKE_TESTS.md` updated with `npm run smoke` and
+      corrupted-JSON / reset / import-failure tests.
+
+## 14. Handoff to next big branch (Step 16)
+
+- [x] `src/feature-flags.js` (frozen safe defaults: `realDesktopActions: false`,
+      `ocr: false`, `imageRecognition: false`, `simulationOnly: true`).
+- [x] Diagnostics show feature flags read-only.
+- [x] `Next safety milestone` card in Advanced → Future (every
+      milestone planned, real mode disabled).
+- [x] `docs/REAL_ACTIONS_GO_NO_GO.md` — gate for any future real-input
+      shipping.
+- [x] `docs/FEATURE_FLAGS.md` — runtime flag layer documentation.
+- [x] `docs/AUDIT_LOG_PLAN.md` — design-only audit log doc.
+- [x] `docs/PRIVACY.md` — single-page privacy explainer.
+- [x] `README.md` updated to step 16.
+- [x] `PROJECT_CONTEXT.md` updated to step 16.
+- [x] `CHANGELOG.md` updated with steps 15-16.
+
+## 15. Documentation
 
 - [x] `README.md` with full history and `0.1.0-beta` status.
 - [x] `PROJECT_CONTEXT.md`.
@@ -153,7 +188,16 @@ Status as of `0.1.0-beta` (Step 14).
 - [x] `docs/KNOWN_LIMITATIONS.md`.
 - [x] `docs/ROADMAP.md`.
 
-## 14. Known limitations (single source of truth)
+## 16. Final stabilization & handoff docs (Steps 15-16)
+
+- [x] `docs/FINAL_BETA_REVIEW.md`.
+- [x] `docs/REAL_ACTIONS_GO_NO_GO.md`.
+- [x] `docs/FEATURE_FLAGS.md`.
+- [x] `docs/AUDIT_LOG_PLAN.md`.
+- [x] `docs/PRIVACY.md`.
+- [x] `scripts/README.md` and `scripts/smoke-check.js`.
+
+## 17. Known limitations (single source of truth)
 
 See [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md). Highlights:
 

@@ -29,14 +29,21 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, готов к публичному beta-тестированию.
+- Состояние: simulation-only MVP, готов к публичному beta-тестированию,
+  GitHub pre-release-ready.
 - Последние шаги развития:
   - Шаг 13 — визуальная полировка, дизайн-токены, тёмная тема,
     `assets/`.
   - Шаг 14 — `CHANGELOG`, `RELEASE_NOTES`, `CONTRIBUTING`,
     GitHub-шаблоны, beta-гид, известные ограничения, roadmap.
+  - Шаг 15 — финальная стабилизация: `npm run smoke`, Beta health
+    диагностика, обработка повреждённых JSON, `FINAL_BETA_REVIEW`.
+  - Шаг 16 — handoff design: `src/feature-flags.js` с safe defaults,
+    карточка Feature flags, Next safety milestone в Future,
+    `REAL_ACTIONS_GO_NO_GO`, `FEATURE_FLAGS`, `AUDIT_LOG_PLAN`,
+    `PRIVACY`.
 
 ---
 
@@ -64,7 +71,16 @@ safety review).
 ### Расширенный режим
 Семь вкладок: Overview, Scenarios, Execution, Logs, Settings,
 Safety, Future. Diagnostics, история ошибок, профили, импорт /
-экспорт, readiness-чеклист desktop-адаптера.
+экспорт, readiness-чеклист desktop-адаптера, **Beta health card**
+(Step 15), **Feature flags card** (Step 16), **Next safety milestone**
+карточка во вкладке Future.
+
+### Smoke check
+`npm run smoke` — статическая проверка целостности репозитория
+(файлы, security-флаги, CSP, package.json wiring, отсутствие
+real-input модулей). Без Electron, без сетевых вызовов, без
+зависимостей — только Node `fs`/`path`. См.
+[`scripts/README.md`](./scripts/README.md).
 
 ### Глобальные горячие клавиши
 - `CmdOrCtrl+Alt+S` — Start.
@@ -141,6 +157,7 @@ npm start        # запустить приложение через Electron
 npm run dev      # то же, оставлено для совместимости
 npm run pack     # unpacked build (electron-builder --dir)
 npm run dist     # инсталлятор / DMG / AppImage
+npm run smoke    # статическая smoke-проверка (без Electron)
 ```
 
 Архитектурные правила и safety review gate — в
@@ -180,21 +197,30 @@ npm run dist     # релизные артефакты в dist/
 │       └── clickflow-icon.svg    # локальный SVG, без внешних ссылок
 ├── docs/
 │   ├── ACTION_SCHEMA.md
+│   ├── AUDIT_LOG_PLAN.md
 │   ├── BETA_TESTING_GUIDE.md
 │   ├── DESKTOP_ADAPTER_PLAN.md
+│   ├── FEATURE_FLAGS.md
+│   ├── FINAL_BETA_REVIEW.md
 │   ├── KNOWN_LIMITATIONS.md
 │   ├── MVP_CHECKLIST.md
 │   ├── PACKAGING.md
+│   ├── PRIVACY.md
+│   ├── REAL_ACTIONS_GO_NO_GO.md
 │   ├── ROADMAP.md
 │   ├── SECURITY_CHECKLIST.md
 │   ├── SMOKE_TESTS.md
 │   └── TEST_PLAN.md
 ├── prompts/
 │   └── step-05.md
+├── scripts/
+│   ├── README.md
+│   └── smoke-check.js
 ├── src/
 │   ├── app-state.js
 │   ├── click-engine.js
 │   ├── error-manager.js
+│   ├── feature-flags.js
 │   ├── i18n.js
 │   ├── index.html
 │   ├── logger.js
@@ -219,23 +245,36 @@ npm run dist     # релизные артефакты в dist/
 - [`CHANGELOG.md`](./CHANGELOG.md) — история изменений.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — как разрабатывать без
   нарушения safety-модели.
+- [`docs/FINAL_BETA_REVIEW.md`](./docs/FINAL_BETA_REVIEW.md) —
+  финальный go/no-go review beta-MVP (Step 15).
 - [`docs/BETA_TESTING_GUIDE.md`](./docs/BETA_TESTING_GUIDE.md) —
   гид для beta-тестера.
 - [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) —
   что не реализовано и что **никогда** не будет реализовано.
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — что планируется дальше.
+- [`docs/REAL_ACTIONS_GO_NO_GO.md`](./docs/REAL_ACTIONS_GO_NO_GO.md)
+  — обязательный checklist перед любой будущей реализацией реальных
+  desktop-кликов.
+- [`docs/FEATURE_FLAGS.md`](./docs/FEATURE_FLAGS.md) — слой
+  feature-flags и safe defaults.
+- [`docs/AUDIT_LOG_PLAN.md`](./docs/AUDIT_LOG_PLAN.md) — design-only
+  план audit-логов.
+- [`docs/PRIVACY.md`](./docs/PRIVACY.md) — что хранится локально,
+  что не отправляется в сеть.
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
   electron-builder.
 - [`docs/SMOKE_TESTS.md`](./docs/SMOKE_TESTS.md) — быстрая проверка
-  перед релизом.
+  перед релизом, включая `npm run smoke`.
 - [`docs/TEST_PLAN.md`](./docs/TEST_PLAN.md) — расширенный
   тест-план.
 - [`docs/MVP_CHECKLIST.md`](./docs/MVP_CHECKLIST.md) — статус MVP.
 - [`docs/DESKTOP_ADAPTER_PLAN.md`](./docs/DESKTOP_ADAPTER_PLAN.md)
   и [`docs/ACTION_SCHEMA.md`](./docs/ACTION_SCHEMA.md) — будущий
   адаптер реального ввода (за safety-гейтом).
+- [`scripts/README.md`](./scripts/README.md) — правила для
+  репозиторных helper-скриптов.
 
 ---
 
@@ -272,6 +311,8 @@ npm run dist     # релизные артефакты в dist/
 | 12 | Packaging | `electron-builder`, packaging & security docs. |
 | 13 | Beta polish | UI / dark theme / assets / структура CSS. |
 | 14 | Release prep | Этот release-каркас. |
+| 15 | Final stabilization | `npm run smoke`, Beta health, JSON corruption guard, `FINAL_BETA_REVIEW`. |
+| 16 | Handoff design | Feature flags, go/no-go, audit log plan, privacy doc. |
 
 ---
 

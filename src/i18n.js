@@ -294,7 +294,29 @@ const translations = {
     noRealClicks: "Реальные клики не реализованы",
     simulationOnlyShort: "Только имитация",
     yes: "да",
-    no: "нет"
+    no: "нет",
+
+    // Steps 15-16: Final stabilization & handoff
+    betaHealth: "Состояние beta",
+    docsReady: "Документация готова",
+    packagingConfigured: "Упаковка настроена",
+    securityChecklistPresent: "Security checklist есть",
+    actionSchemaPresent: "Action schema есть",
+    realClicksImplemented: "Реальные клики реализованы",
+    ocrImplemented: "OCR реализован",
+    imageRecognitionImplemented: "Распознавание изображений реализовано",
+    featureFlags: "Feature flags",
+    nextSafetyMilestone: "Следующий этап безопасности",
+    finalSafetyReview: "Финальный safety review",
+    adapterAvailabilityCheck: "Проверка доступности адаптера",
+    globalEmergencyStopVerified: "Global emergency stop проверен",
+    userConfirmationFlow: "Flow подтверждения пользователя",
+    realModeDisabled: "Реальный режим отключён",
+    corruptedDataFallback: "Повреждённый файл, используются настройки по умолчанию",
+    resetCompleted: "Сброс выполнен",
+    smokeCheck: "Smoke-проверка",
+    flagDisabled: "выключен",
+    flagEnabled: "включён"
   },
   en: {
     // Main screen
@@ -589,7 +611,29 @@ const translations = {
     noRealClicks: "Real clicks not implemented",
     simulationOnlyShort: "Simulation only",
     yes: "yes",
-    no: "no"
+    no: "no",
+
+    // Steps 15-16: Final stabilization & handoff
+    betaHealth: "Beta health",
+    docsReady: "Docs ready",
+    packagingConfigured: "Packaging configured",
+    securityChecklistPresent: "Security checklist present",
+    actionSchemaPresent: "Action schema present",
+    realClicksImplemented: "Real clicks implemented",
+    ocrImplemented: "OCR implemented",
+    imageRecognitionImplemented: "Image recognition implemented",
+    featureFlags: "Feature flags",
+    nextSafetyMilestone: "Next safety milestone",
+    finalSafetyReview: "Final safety review",
+    adapterAvailabilityCheck: "Adapter availability check",
+    globalEmergencyStopVerified: "Global emergency stop verified",
+    userConfirmationFlow: "User confirmation flow",
+    realModeDisabled: "Real mode disabled",
+    corruptedDataFallback: "Corrupted file detected, using defaults",
+    resetCompleted: "Reset completed",
+    smokeCheck: "Smoke check",
+    flagDisabled: "disabled",
+    flagEnabled: "enabled"
   }
 };
 

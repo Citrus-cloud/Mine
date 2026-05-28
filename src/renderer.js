@@ -534,6 +534,53 @@ function renderAdvancedSafety() {
   });
   c.appendChild(sysCard);
 
+  // Beta health card (Step 15)
+  const bhCard = document.createElement('div'); bhCard.className = 'adv-card';
+  const bhTitle = document.createElement('div'); bhTitle.className = 'adv-card-title'; bhTitle.textContent = t('betaHealth'); bhCard.appendChild(bhTitle);
+  // Render placeholder rows synchronously so the card renders even before
+  // the IPC promise resolves; rows are then updated in place.
+  addCardRow(bhCard, t('simulationOnly'), t('flagEnabled'));
+  addCardRow(bhCard, t('realClicksImplemented'), t('no'));
+  addCardRow(bhCard, t('ocrImplemented'), t('no'));
+  addCardRow(bhCard, t('imageRecognitionImplemented'), t('no'));
+  const bhDocsRow = document.createElement('div'); bhDocsRow.className = 'adv-card-row';
+  const bhDocsLbl = document.createElement('span'); bhDocsLbl.className = 'adv-card-label'; bhDocsLbl.textContent = t('docsReady');
+  const bhDocsVal = document.createElement('span'); bhDocsVal.className = 'adv-card-value'; bhDocsVal.textContent = '...';
+  bhDocsRow.appendChild(bhDocsLbl); bhDocsRow.appendChild(bhDocsVal); bhCard.appendChild(bhDocsRow);
+  const bhPackRow = document.createElement('div'); bhPackRow.className = 'adv-card-row';
+  const bhPackLbl = document.createElement('span'); bhPackLbl.className = 'adv-card-label'; bhPackLbl.textContent = t('packagingConfigured');
+  const bhPackVal = document.createElement('span'); bhPackVal.className = 'adv-card-value'; bhPackVal.textContent = '...';
+  bhPackRow.appendChild(bhPackLbl); bhPackRow.appendChild(bhPackVal); bhCard.appendChild(bhPackRow);
+  const bhSecRow = document.createElement('div'); bhSecRow.className = 'adv-card-row';
+  const bhSecLbl = document.createElement('span'); bhSecLbl.className = 'adv-card-label'; bhSecLbl.textContent = t('securityChecklistPresent');
+  const bhSecVal = document.createElement('span'); bhSecVal.className = 'adv-card-value'; bhSecVal.textContent = '...';
+  bhSecRow.appendChild(bhSecLbl); bhSecRow.appendChild(bhSecVal); bhCard.appendChild(bhSecRow);
+  const bhActRow = document.createElement('div'); bhActRow.className = 'adv-card-row';
+  const bhActLbl = document.createElement('span'); bhActLbl.className = 'adv-card-label'; bhActLbl.textContent = t('actionSchemaPresent');
+  const bhActVal = document.createElement('span'); bhActVal.className = 'adv-card-value'; bhActVal.textContent = '...';
+  bhActRow.appendChild(bhActLbl); bhActRow.appendChild(bhActVal); bhCard.appendChild(bhActRow);
+  c.appendChild(bhCard);
+  window.clickflow.system.getBetaHealth().then(h => {
+    bhDocsVal.textContent = h.docsReady ? t('yes') : t('no');
+    bhPackVal.textContent = h.packagingConfigured ? t('yes') : t('no');
+    bhSecVal.textContent  = h.securityChecklistPresent ? t('yes') : t('no');
+    bhActVal.textContent  = h.actionSchemaPresent ? t('yes') : t('no');
+  }).catch(() => {
+    bhDocsVal.textContent = '?'; bhPackVal.textContent = '?'; bhSecVal.textContent = '?'; bhActVal.textContent = '?';
+  });
+
+  // Feature flags card (Step 16)
+  const ffCard = document.createElement('div'); ffCard.className = 'adv-card';
+  const ffTitle = document.createElement('div'); ffTitle.className = 'adv-card-title'; ffTitle.textContent = t('featureFlags'); ffCard.appendChild(ffTitle);
+  const flags = (typeof getFeatureFlagsForDiagnostics === 'function')
+    ? getFeatureFlagsForDiagnostics()
+    : { safety: { simulationOnly: true, realDesktopActions: false, ocr: false, imageRecognition: false }, capabilities: {} };
+  addCardRow(ffCard, t('simulationOnly'), flags.safety.simulationOnly ? t('flagEnabled') : t('flagDisabled'));
+  addCardRow(ffCard, 'realDesktopActions', flags.safety.realDesktopActions ? t('flagEnabled') : t('flagDisabled'));
+  addCardRow(ffCard, 'OCR', flags.safety.ocr ? t('flagEnabled') : t('flagDisabled'));
+  addCardRow(ffCard, 'imageRecognition', flags.safety.imageRecognition ? t('flagEnabled') : t('flagDisabled'));
+  c.appendChild(ffCard);
+
   // Warning
   const warning = document.createElement('div'); warning.className = 'adv-warning'; warning.textContent = t('simulationModeNotice'); c.appendChild(warning);
   // Error history
@@ -549,8 +596,14 @@ function renderAdvancedSafety() {
 async function copyDiagnostics() {
   const state = getState();
   let sysInfo = {};
+  let betaHealth = {};
   try { sysInfo = await window.clickflow.system.getInfo(); } catch(e) {}
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true`;
+  try { betaHealth = await window.clickflow.system.getBetaHealth(); } catch(e) {}
+  const ff = (typeof getFeatureFlagsForDiagnostics === 'function') ? getFeatureFlagsForDiagnostics() : null;
+  const ffLine = ff
+    ? `Feature flags: simulationOnly=${ff.safety.simulationOnly}, realDesktopActions=${ff.safety.realDesktopActions}, ocr=${ff.safety.ocr}, imageRecognition=${ff.safety.imageRecognition}`
+    : 'Feature flags: simulationOnly=true, realDesktopActions=false, ocr=false, imageRecognition=false';
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
@@ -597,6 +650,30 @@ function renderAdvancedFuture() {
   const modeBadge = document.createElement('div'); modeBadge.className = 'execution-mode-badge'; modeBadge.textContent = t('executionModeSimulation');
   rCard.appendChild(modeBadge);
   c.appendChild(rCard);
+
+  // Next safety milestone card (Step 16) — every item is "planned" or "disabled".
+  // No UI lever flips real mode here; this is informational only.
+  const nsCard = document.createElement('div'); nsCard.className = 'adv-card';
+  const nsTitle = document.createElement('div'); nsTitle.className = 'adv-card-title'; nsTitle.textContent = t('nextSafetyMilestone'); nsCard.appendChild(nsTitle);
+  const nsList = document.createElement('div'); nsList.className = 'readiness-list';
+  const nsItems = [
+    { label: t('finalSafetyReview'),         status: 'planned' },
+    { label: t('adapterAvailabilityCheck'),  status: 'planned' },
+    { label: t('globalEmergencyStopVerified'), status: 'planned' },
+    { label: t('auditLogsPlanned'),          status: 'planned' },
+    { label: t('userConfirmationFlow'),      status: 'planned' },
+    { label: t('realModeDisabled'),          status: 'ready' }
+  ];
+  nsItems.forEach(it => {
+    const row = document.createElement('div'); row.className = 'readiness-item';
+    const lbl = document.createElement('span'); lbl.className = 'readiness-item-label'; lbl.textContent = it.label;
+    const badge = document.createElement('span');
+    badge.className = 'readiness-badge readiness-' + it.status;
+    badge.textContent = it.status === 'ready' ? t('ready') : t('planned');
+    row.appendChild(lbl); row.appendChild(badge); nsList.appendChild(row);
+  });
+  nsCard.appendChild(nsList);
+  c.appendChild(nsCard);
 }
 
 
@@ -664,6 +741,21 @@ async function init() {
   await initProfiles();
   const def = getDefaultScenario(); setSelectedScenario(def);
   resetExecution();
+
+  // Step 15: surface JSON corruption fallback to the user as warning logs
+  // (no crash — defaults are already in use, broken file kept on disk).
+  if (settings.__corrupted) {
+    addLogEntry(createLog('warning', t('corruptedDataFallback') + ' (settings.json)'));
+    reportError({ code: 'CORRUPT_SETTINGS_JSON', message: 'settings.json was corrupted, defaults loaded' }, 'storage');
+  }
+  if (typeof getScenariosCorrupted === 'function' && getScenariosCorrupted()) {
+    addLogEntry(createLog('warning', t('corruptedDataFallback') + ' (scenarios.json)'));
+    reportError({ code: 'CORRUPT_SCENARIOS_JSON', message: 'scenarios.json was corrupted, defaults loaded' }, 'storage');
+  }
+  if (typeof getProfilesCorrupted === 'function' && getProfilesCorrupted()) {
+    addLogEntry(createLog('warning', t('corruptedDataFallback') + ' (profiles.json)'));
+    reportError({ code: 'CORRUPT_PROFILES_JSON', message: 'profiles.json was corrupted, defaults loaded' }, 'storage');
+  }
 
   // Set version badge (textContent, safe)
   const verBadge = document.getElementById('badge-version');
