@@ -217,12 +217,12 @@ function startScenario() {
   const sc = getScenarioById(state.selectedScenarioId);
   if (!sc) { addLogEntry(createLog('error', t('logNoScenario'))); reportError({ code: 'NO_SCENARIO', message: t('logNoScenario') }, 'start'); renderState(); return; }
   runScenario(sc, {
-    onStart: () => { setRunning(true); setExecutionRunning(true); setExecutionProgress(0, sc.settings.repeatCount); setExecutionStartedAt(new Date().toISOString()); setExecutionFinishedAt(null); setExecutionLastAction(null); addLogEntry(createLog('success', `${t('logScenarioStarted')}: ${sc.name}`)); renderState(); },
+    onStart: () => { setRunning(true); setExecutionRunning(true); setExecutionProgress(0, sc.settings.repeatCount); setExecutionStartedAt(new Date().toISOString()); setExecutionFinishedAt(null); setExecutionLastAction(null); addLogEntry(createLog('success', `${t('logScenarioStarted')}: ${sc.name}`)); window.clickflow.system.setExecutionRunning(true); renderState(); },
     onAction: (action, c, total) => { setExecutionLastAction(action); if (shouldLogAction(c, total)) addLogEntry(createLog('info', `${c}/${total}: click x=${action.x} y=${action.y}`)); },
     onProgress: (c, total) => { setExecutionProgress(c, total); renderState(); },
-    onStop: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('warning', t('logScenarioStopped'))); renderState(); },
-    onComplete: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('success', t('logScenarioComplete'))); renderState(); },
-    onError: (msg) => { setRunning(false); setExecutionRunning(false); reportError({ code: 'EXEC_ERROR', message: msg }, 'click-engine'); addLogEntry(createLog('error', msg)); renderState(); }
+    onStop: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('warning', t('logScenarioStopped'))); window.clickflow.system.setExecutionRunning(false); renderState(); },
+    onComplete: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('success', t('logScenarioComplete'))); window.clickflow.system.setExecutionRunning(false); renderState(); },
+    onError: (msg) => { setRunning(false); setExecutionRunning(false); reportError({ code: 'EXEC_ERROR', message: msg }, 'click-engine'); addLogEntry(createLog('error', msg)); window.clickflow.system.setExecutionRunning(false); renderState(); }
   }, { safety: state.settings.safety });
 }
 
@@ -235,7 +235,7 @@ function stopScenario() {
 function triggerEmergencyStop() {
   const state = getState(); if (!state.execution.isRunning) return;
   stopEngine(); setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString());
-  addLogEntry(createLog('warning', t('logEmergencyStop'))); renderState();
+  addLogEntry(createLog('warning', t('logEmergencyStop'))); window.clickflow.system.setExecutionRunning(false); renderState();
 }
 
 
@@ -486,8 +486,25 @@ function renderAdvancedSafety() {
   addCardRow(card, t('emergencyStop'), state.settings.safety.emergencyStopEnabled ? t('enabled') : t('disabled'));
   addCardRow(card, t('minInterval'), `${state.settings.safety.minIntervalMs} ms`);
   addCardRow(card, t('maxRepeats'), `${state.settings.safety.maxRepeatCount}`);
-  addCardRow(card, t('emergencyStopHint'), 'Escape');
+  addCardRow(card, t('emergencyStopHint'), 'Escape / CmdOrCtrl+Alt+E');
   c.appendChild(card);
+
+  // Global Hotkeys card
+  const hkCard = document.createElement('div'); hkCard.className = 'adv-card';
+  const hkTitle = document.createElement('div'); hkTitle.className = 'adv-card-title'; hkTitle.textContent = t('globalHotkeys'); hkCard.appendChild(hkTitle);
+  addCardRow(hkCard, t('startHotkey'), '');
+  addCardRow(hkCard, t('stopHotkey'), '');
+  addCardRow(hkCard, t('emergencyHotkey'), '');
+  const hkBtnGroup = document.createElement('div'); hkBtnGroup.className = 'adv-btn-group';
+  const regBtn = document.createElement('button'); regBtn.className = 'adv-btn adv-btn-secondary'; regBtn.textContent = t('registerHotkeys');
+  regBtn.addEventListener('click', async () => { const r = await window.clickflow.hotkeys.register(); addLogEntry(createLog(r.success ? 'success' : 'error', r.success ? t('hotkeyRegistered') : t('hotkeyRegistrationFailed'))); renderAdvancedSafety(); renderState(); });
+  const unregBtn = document.createElement('button'); unregBtn.className = 'adv-btn adv-btn-secondary'; unregBtn.textContent = t('unregisterHotkeys');
+  unregBtn.addEventListener('click', async () => { await window.clickflow.hotkeys.unregister(); addLogEntry(createLog('info', t('hotkeyUnregistered'))); renderAdvancedSafety(); renderState(); });
+  const statusBtn = document.createElement('button'); statusBtn.className = 'adv-btn adv-btn-secondary'; statusBtn.textContent = t('refreshHotkeyStatus');
+  statusBtn.addEventListener('click', async () => { const s = await window.clickflow.hotkeys.getStatus(); addLogEntry(createLog('info', s.registered ? t('globalHotkeysEnabled') : t('globalHotkeysDisabled'))); renderAdvancedSafety(); renderState(); });
+  hkBtnGroup.appendChild(regBtn); hkBtnGroup.appendChild(unregBtn); hkBtnGroup.appendChild(statusBtn);
+  hkCard.appendChild(hkBtnGroup); c.appendChild(hkCard);
+
   // Diagnostics
   const dCard = document.createElement('div'); dCard.className = 'adv-card';
   const dTitle = document.createElement('div'); dTitle.className = 'adv-card-title'; dTitle.textContent = t('diagnostics'); dCard.appendChild(dTitle);
@@ -498,14 +515,25 @@ function renderAdvancedSafety() {
   addCardRow(dCard, t('profileCount'), `${getProfileCount()}`);
   addCardRow(dCard, t('logCount'), `${state.logs.length}`);
   addCardRow(dCard, t('errorCount'), `${getErrorCount()}`);
-  addCardRow(dCard, t('settingsLoaded'), 'yes');
-  addCardRow(dCard, t('scenariosLoaded'), 'yes');
-  addCardRow(dCard, t('profilesLoaded'), 'yes');
   addCardRow(dCard, t('currentView'), state.currentView);
   addCardRow(dCard, t('executionRunning'), state.execution.isRunning ? 'yes' : 'no');
   const copyBtn = document.createElement('button'); copyBtn.className = 'adv-btn adv-btn-secondary'; copyBtn.textContent = t('copyDiagnostics');
   copyBtn.addEventListener('click', copyDiagnostics);
   dCard.appendChild(copyBtn); c.appendChild(dCard);
+
+  // System info (from main process)
+  const sysCard = document.createElement('div'); sysCard.className = 'adv-card';
+  const sysTitle = document.createElement('div'); sysTitle.className = 'adv-card-title'; sysTitle.textContent = t('systemInfo'); sysCard.appendChild(sysTitle);
+  window.clickflow.system.getInfo().then(info => {
+    addCardRow(sysCard, t('electronVersion'), info.electronVersion || '?');
+    addCardRow(sysCard, t('platformInfo'), `${info.platform} (${info.arch})`);
+    addCardRow(sysCard, t('isPackaged'), info.isPackaged ? 'yes' : 'no');
+    addCardRow(sysCard, t('simulationOnly'), 'true');
+    addCardRow(sysCard, t('trayAvailable'), info.trayAvailable ? t('trayAvailable') : t('trayUnavailable'));
+    addCardRow(sysCard, t('globalHotkeys'), info.globalHotkeysRegistered ? t('globalHotkeysEnabled') : t('globalHotkeysDisabled'));
+  });
+  c.appendChild(sysCard);
+
   // Warning
   const warning = document.createElement('div'); warning.className = 'adv-warning'; warning.textContent = t('simulationModeNotice'); c.appendChild(warning);
   // Error history
@@ -520,7 +548,9 @@ function renderAdvancedSafety() {
 
 async function copyDiagnostics() {
   const state = getState();
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nView: ${state.currentView}`;
+  let sysInfo = {};
+  try { sysInfo = await window.clickflow.system.getInfo(); } catch(e) {}
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
@@ -634,6 +664,23 @@ async function init() {
   await initProfiles();
   const def = getDefaultScenario(); setSelectedScenario(def);
   resetExecution();
+
+  // Register global hotkey listeners from main process
+  window.clickflow.hotkeys.onStart(() => startScenario());
+  window.clickflow.hotkeys.onStop(() => stopScenario());
+  window.clickflow.hotkeys.onEmergencyStop(() => triggerEmergencyStop());
+
+  // Register app menu command listeners
+  window.clickflow.appCommands.onStart(() => startScenario());
+  window.clickflow.appCommands.onStop(() => stopScenario());
+  window.clickflow.appCommands.onEmergencyStop(() => triggerEmergencyStop());
+  window.clickflow.appCommands.onOpenSettings(() => openSettings());
+  window.clickflow.appCommands.onOpenScenarios(() => openScenarioList());
+  window.clickflow.appCommands.onOpenAdvanced(() => openAdvancedMode());
+  window.clickflow.appCommands.onOpenMain(() => { showView('main'); renderState(); });
+  window.clickflow.appCommands.onShowAbout(() => alert(`${t('aboutClickFlow')}\nv${window.clickflow.version}\n${t('simulationOnlyMvp')}`));
+  window.clickflow.appCommands.onShowSafetyNotice(() => alert(t('safetyNotice')));
+
   addLogEntry(createLog('info', t('logAppReady')));
   showView('main'); renderState();
 }
