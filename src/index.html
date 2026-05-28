@@ -16,7 +16,6 @@
         <h1 class="app-title" data-i18n="appTitle">ClickFlow</h1>
         <p class="app-description" data-i18n="appDescription">Минималистичный кликер для быстрых сценариев</p>
       </header>
-
       <div class="status-card">
         <div class="status-row">
           <span class="status-label" data-i18n="status">Статус</span>
@@ -28,37 +27,29 @@
           <span class="scenario-value" id="scenario-value">Быстрый кликер</span>
         </div>
       </div>
-
-      <!-- Прогресс выполнения -->
       <div class="progress-card" id="progress-card">
         <div class="progress-header">
           <span class="progress-title" data-i18n="progress">Прогресс</span>
           <span class="progress-meta" id="progress-meta">0 / 0 · 0%</span>
         </div>
-        <div class="progress-bar">
-          <div class="progress-bar-fill" id="progress-bar-fill"></div>
-        </div>
+        <div class="progress-bar"><div class="progress-bar-fill" id="progress-bar-fill"></div></div>
         <div class="last-action" id="last-action"></div>
       </div>
-
       <div class="actions">
         <button class="btn btn-start" id="btn-start" data-i18n="start">Start</button>
         <button class="btn btn-stop" id="btn-stop" disabled data-i18n="stop">Stop</button>
       </div>
-
       <div class="secondary-actions">
         <button class="btn btn-secondary" id="btn-scenario" data-i18n="chooseScenario">Выбрать сценарий</button>
         <button class="btn btn-secondary" id="btn-settings" data-i18n="settings">Настройки</button>
         <a href="#" class="link-advanced" id="btn-advanced" data-i18n="advancedMode">Расширенный режим</a>
       </div>
-
       <div class="logs-section">
         <h3 class="logs-title" data-i18n="latestEvents">Последние события</h3>
         <div class="logs-list" id="logs-container"></div>
       </div>
-
       <footer class="footer">
-        <span class="safe-mode" data-i18n="safeModeEnabled">🛡️ Безопасный режим включён</span>
+        <span class="safe-mode" data-i18n="safeModeEnabled">Безопасный режим включён</span>
       </footer>
     </div>
 
@@ -66,68 +57,57 @@
     <div id="view-scenarios" class="view view-hidden">
       <header class="header">
         <h1 class="app-title" data-i18n="scenariosTitle">Сценарии</h1>
-        <p class="app-description" data-i18n="scenariosDescription">Выберите сценарий для быстрого запуска</p>
+        <p class="app-description" data-i18n="scenariosDescription">Выберите сценарий</p>
       </header>
-
       <div class="scenario-list" id="scenario-list"></div>
-
       <div class="scenario-actions">
-        <button class="btn btn-accent" id="btn-create-scenario" data-i18n="createScenario">+ Создать сценарий</button>
+        <button class="btn btn-accent" id="btn-create-scenario" data-i18n="createScenario">+ Создать</button>
         <button class="btn btn-back" id="btn-scenarios-back" data-i18n="back">← Назад</button>
       </div>
     </div>
 
     <!-- Форма сценария -->
     <div id="view-scenario-form" class="view view-hidden">
-      <header class="header">
-        <h1 class="app-title" id="form-title">Создать сценарий</h1>
-      </header>
-
+      <header class="header"><h1 class="app-title" id="form-title">Создать сценарий</h1></header>
       <div class="form-card">
         <div class="form-error" id="form-error"></div>
-
         <div class="form-group">
-          <label class="form-label" for="input-name" data-i18n="scenarioName">Название</label>
-          <input class="form-input" type="text" id="input-name" placeholder="Мой сценарий">
+          <label class="form-label" data-i18n="scenarioName">Название</label>
+          <input class="form-input" type="text" id="input-name">
         </div>
-
         <div class="form-group">
-          <label class="form-label" for="input-description" data-i18n="scenarioDescription">Описание</label>
-          <textarea class="form-textarea" id="input-description" placeholder="Краткое описание..." rows="2"></textarea>
+          <label class="form-label" data-i18n="scenarioDescription">Описание</label>
+          <textarea class="form-textarea" id="input-description" rows="2"></textarea>
         </div>
-
         <div class="form-row">
           <div class="form-group form-group-half">
-            <label class="form-label" for="input-x" data-i18n="scenarioX">X</label>
+            <label class="form-label" data-i18n="scenarioX">X</label>
             <input class="form-input" type="number" id="input-x" min="0" value="500">
           </div>
           <div class="form-group form-group-half">
-            <label class="form-label" for="input-y" data-i18n="scenarioY">Y</label>
+            <label class="form-label" data-i18n="scenarioY">Y</label>
             <input class="form-input" type="number" id="input-y" min="0" value="400">
           </div>
         </div>
-
         <div class="form-row">
           <div class="form-group form-group-half">
-            <label class="form-label" for="input-interval" data-i18n="intervalMs">Интервал, мс</label>
+            <label class="form-label" data-i18n="intervalMs">Интервал, мс</label>
             <input class="form-input" type="number" id="input-interval" min="50" value="500">
           </div>
           <div class="form-group form-group-half">
-            <label class="form-label" for="input-repeat" data-i18n="repeatCount">Повторы</label>
+            <label class="form-label" data-i18n="repeatCount">Повторы</label>
             <input class="form-input" type="number" id="input-repeat" min="1" max="100000" value="100">
           </div>
         </div>
-
         <div class="form-group">
-          <label class="form-label" for="input-button" data-i18n="mouseButton">Кнопка мыши</label>
+          <label class="form-label" data-i18n="mouseButton">Кнопка мыши</label>
           <select class="form-select" id="input-button">
-            <option value="left" data-i18n="mouseLeft">Левая (left)</option>
-            <option value="right" data-i18n="mouseRight">Правая (right)</option>
-            <option value="middle" data-i18n="mouseMiddle">Средняя (middle)</option>
+            <option value="left" data-i18n="mouseLeft">Левая</option>
+            <option value="right" data-i18n="mouseRight">Правая</option>
+            <option value="middle" data-i18n="mouseMiddle">Средняя</option>
           </select>
         </div>
       </div>
-
       <div class="form-actions">
         <button class="btn btn-accent" id="btn-save-scenario" data-i18n="save">Сохранить</button>
         <button class="btn btn-back" id="btn-form-cancel" data-i18n="cancel">Отмена</button>
@@ -136,22 +116,16 @@
 
     <!-- Настройки -->
     <div id="view-settings" class="view view-hidden">
-      <header class="header">
-        <h1 class="app-title" data-i18n="settingsTitle">Настройки</h1>
-      </header>
-
+      <header class="header"><h1 class="app-title" data-i18n="settingsTitle">Настройки</h1></header>
       <div class="settings-card">
         <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="interfaceSection">Интерфейс</h3>
-
           <div class="form-group">
             <label class="form-label" data-i18n="language">Язык</label>
             <select class="form-select" id="settings-language">
-              <option value="ru" data-i18n="langRu">Русский</option>
-              <option value="en" data-i18n="langEn">English</option>
+              <option value="ru">Русский</option><option value="en">English</option>
             </select>
           </div>
-
           <div class="form-group">
             <label class="form-label" data-i18n="theme">Тема</label>
             <select class="form-select" id="settings-theme">
@@ -161,51 +135,30 @@
             </select>
           </div>
         </div>
-
         <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="hotkeysSection">Горячие клавиши</h3>
           <div class="hotkey-list">
-            <div class="hotkey-row">
-              <span class="hotkey-label" data-i18n="hotkeyStart">Запуск</span>
-              <span class="hotkey-value" id="hotkey-start">Ctrl+Alt+S</span>
-            </div>
-            <div class="hotkey-row">
-              <span class="hotkey-label" data-i18n="hotkeyStop">Остановка</span>
-              <span class="hotkey-value" id="hotkey-stop">Ctrl+Alt+X</span>
-            </div>
-            <div class="hotkey-row">
-              <span class="hotkey-label" data-i18n="hotkeyEmergency">Аварийная остановка</span>
-              <span class="hotkey-value" id="hotkey-emergency">Escape</span>
-            </div>
+            <div class="hotkey-row"><span class="hotkey-label" data-i18n="hotkeyStart">Запуск</span><span class="hotkey-value" id="hotkey-start">Ctrl+Alt+S</span></div>
+            <div class="hotkey-row"><span class="hotkey-label" data-i18n="hotkeyStop">Остановка</span><span class="hotkey-value" id="hotkey-stop">Ctrl+Alt+X</span></div>
+            <div class="hotkey-row"><span class="hotkey-label" data-i18n="hotkeyEmergency">Аварийная</span><span class="hotkey-value" id="hotkey-emergency">Escape</span></div>
           </div>
         </div>
-
         <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="safetySection">Безопасность</h3>
-
           <div class="form-group">
             <label class="form-label" data-i18n="minInterval">Мин. интервал (мс)</label>
             <input class="form-input" type="number" id="settings-min-interval" min="50" value="50">
           </div>
-
           <div class="form-group">
             <label class="form-label" data-i18n="maxRepeats">Макс. повторов</label>
             <input class="form-input" type="number" id="settings-max-repeats" min="1" max="100000" value="100000">
           </div>
-
           <div class="safety-info">
-            <div class="safety-row">
-              <span data-i18n="safeMode">Безопасный режим</span>
-              <span class="safety-badge safety-on" id="safety-mode-badge"></span>
-            </div>
-            <div class="safety-row">
-              <span data-i18n="emergencyStop">Аварийная остановка</span>
-              <span class="safety-badge safety-on" id="emergency-stop-badge"></span>
-            </div>
+            <div class="safety-row"><span data-i18n="safeMode">Безопасный режим</span><span class="safety-badge safety-on" id="safety-mode-badge"></span></div>
+            <div class="safety-row"><span data-i18n="emergencyStop">Аварийная остановка</span><span class="safety-badge safety-on" id="emergency-stop-badge"></span></div>
           </div>
         </div>
       </div>
-
       <div class="form-actions">
         <button class="btn btn-accent" id="btn-save-settings" data-i18n="saveSettings">Сохранить</button>
         <button class="btn btn-back" id="btn-settings-back" data-i18n="back">← Назад</button>
@@ -216,9 +169,8 @@
     <div id="view-advanced" class="view view-hidden view-wide">
       <header class="header">
         <h1 class="app-title" data-i18n="advancedTitle">Расширенный режим</h1>
-        <p class="app-description" data-i18n="advancedDescription">Панель управления и мониторинга ClickFlow</p>
+        <p class="app-description" data-i18n="advancedDescription">Панель управления</p>
       </header>
-
       <div class="advanced-tabs" id="advanced-tabs">
         <button class="adv-tab active" data-advanced-tab="overview" data-i18n="tabOverview">Обзор</button>
         <button class="adv-tab" data-advanced-tab="scenarios" data-i18n="tabScenarios">Сценарии</button>
@@ -228,7 +180,6 @@
         <button class="adv-tab" data-advanced-tab="safety" data-i18n="tabSafety">Безопасность</button>
         <button class="adv-tab" data-advanced-tab="future" data-i18n="tabFuture">Будущее</button>
       </div>
-
       <div class="advanced-content" id="advanced-content">
         <section id="advanced-tab-overview" class="adv-section"></section>
         <section id="advanced-tab-scenarios" class="adv-section adv-section-hidden"></section>
@@ -238,7 +189,6 @@
         <section id="advanced-tab-safety" class="adv-section adv-section-hidden"></section>
         <section id="advanced-tab-future" class="adv-section adv-section-hidden"></section>
       </div>
-
       <button class="btn btn-back" id="btn-back" data-i18n="back">← Назад</button>
     </div>
 
@@ -246,7 +196,9 @@
 
   <script src="app-state.js"></script>
   <script src="logger.js"></script>
+  <script src="error-manager.js"></script>
   <script src="scenario-manager.js"></script>
+  <script src="profile-manager.js"></script>
   <script src="click-engine.js"></script>
   <script src="settings-manager.js"></script>
   <script src="i18n.js"></script>
