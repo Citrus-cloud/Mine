@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('clickflow', {
   system: {
     getInfo: () => ipcRenderer.invoke('system:get-info'),
     getBetaHealth: () => ipcRenderer.invoke('system:get-beta-health'),
+    getReleaseStatus: () => ipcRenderer.invoke('system:get-release-status'),
     setExecutionRunning: (running) => ipcRenderer.invoke('app-state:set-execution-running-status', running)
   }
 });

@@ -1,0 +1,82 @@
+# =====================================================================
+# ClickFlow — .gitignore
+# Step 21: beta release packaging pass.
+# Goal: keep the repo focused on source + docs + assets. Never commit
+#       node_modules, build artifacts, OS junk, or temporary user data.
+# =====================================================================
+
+# --- Node / npm ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json.bak
+.pnpm-store/
+
+# --- Build output (electron-builder, electron-packager) ---
+dist/
+out/
+build/
+release/
+release-builds/
+*.app/
+*.dmg
+*.exe
+*.AppImage
+*.snap
+*.deb
+*.rpm
+*.pkg
+*.zip
+!assets/**/*.zip
+!docs/**/*.zip
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Coverage / test ---
+coverage/
+.nyc_output/
+.cache/
+test-results/
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.iml
+*.swp
+*~
+
+# --- OS junk ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Temp / scratch ---
+temp/
+tmp/
+.tmp/
+*.tmp
+*.bak
+
+# --- Local environment / secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Electron userData snapshots / corrupted-file quarantines ---
+*.broken
+*.broken-*
+userData/
+user-data/
+
+# --- Local backups produced by ClickFlow's import/export ---
+clickflow-backup-*.json
+clickflow-scenarios-*.json
+clickflow-settings-*.json

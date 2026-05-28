@@ -398,7 +398,27 @@ const translations = {
     statusReady: "готов",
     statusMissing: "не готов",
     statusPlanned: "планируется",
-    statusBlocked: "заблокирован"
+    statusBlocked: "заблокирован",
+
+    // Step 21: beta release packaging pass
+    releaseStatus: "Статус релиза",
+    betaVersion21: "0.1.0-beta",
+    smokeCheckScript: "Smoke-check script",
+    packagingConfigured: "Упаковка настроена",
+    releaseChecklistPresent: "Release checklist готов",
+    changelogPresent: "CHANGELOG готов",
+    releaseNotesPresent: "RELEASE_NOTES готов",
+    githubReleaseDraftPresent: "GitHub release draft готов",
+    buildArtifacts: "Build artifacts",
+    releaseReady: "Готов к beta release",
+    releaseNotReady: "Не готов к release",
+    betaRelease: "Beta release",
+    simulationOnlyRelease: "Simulation-only release",
+    realActionsNotIncluded: "Реальные действия не включены",
+    packagingDocs: "Документация по упаковке",
+    versioning: "Версионирование",
+    present: "есть",
+    absent: "нет"
   },
   en: {
     // Main screen
@@ -797,7 +817,27 @@ const translations = {
     statusReady: "ready",
     statusMissing: "missing",
     statusPlanned: "planned",
-    statusBlocked: "blocked"
+    statusBlocked: "blocked",
+
+    // Step 21: beta release packaging pass
+    releaseStatus: "Release status",
+    betaVersion21: "0.1.0-beta",
+    smokeCheckScript: "Smoke-check script",
+    packagingConfigured: "Packaging configured",
+    releaseChecklistPresent: "Release checklist present",
+    changelogPresent: "CHANGELOG present",
+    releaseNotesPresent: "RELEASE_NOTES present",
+    githubReleaseDraftPresent: "GitHub release draft present",
+    buildArtifacts: "Build artifacts",
+    releaseReady: "Ready for beta release",
+    releaseNotReady: "Not ready for release",
+    betaRelease: "Beta release",
+    simulationOnlyRelease: "Simulation-only release",
+    realActionsNotIncluded: "Real actions not included",
+    packagingDocs: "Packaging docs",
+    versioning: "Versioning",
+    present: "present",
+    absent: "absent"
   }
 };
 

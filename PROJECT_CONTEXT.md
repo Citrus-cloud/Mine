@@ -7,22 +7,35 @@
 
 ## Текущий шаг
 
-**Шаг 20 завершён.** Final beta QA and bugfix pass. Проект остаётся
-в стадии `0.1.0-beta preparation` (simulation-only). Готовится
-`v0.1.0-beta` GitHub pre-release. На шаге 20:
-структурный аудит (0 дубликатов id, 0 broken refs, 0 forbidden
-module imports, perfect i18n parity 342/342); smoke-check расширен
-(теперь 96 проверок); добавлены [`docs/BETA_QA_REPORT.md`](./docs/BETA_QA_REPORT.md)
-и [`docs/I18N_CHECKLIST.md`](./docs/I18N_CHECKLIST.md);
-обновлены `SMOKE_TESTS.md`, `MVP_CHECKLIST.md`, `README.md`,
-`CHANGELOG.md`. **Реальные действия по-прежнему отключены:
+**Шаг 21 завершён.** Beta release packaging pass. Проект остаётся
+в стадии `0.1.0-beta preparation` (simulation-only). На шаге 21:
+package.json дополнен (`directories.output: "dist"`, расширенный
+`files`-массив с явными исключениями для `*.broken-*` / `.DS_Store` /
+`Thumbs.db` / `.git`, mac/linux `category`); создан `.gitignore`
+(node_modules, dist, OS junk, broken-quarantine, локальные backup-JSON);
+добавлены документы [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md),
+[`docs/BUILD_ARTIFACTS.md`](./docs/BUILD_ARTIFACTS.md),
+[`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md),
+[`docs/VERSIONING.md`](./docs/VERSIONING.md);
+в `main.js` добавлен IPC `system:get-release-status`, в renderer —
+карточка **Release status** в Advanced → Safety с 12 строками
+(appVersion / beta / simulationOnly / realActionsNotIncluded /
+8 release-артефактов / итоговый бейдж готовности);
+smoke-check расширен до 113 проверок (добавлены проверки
+`.gitignore`, `pack`/`dist` scripts, `electron-builder` devDependency,
+`build.appId/productName/files/directories`, всех 4 release-документов,
+текстовых assertions «simulation-only» и «no real clicks» в
+`RELEASE_CHECKLIST` и `GITHUB_RELEASE_DRAFT`); добавлены 19 новых
+i18n-ключей RU + EN. **Реальные действия по-прежнему отключены:
 `realDesktopActions = false`, `simulationOnly = true`,
 `isRealActionAllowed() → false`, `isRealAdapterAllowed() → false`,
 `setActiveAdapter("real-desktop")` блокируется,
 `executionMode === "real"` блокируется в `executeAction()`,
 `evaluateRealActionReadiness() → { allowed: false, ... }`.**
-Перед beta-релизом нужен ручной smoke-тест по
-`docs/SMOKE_TESTS.md` Step 20.
+Перед публикацией `v0.1.0-beta` тэга обязательно прохождение
+[`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md) и
+manual smoke-run из [`docs/SMOKE_TESTS.md`](./docs/SMOKE_TESTS.md)
+Step 20.
 
 ## Стек
 
@@ -54,7 +67,7 @@ module imports, perfect i18n parity 342/342); smoke-check расширен
     Нет UI / IPC / env-vars, которые могут их перевернуть. Любое
     изменение проходит `docs/REAL_ACTIONS_GO_NO_GO.md`.
 
-## Статус реализации (на конец шага 20)
+## Статус реализации (на конец шага 21)
 
 ### Реализовано
 - Electron-приложение, главное минималистичное меню.
@@ -259,6 +272,75 @@ module imports, perfect i18n parity 342/342); smoke-check расширен
   - README, PROJECT_CONTEXT, CHANGELOG обновлены до шага 20.
   - **Релиз-рекомендация:** ready for beta after manual testing.
 
+- **Beta release packaging pass (шаг 21):**
+  - **`package.json`**: добавлен `directories.output: "dist"`;
+    расширен `files`-массив до `[main.js, preload.js, src/**/*,
+    assets/**/*, docs/**/*, README.md, PROJECT_CONTEXT.md,
+    CHANGELOG.md, RELEASE_NOTES.md, CONTRIBUTING.md, package.json]`;
+    добавлены явные исключения `!**/*.broken-*`, `!**/.DS_Store`,
+    `!**/Thumbs.db`, `!**/.git`, `!**/.gitignore`; добавлены
+    `mac.category: public.app-category.utilities` и
+    `linux.category: Utility`. **Версия `0.1.0` сохранена.**
+  - **`.gitignore`** (новый): `node_modules/`, `dist/`, `out/`,
+    `build/`, `release/`, OS junk (`.DS_Store`, `Thumbs.db`),
+    логи, IDE-каталоги, временные файлы, `.env*`, `userData/`,
+    `*.broken-*` и локальные `clickflow-*-*.json` backup-файлы.
+  - **Документы (новые):**
+    [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md) —
+    9-секционный чеклист (pre-release / security / simulation-only
+    / packaging / documentation / localization / manual QA /
+    GitHub release / post-release).
+    [`docs/BUILD_ARTIFACTS.md`](./docs/BUILD_ARTIFACTS.md) —
+    описание выходов `npm run pack` / `npm run dist`, naming-схема
+    GitHub release assets, что не должно попадать в артефакты,
+    как верифицировать каждый файл перед загрузкой.
+    [`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md) —
+    готовый текст pre-release для GitHub: title, summary,
+    highlights, safety model (six layers), what works, what is not
+    included, installation, testing notes, known limitations,
+    download artifacts placeholder, feedback links, security note.
+    [`docs/VERSIONING.md`](./docs/VERSIONING.md) — semver-подход,
+    что считается patch / minor / major, план линий 0.1.x — 0.2.x
+    — 0.3.x — 0.4.x, hard rule про real-input гейт.
+  - **IPC `system:get-release-status`** (новый, в `main.js`) —
+    read-only, читает только из `app.getAppPath()`. Возвращает
+    `appVersion`, `beta`, `simulationOnly`, `realActionsImplemented`,
+    `smokeCheckScript`, `packagingConfigured`,
+    `releaseChecklistPresent`, `buildArtifactsPresent`,
+    `githubReleaseDraftPresent`, `versioningPresent`,
+    `changelogPresent`, `releaseNotesPresent`, `gitignorePresent`,
+    `releaseDocsReady`. Никаких приватных путей.
+  - **Карточка Release status** в Advanced → Safety с 12 строками
+    + итоговый бейдж `Ready for beta release` / `Not ready for
+    release`.
+  - **`Copy diagnostics`** теперь содержит строку `Release: …`.
+  - **Smoke-check расширен до 113 проверок** (с 96): добавлены
+    проверки `.gitignore` (включая ключевые токены node_modules /
+    dist / .DS_Store / Thumbs.db / *.log), `package.json` scripts
+    `pack` и `dist`, `electron-builder` как devDependency,
+    `build.appId` / `build.productName` / `build.files` /
+    `build.directories.output` / `build.directories.buildResources`,
+    наличие 4 новых release-документов, упоминания «step 21» в
+    README или PROJECT_CONTEXT, упоминания simulation-only в
+    `RELEASE_NOTES.md`, утверждений simulation-only и no real
+    clicks/OCR/image-recognition в `RELEASE_CHECKLIST.md` и
+    `GITHUB_RELEASE_DRAFT.md`.
+  - **i18n**: 19 новых ключей RU + EN (`releaseStatus`,
+    `betaVersion21`, `smokeCheckScript`, `packagingConfigured`,
+    `releaseChecklistPresent`, `changelogPresent`,
+    `releaseNotesPresent`, `githubReleaseDraftPresent`,
+    `buildArtifacts`, `releaseReady`, `releaseNotReady`,
+    `betaRelease`, `simulationOnlyRelease`,
+    `realActionsNotIncluded`, `packagingDocs`, `versioning`,
+    `present`, `absent`).
+  - **`RELEASE_NOTES.md`** проверен и остаётся актуальным (текст
+    `0.1.0-beta`, simulation-only, no real clicks / OCR / image
+    recognition, dry-run sandbox упоминается); конкретных правок
+    не потребовалось.
+  - **Гейт перед публикацией тэга:** прохождение всех пунктов
+    `docs/RELEASE_CHECKLIST.md`. Без `npm run dist` локально и
+    без manual smoke (Step 20 #115–#134) тэг не публикуется.
+
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
   `node-key-sender`, нет нативных модулей ввода.
@@ -324,18 +406,23 @@ module imports, perfect i18n parity 342/342); smoke-check расширен
 | 18 | Desktop adapter interface + mock adapter + registry. Mock active. Real adapter blocked. |
 | 19 | Real-action sandbox: dry-run preview, permission checklist, blocked reasons. No real execution. |
 | 20 | Final beta QA and bugfix pass: structural audit, expanded smoke-check (96 checks), BETA_QA_REPORT, I18N_CHECKLIST. Manual smoke required before tag. |
+| 21 | Beta release packaging pass: `.gitignore`, extended package.json `build` block, RELEASE_CHECKLIST / BUILD_ARTIFACTS / GITHUB_RELEASE_DRAFT / VERSIONING docs, Release status diagnostics, smoke-check 113 checks. |
 
-## Что логично делать на шаге 21
+## Что логично делать на шаге 22
 
-- **`v0.1.0-beta` GitHub pre-release**: тэг + прикреплённые
-  `npm run dist` артефакты + README → release notes на GitHub.
-  **Гейт:** ручной smoke-run по `docs/SMOKE_TESTS.md` Step 20.
+- **Тэг `v0.1.0-beta` на GitHub:** прохождение полного
+  [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md);
+  локальный `npm run dist` хотя бы на одной целевой ОС;
+  переименование артефактов по схеме
+  [`docs/BUILD_ARTIFACTS.md`](./docs/BUILD_ARTIFACTS.md);
+  публикация pre-release c текстом из
+  [`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md).
 - **Реальные иконки** для tray и packaged-builds (PNG/ICO/ICNS),
   сгенерированные из `assets/icons/clickflow-icon.svg`.
 - **Code signing notes** (Windows + macOS) и первый подписанный build.
-- **GitHub Actions CI**: `npm run smoke` на каждый push и PR
-  (запустить через `actions/setup-node` + `npm install` + `npm run
-  smoke`). Никаких реальных Electron-харнесов в CI пока что.
+- **GitHub Actions CI**: `actions/setup-node` + `npm install` +
+  `npm run smoke` на каждый push и PR. Никаких реальных Electron-
+  харнесов в CI пока что.
 - **Accessibility-аудит**: `aria-label` на icon-only кнопках,
   `aria-live="polite"` на статусе и preview, полная клавиатурная
   навигация по 7 вкладкам Advanced.

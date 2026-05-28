@@ -730,6 +730,62 @@ function renderAdvancedSafety() {
     c.appendChild(pv);
   }
 
+  // --- Step 21: Release status card ---
+  const rsCard = document.createElement('div'); rsCard.className = 'adv-card';
+  const rsTitle = document.createElement('div'); rsTitle.className = 'adv-card-title'; rsTitle.textContent = t('releaseStatus'); rsCard.appendChild(rsTitle);
+  // Synchronous placeholder rows so the card renders before IPC resolves.
+  const rsVer = document.createElement('div'); rsVer.className = 'adv-card-row';
+  const rsVerLbl = document.createElement('span'); rsVerLbl.className = 'adv-card-label'; rsVerLbl.textContent = 'App version';
+  const rsVerVal = document.createElement('span'); rsVerVal.className = 'adv-card-value'; rsVerVal.textContent = '...';
+  rsVer.appendChild(rsVerLbl); rsVer.appendChild(rsVerVal); rsCard.appendChild(rsVer);
+  addCardRow(rsCard, t('betaRelease'),                t('yes'));
+  addCardRow(rsCard, t('simulationOnly'),             t('flagEnabled'));
+  addCardRow(rsCard, t('realActionsNotIncluded'),     t('yes'));
+  // Async rows — placeholders + inline references for update.
+  const placeholders = {};
+  [
+    { key: 'smokeCheckScript',          label: t('smokeCheckScript') },
+    { key: 'packagingConfigured',       label: t('packagingConfigured') },
+    { key: 'releaseChecklistPresent',   label: t('releaseChecklistPresent') },
+    { key: 'buildArtifactsPresent',     label: t('buildArtifacts') },
+    { key: 'githubReleaseDraftPresent', label: t('githubReleaseDraftPresent') },
+    { key: 'versioningPresent',         label: t('versioning') },
+    { key: 'changelogPresent',          label: t('changelogPresent') },
+    { key: 'releaseNotesPresent',       label: t('releaseNotesPresent') }
+  ].forEach(item => {
+    const row = document.createElement('div'); row.className = 'adv-card-row';
+    const lbl = document.createElement('span'); lbl.className = 'adv-card-label'; lbl.textContent = item.label;
+    const val = document.createElement('span'); val.className = 'adv-card-value'; val.textContent = '...';
+    row.appendChild(lbl); row.appendChild(val); rsCard.appendChild(row);
+    placeholders[item.key] = val;
+  });
+  // Bottom badge row — readiness summary.
+  const rsBadgeRow = document.createElement('div'); rsBadgeRow.className = 'adv-card-row';
+  const rsBadgeLbl = document.createElement('span'); rsBadgeLbl.className = 'adv-card-label'; rsBadgeLbl.textContent = t('releaseStatus');
+  const rsBadge = document.createElement('span'); rsBadge.className = 'execution-mode-badge'; rsBadge.textContent = '...';
+  rsBadgeRow.appendChild(rsBadgeLbl); rsBadgeRow.appendChild(rsBadge); rsCard.appendChild(rsBadgeRow);
+  c.appendChild(rsCard);
+
+  // Resolve the IPC and update placeholders in place (textContent only, safe).
+  if (window.clickflow && window.clickflow.system && typeof window.clickflow.system.getReleaseStatus === 'function') {
+    window.clickflow.system.getReleaseStatus().then(rs => {
+      rsVerVal.textContent = rs.appVersion || '?';
+      placeholders.smokeCheckScript.textContent          = rs.smokeCheckScript ? t('present') : t('absent');
+      placeholders.packagingConfigured.textContent       = rs.packagingConfigured ? t('yes') : t('no');
+      placeholders.releaseChecklistPresent.textContent   = rs.releaseChecklistPresent ? t('present') : t('absent');
+      placeholders.buildArtifactsPresent.textContent     = rs.buildArtifactsPresent ? t('present') : t('absent');
+      placeholders.githubReleaseDraftPresent.textContent = rs.githubReleaseDraftPresent ? t('present') : t('absent');
+      placeholders.versioningPresent.textContent         = rs.versioningPresent ? t('present') : t('absent');
+      placeholders.changelogPresent.textContent          = rs.changelogPresent ? t('present') : t('absent');
+      placeholders.releaseNotesPresent.textContent       = rs.releaseNotesPresent ? t('present') : t('absent');
+      rsBadge.textContent = rs.releaseDocsReady ? t('releaseReady') : t('releaseNotReady');
+    }).catch(() => {
+      rsVerVal.textContent = '?';
+      Object.values(placeholders).forEach(p => p.textContent = '?');
+      rsBadge.textContent = '?';
+    });
+  }
+
   // Error history
   const eCard = document.createElement('div'); eCard.className = 'adv-card';
   const eTitle = document.createElement('div'); eTitle.className = 'adv-card-title'; eTitle.textContent = `${t('errorHistory')} (${getErrorCount()})`; eCard.appendChild(eTitle);
@@ -744,8 +800,10 @@ async function copyDiagnostics() {
   const state = getState();
   let sysInfo = {};
   let betaHealth = {};
+  let releaseStatus = {};
   try { sysInfo = await window.clickflow.system.getInfo(); } catch(e) {}
   try { betaHealth = await window.clickflow.system.getBetaHealth(); } catch(e) {}
+  try { releaseStatus = await window.clickflow.system.getReleaseStatus(); } catch(e) {}
   const ff = (typeof getFeatureFlagsForDiagnostics === 'function') ? getFeatureFlagsForDiagnostics() : null;
   const ffLine = ff
     ? `Feature flags: simulationOnly=${ff.safety.simulationOnly}, realDesktopActions=${ff.safety.realDesktopActions}, ocr=${ff.safety.ocr}, imageRecognition=${ff.safety.imageRecognition}`
@@ -777,7 +835,7 @@ async function copyDiagnostics() {
     } catch (e) {}
     sbLine = `Sandbox: dryRunAvailable=${sb.dryRunAvailable}, realActionsAllowed=${sb.realActionsAllowed}, realActionsImplemented=${sb.realActionsImplemented}, blockedReasons=${blockedCount}, checklistReady=${readyCount}, lastDryRunAt=${sb.lastDryRunAt || 'none'}, lastDryRunActionCount=${sb.lastDryRunActionCount}`;
   }
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
