@@ -25,23 +25,38 @@
   "build": {
     "appId": "com.clickflow.app",
     "productName": "ClickFlow",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
     "files": [
       "main.js",
       "preload.js",
       "src/**/*",
-      "package.json"
+      "assets/**/*",
+      "docs/**/*",
+      "README.md",
+      "PROJECT_CONTEXT.md",
+      "CHANGELOG.md",
+      "RELEASE_NOTES.md",
+      "CONTRIBUTING.md",
+      "package.json",
+      "!**/*.broken-*",
+      "!**/.DS_Store",
+      "!**/Thumbs.db",
+      "!**/.git",
+      "!**/.gitignore"
     ],
-    "directories": {
-      "buildResources": "assets"
-    },
     "win": {
       "target": "nsis"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "category": "public.app-category.utilities"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "category": "Utility"
     }
   },
   "author": "",

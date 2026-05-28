@@ -176,8 +176,7 @@ function fileExistsInApp(relPath) {
   }
 }
 
-ipcMain.handle('system:get-beta-health', async () => {
-  // Hard-coded simulation guarantees — these reflect what the codebase ships.
+ipcMain.handle('system:get-beta-health', async () => {  // Hard-coded simulation guarantees — these reflect what the codebase ships.
   // They are NOT user-controllable feature flags.
   const simulationOnly = true;
   const realClicksImplemented = false;
@@ -225,6 +224,64 @@ ipcMain.handle('system:get-beta-health', async () => {
     featureFlagsDocPresent,
     auditLogPlanPresent,
     finalReviewPresent
+  };
+});
+
+// --- IPC: Release status (Step 21) ---
+// Read-only structural check used by the Advanced > Safety
+// "Release status" card. Reads only inside app.getAppPath();
+// returns no private filesystem paths to the renderer.
+ipcMain.handle('system:get-release-status', async () => {
+  const smokeCheckScript = fileExistsInApp(path.join('scripts', 'smoke-check.js'));
+  const releaseChecklistPresent  = fileExistsInApp(path.join('docs', 'RELEASE_CHECKLIST.md'));
+  const buildArtifactsPresent    = fileExistsInApp(path.join('docs', 'BUILD_ARTIFACTS.md'));
+  const githubReleaseDraftPresent = fileExistsInApp(path.join('docs', 'GITHUB_RELEASE_DRAFT.md'));
+  const versioningPresent        = fileExistsInApp(path.join('docs', 'VERSIONING.md'));
+  const changelogPresent         = fileExistsInApp('CHANGELOG.md');
+  const releaseNotesPresent      = fileExistsInApp('RELEASE_NOTES.md');
+  const gitignorePresent         = fileExistsInApp('.gitignore');
+
+  let appVersion = '?';
+  let packagingConfigured = false;
+  try {
+    const pkgPath = path.join(app.getAppPath(), 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      appVersion = pkg.version || '?';
+      packagingConfigured = !!(pkg && pkg.build && typeof pkg.build === 'object' &&
+        pkg.scripts && typeof pkg.scripts.pack === 'string' && typeof pkg.scripts.dist === 'string');
+    }
+  } catch (err) {
+    appVersion = '?';
+    packagingConfigured = false;
+  }
+
+  // Hard-coded simulation guarantees — these reflect what the build ships.
+  const simulationOnly = true;
+  const realActionsImplemented = false;
+  const beta = true;
+
+  // Aggregate readiness signal (used for the badge).
+  const releaseDocsReady = releaseChecklistPresent &&
+    buildArtifactsPresent && githubReleaseDraftPresent &&
+    versioningPresent && changelogPresent && releaseNotesPresent &&
+    smokeCheckScript && gitignorePresent;
+
+  return {
+    appVersion,
+    beta,
+    simulationOnly,
+    realActionsImplemented,
+    smokeCheckScript,
+    packagingConfigured,
+    releaseChecklistPresent,
+    buildArtifactsPresent,
+    githubReleaseDraftPresent,
+    versioningPresent,
+    changelogPresent,
+    releaseNotesPresent,
+    gitignorePresent,
+    releaseDocsReady
   };
 });
 

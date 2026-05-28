@@ -8,6 +8,110 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-21
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding (controlled action pipeline, safety gates, in-memory
+audit events), the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, and the Step 21 beta release packaging
+pass. **Still simulation-only.**
+
+### Added (Step 21 — Beta release packaging pass)
+
+- `.gitignore` (new) — covers `node_modules/`, `dist/`, `out/`,
+  `build/`, `release/`, `*.log`, OS junk (`.DS_Store`, `Thumbs.db`),
+  IDE caches, `.env*`, `userData/`, `*.broken-*`, and local
+  `clickflow-*-*.json` backup files.
+- `docs/RELEASE_CHECKLIST.md` — 9-section release checklist
+  (pre-release / security / simulation-only / packaging /
+  documentation / localization / manual QA / GitHub release /
+  post-release).
+- `docs/BUILD_ARTIFACTS.md` — what `npm run pack` / `npm run dist`
+  produce, GitHub release naming scheme, what must NOT ship,
+  how to verify each artifact before upload.
+- `docs/GITHUB_RELEASE_DRAFT.md` — ready-to-paste release body
+  for the `v0.1.0-beta` pre-release.
+- `docs/VERSIONING.md` — semver approach, future release lines,
+  hard rule for real-input gating.
+- New IPC `system:get-release-status` (read-only, reads only
+  `app.getAppPath()`, never returns private paths). Surfaces
+  `appVersion`, `beta`, `simulationOnly`, `realActionsImplemented`,
+  `smokeCheckScript`, `packagingConfigured`,
+  `releaseChecklistPresent`, `buildArtifactsPresent`,
+  `githubReleaseDraftPresent`, `versioningPresent`,
+  `changelogPresent`, `releaseNotesPresent`, `gitignorePresent`,
+  `releaseDocsReady`.
+- Renderer — Advanced → Safety has a new **Release status** card
+  with 12 rows (app version, beta, simulation only, real actions
+  not included, smoke-check script, packaging configured, release
+  checklist, build artifacts, GitHub release draft, versioning,
+  CHANGELOG, RELEASE_NOTES) plus a final readiness badge
+  (`Ready for beta release` / `Not ready for release`).
+- `Copy diagnostics` now includes a `Release:` line.
+- 19 new RU + EN i18n keys (`releaseStatus`, `betaVersion21`,
+  `smokeCheckScript`, `packagingConfigured`,
+  `releaseChecklistPresent`, `changelogPresent`,
+  `releaseNotesPresent`, `githubReleaseDraftPresent`,
+  `buildArtifacts`, `releaseReady`, `releaseNotReady`,
+  `betaRelease`, `simulationOnlyRelease`,
+  `realActionsNotIncluded`, `packagingDocs`, `versioning`,
+  `present`, `absent`).
+
+### Changed (Step 21)
+
+- `package.json` — extended `build.files` array to include
+  `assets/**/*`, `docs/**/*`, README/PROJECT_CONTEXT/CHANGELOG/
+  RELEASE_NOTES/CONTRIBUTING.md, with explicit exclusions
+  `!**/*.broken-*`, `!**/.DS_Store`, `!**/Thumbs.db`, `!**/.git`,
+  `!**/.gitignore`. Added `directories.output: "dist"`. Added
+  `mac.category: public.app-category.utilities` and
+  `linux.category: Utility`. **Version stays `0.1.0`.**
+- `scripts/smoke-check.js` — extended from 96 to 113 checks:
+  `.gitignore` covers `node_modules` / `dist` / `.DS_Store` /
+  `Thumbs.db` / `*.log`; `package.json` declares `scripts.pack`
+  and `scripts.dist`; `electron-builder` is a devDependency;
+  `build.appId`, `build.productName`, `build.files`,
+  `build.directories.output`, `build.directories.buildResources`
+  all set; all 4 new release docs exist; README or
+  PROJECT_CONTEXT mentions step 21; `RELEASE_NOTES.md` mentions
+  simulation-only; `RELEASE_CHECKLIST.md` and
+  `GITHUB_RELEASE_DRAFT.md` assert simulation-only and no real
+  clicks / OCR / image recognition.
+- README + PROJECT_CONTEXT updated to step 21.
+
+### Verified (Step 21 — no source-level changes required)
+
+- `package.json` declares no `robotjs` / `nut.js` / `iohook` /
+  `uiohook-napi` / `node-key-sender`.
+- All six runtime safety layers still hard-coded false: feature
+  flags, safety gates, adapter interface, adapter registry,
+  action pipeline, sandbox readiness.
+- CSP unchanged. `contextIsolation: true`, `nodeIntegration: false`
+  unchanged.
+- `node --check` passes for every modified or new JS file.
+- `npm run smoke` — 113 / 113 OK, exit 0.
+
+### Security (Step 21)
+
+- New IPC reads only from `app.getAppPath()`. No private user
+  paths flow to the renderer.
+- New `.gitignore` patterns prevent accidental commits of broken
+  JSON quarantines and local user backups.
+- Build `files` array explicitly excludes `*.broken-*` and OS
+  junk so they cannot leak into a packaged binary.
+- `RELEASE_CHECKLIST.md` enumerates every safety invariant that
+  must be reverified before tagging.
+
+### Not included yet
+
+Same as the `0.1.0-beta` baseline: no real clicks, no OCR, no
+image recognition, no mobile, no cloud sync, no auto-update, no
+code signing.
+
+---
+
 ## [Unreleased] — Steps 15-20
 
 Final stabilization of the simulation-only beta, design-only handoff
@@ -609,3 +713,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 18 | Adapter interface | `desktop-adapter-interface.js`, `mock-desktop-adapter.js`, `adapter-registry.js`. Mock active. Real adapter blocked. |
 | 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |
 | 20 | Final beta QA | Structural audit (0 dup ids, perfect i18n parity 342/342), expanded smoke-check (96 checks), `BETA_QA_REPORT.md`, `I18N_CHECKLIST.md`. Manual testing required before tag. |
+| 21 | Beta release packaging | `.gitignore`, extended `package.json` `build` block, `RELEASE_CHECKLIST.md`, `BUILD_ARTIFACTS.md`, `GITHUB_RELEASE_DRAFT.md`, `VERSIONING.md`, Release status diagnostics, smoke-check 113 checks. |

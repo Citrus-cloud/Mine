@@ -119,7 +119,12 @@ function safeJson(rel) {
   // Step 18 doc
   'docs/ADAPTER_INTERFACE.md',
   // Step 19 doc
-  'docs/REAL_ACTION_SANDBOX.md'
+  'docs/REAL_ACTION_SANDBOX.md',
+  // Step 21 docs
+  'docs/RELEASE_CHECKLIST.md',
+  'docs/BUILD_ARTIFACTS.md',
+  'docs/GITHUB_RELEASE_DRAFT.md',
+  'docs/VERSIONING.md'
 ].forEach(function (rel) {
   record('doc exists: ' + rel, fileExists(rel));
 });
@@ -493,6 +498,133 @@ record(
   'README or PROJECT_CONTEXT mentions step 20',
   /step\s*20|шаг\s*20|Step 20|Шаг 20/.test(readText('README.md')) ||
   /step\s*20|шаг\s*20|Step 20|Шаг 20/.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// --- Step 21: beta release packaging pass ---
+
+// 24. Root-level release files exist.
+[
+  '.gitignore',
+  'CHANGELOG.md',
+  'RELEASE_NOTES.md',
+  'CONTRIBUTING.md'
+].forEach(function (rel) {
+  record('release file exists: ' + rel, fileExists(rel));
+});
+
+// 25. .gitignore covers the things it must.
+var giTxt = readText('.gitignore');
+[
+  'node_modules',
+  'dist',
+  '.DS_Store',
+  'Thumbs.db',
+  '*.log'
+].forEach(function (token) {
+  record(
+    '.gitignore covers ' + token,
+    giTxt.indexOf(token) !== -1
+  );
+});
+
+// 26. package.json scripts.pack and scripts.dist.
+if (pkg) {
+  record(
+    'package.json has scripts.pack',
+    !!(pkg.scripts && typeof pkg.scripts.pack === 'string'),
+    pkg.scripts ? ('pack = ' + pkg.scripts.pack) : 'no scripts'
+  );
+  record(
+    'package.json has scripts.dist',
+    !!(pkg.scripts && typeof pkg.scripts.dist === 'string'),
+    pkg.scripts ? ('dist = ' + pkg.scripts.dist) : 'no scripts'
+  );
+  // 27. If pack/dist invoke electron-builder, electron-builder must be a devDependency.
+  var packStr = (pkg.scripts && pkg.scripts.pack) || '';
+  var distStr = (pkg.scripts && pkg.scripts.dist) || '';
+  var usesEB  = packStr.indexOf('electron-builder') !== -1 ||
+                distStr.indexOf('electron-builder') !== -1;
+  if (usesEB) {
+    var hasEB = !!(pkg.devDependencies && pkg.devDependencies['electron-builder']);
+    record(
+      'electron-builder is a devDependency (used by pack/dist)',
+      hasEB
+    );
+  }
+  // 28. build block has appId, productName, files[], directories.output and directories.buildResources.
+  var b = pkg.build;
+  record(
+    'package.json build.appId is set',
+    !!(b && typeof b.appId === 'string' && b.appId.length > 0),
+    b ? ('appId = ' + b.appId) : 'no build block'
+  );
+  record(
+    'package.json build.productName is set',
+    !!(b && typeof b.productName === 'string' && b.productName.length > 0)
+  );
+  record(
+    'package.json build.files is a non-empty array',
+    !!(b && Array.isArray(b.files) && b.files.length > 0)
+  );
+  record(
+    'package.json build.directories.output is set',
+    !!(b && b.directories && typeof b.directories.output === 'string')
+  );
+  record(
+    'package.json build.directories.buildResources is set',
+    !!(b && b.directories && typeof b.directories.buildResources === 'string')
+  );
+}
+
+// 29. Release docs presence (already added above) — surface a single
+// aggregate row so the report is readable.
+var releaseDocs = [
+  'docs/RELEASE_CHECKLIST.md',
+  'docs/BUILD_ARTIFACTS.md',
+  'docs/GITHUB_RELEASE_DRAFT.md',
+  'docs/VERSIONING.md'
+];
+record(
+  'all step 21 release docs exist',
+  releaseDocs.every(function (rel) { return fileExists(rel); }),
+  releaseDocs.filter(function (rel) { return !fileExists(rel); }).join(', ')
+);
+
+// 30. README / PROJECT_CONTEXT acknowledge step 21.
+record(
+  'README or PROJECT_CONTEXT mentions step 21',
+  /step\s*21|шаг\s*21|Step 21|Шаг 21/.test(readText('README.md')) ||
+  /step\s*21|шаг\s*21|Step 21|Шаг 21/.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 31. RELEASE_NOTES mentions simulation-only or no real clicks.
+var rn = readText('RELEASE_NOTES.md').toLowerCase();
+record(
+  'RELEASE_NOTES.md mentions simulation-only / no real clicks',
+  rn.indexOf('simulation') !== -1 ||
+  rn.indexOf('реальные клики') !== -1 ||
+  rn.indexOf('real clicks not implemented') !== -1
+);
+
+// 32. RELEASE_CHECKLIST and GITHUB_RELEASE_DRAFT explicitly assert simulation-only.
+var rcLow = readText('docs/RELEASE_CHECKLIST.md').toLowerCase();
+record(
+  'docs/RELEASE_CHECKLIST.md asserts simulation-only',
+  rcLow.indexOf('simulation-only') !== -1 ||
+  rcLow.indexOf('simulation only') !== -1 ||
+  rcLow.indexOf('no real') !== -1
+);
+var grLow = readText('docs/GITHUB_RELEASE_DRAFT.md').toLowerCase();
+record(
+  'docs/GITHUB_RELEASE_DRAFT.md asserts simulation-only',
+  grLow.indexOf('simulation-only') !== -1 ||
+  grLow.indexOf('simulation only') !== -1
+);
+record(
+  'docs/GITHUB_RELEASE_DRAFT.md states no real clicks / OCR / image recognition',
+  /no\s+real(\s+system)?\s+clicks/.test(grLow) ||
+  /no real input/.test(grLow) ||
+  (grLow.indexOf('no ocr') !== -1 && grLow.indexOf('no image recognition') !== -1)
 );
 
 // --- Report ---

@@ -29,12 +29,10 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, готов к публичному beta-тестированию,
-  GitHub pre-release-ready после ручного smoke-теста (см.
-  [`docs/BETA_QA_REPORT.md`](./docs/BETA_QA_REPORT.md) и
-  `docs/SMOKE_TESTS.md` Step 20).
+- Состояние: simulation-only MVP, `0.1.0-beta packaging pass` готов; перед публикацией тэга `v0.1.0-beta` нужен ручной smoke-run по
+  [`docs/SMOKE_TESTS.md`](./docs/SMOKE_TESTS.md) Step 20 и прохождение [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md).
 - Последние шаги развития:
   - Шаг 13 — визуальная полировка, дизайн-токены, тёмная тема,
     `assets/`.
@@ -77,6 +75,18 @@ safety review).
     [`docs/I18N_CHECKLIST.md`](./docs/I18N_CHECKLIST.md);
     SMOKE_TESTS.md и MVP_CHECKLIST.md дополнены секциями для
     шага 20. Перед beta-релизом нужен ручной smoke-тест.
+  - **Шаг 21 — Beta release packaging pass:**
+    `package.json` дополнен (`directories.output: "dist"`,
+    расширенный `files`-массив, исключения для broken/DS_Store/
+    Thumbs/git, mac/linux `category`); создан `.gitignore`;
+    добавлены документы
+    [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md),
+    [`docs/BUILD_ARTIFACTS.md`](./docs/BUILD_ARTIFACTS.md),
+    [`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md),
+    [`docs/VERSIONING.md`](./docs/VERSIONING.md); карточка
+    **Release status** в Advanced → Safety с проверкой 8
+    release-артефактов; smoke-check расширен до 113 проверок;
+    19 новых i18n-ключей RU + EN.
 
 ---
 
@@ -312,6 +322,10 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/REAL_ACTION_SANDBOX.md`](./docs/REAL_ACTION_SANDBOX.md) — sandbox для будущего real adapter, dry-run preview, permission checklist, blocked reasons (Step 19).
 - [`docs/BETA_QA_REPORT.md`](./docs/BETA_QA_REPORT.md) — финальный QA-отчёт перед beta-релизом (Step 20).
 - [`docs/I18N_CHECKLIST.md`](./docs/I18N_CHECKLIST.md) — manual checklist для review RU/EN-локализации (Step 20).
+- [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md) — обязательный чеклист перед публикацией GitHub-тэга (Step 21).
+- [`docs/BUILD_ARTIFACTS.md`](./docs/BUILD_ARTIFACTS.md) — описание выходных артефактов `pack`/`dist` и naming-схема для GitHub release assets (Step 21).
+- [`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md) — готовый текст для GitHub Release `v0.1.0-beta` (Step 21).
+- [`docs/VERSIONING.md`](./docs/VERSIONING.md) — semver-подход и план будущих линий релизов (Step 21).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
@@ -368,6 +382,7 @@ npm run dist     # релизные артефакты в dist/
 | 18 | Adapter interface | `desktop-adapter-interface.js`, `mock-desktop-adapter.js`, `adapter-registry.js`. Mock active. Real adapter blocked. |
 | 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |
 | 20 | Final beta QA | Structural audit (0 dup ids, perfect i18n parity 342/342), expanded smoke-check (96 checks), `BETA_QA_REPORT.md`, `I18N_CHECKLIST.md`. Manual testing required before tag. |
+| 21 | Beta release packaging pass | `.gitignore`, extended package.json `build` block, `RELEASE_CHECKLIST.md`, `BUILD_ARTIFACTS.md`, `GITHUB_RELEASE_DRAFT.md`, `VERSIONING.md`, Release status diagnostics, smoke-check at 113 checks. |
 
 ---
 
