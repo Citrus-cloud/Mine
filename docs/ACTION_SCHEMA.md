@@ -6,10 +6,17 @@
 > checks, and `executeAction()` is the only entry point used by the
 > click engine).
 >
-> **Currently supported action: simulated click only.** Every other
-> action type listed in this document is *planned* and will not run.
-> Any caller that requests `executionMode === "real"` is rejected by
-> `blockRealAction()` with an `action.real.blocked` audit event.
+> **Step 18 update.** The same schema is also enforced at the adapter
+> boundary by `src/desktop-adapter-interface.js`
+> (`validateAdapterAction()`, `normalizeAdapterAction()`,
+> `getSupportedAdapterActions()` returns `["click"]`). The mock
+> adapter (`src/mock-desktop-adapter.js`) and the future real
+> adapter both consume this schema. **The currently supported action
+> is the simulated click only** — `executeMockAction()` records the
+> attempt and emits `adapter.mock.executed`; it does not produce any
+> OS input. Any caller that requests `executionMode === "real"` is
+> rejected by `blockRealAction()` with an `action.real.blocked` audit
+> event.
 
 ## Overview
 

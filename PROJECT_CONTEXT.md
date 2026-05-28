@@ -7,12 +7,16 @@
 
 ## Текущий шаг
 
-**Шаг 17 завершён.** Проект находится в стадии
+**Шаг 18 завершён.** Проект находится в стадии
 `0.1.0-beta preparation` (simulation-only). Готовится `v0.1.0-beta`
-GitHub pre-release. На шаге 17 добавлена архитектура controlled
-action pipeline + safety gates + in-memory audit events.
+GitHub pre-release. На шаге 18 добавлен desktop adapter interface,
+mock adapter (единственный available), adapter registry (real
+adapter `available: false`, `planned: true`), self-test и
+карточка Desktop adapter status в Advanced → Safety.
 **Реальные действия по-прежнему отключены: `realDesktopActions = false`,
 `simulationOnly = true`, `isRealActionAllowed()` всегда `false`,
+`isRealAdapterAllowed()` всегда `false`,
+`setActiveAdapter("real-desktop")` всегда блокируется,
 `executionMode === "real"` блокируется в `executeAction()`.**
 
 ## Стек
@@ -45,7 +49,7 @@ action pipeline + safety gates + in-memory audit events.
     Нет UI / IPC / env-vars, которые могут их перевернуть. Любое
     изменение проходит `docs/REAL_ACTIONS_GO_NO_GO.md`.
 
-## Статус реализации (на конец шага 17)
+## Статус реализации (на конец шага 18)
 
 ### Реализовано
 - Electron-приложение, главное минималистичное меню.
@@ -129,6 +133,46 @@ action pipeline + safety gates + in-memory audit events.
   - `npm run smoke` проверяет существование новых файлов и
     инвариантов в исходниках.
 
+- **Desktop adapter interface + mock adapter (шаг 18):**
+  - `src/desktop-adapter-interface.js` — `getAdapterContract()`
+    (`{ version: 1, supportedActions: ["click"],
+    realActionsAllowed: false, simulationOnly: true,
+    requiresMainProcess: true, requiresUserConfirmation: true,
+    requiresEmergencyStop: true }`),
+    `getSupportedAdapterActions()`, `validateAdapterAction()`,
+    `normalizeAdapterAction()`, `createAdapterResult()`,
+    `isRealAdapterAllowed()` (hard-coded `false`).
+  - `src/mock-desktop-adapter.js` — единственный `available: true`
+    adapter. `executeMockAction()` (валидация → audit
+    `adapter.mock.executed` → структурированный результат),
+    `runMockAdapterSelfTest()` (4 проверки: validate click action,
+    execute mock action, real action blocked, reject malformed
+    action). **Не выполняет реальный системный ввод.**
+  - `src/adapter-registry.js` — реестр adapter'ов:
+    `mock` (`available: true`, активен по умолчанию) и
+    `real-desktop` (`available: false`, `planned: true`,
+    `disabledReason: "Real desktop actions are not implemented in
+    this build"`). `setActiveAdapter("real-desktop")` всегда
+    возвращает `{ success: false, blocked: true, ... }` и эмитит
+    `adapter.selection.blocked` + `adapter.real.unavailable`.
+  - `src/action-pipeline.js` — simulate-путь идёт через активный
+    adapter (mock). Defensive: даже если бы активный adapter
+    объявил `realActions: true`, pipeline всё равно вызвал бы
+    `blockRealAction()`.
+  - `src/audit-events.js` — allowlist расширен 6 новыми типами:
+    `adapter.selftest.started`, `adapter.selftest.completed`,
+    `adapter.selftest.failed`, `adapter.selection.blocked`,
+    `adapter.mock.executed`, `adapter.real.unavailable`.
+  - Карточка **Desktop adapter status** в Advanced → Safety с
+    кнопкой **Run adapter self-test**. `Copy diagnostics` содержит
+    строку `Adapter:`.
+  - `docs/ADAPTER_INTERFACE.md` — отдельный документ с контрактом,
+    safety gates и future-implementation checklist.
+  - 21 новый i18n-ключ RU + EN.
+  - `npm run smoke` проверяет наличие трёх новых файлов и
+    source-инвариантов: registry содержимое, mock invariants,
+    interface contract, расширенный allowlist audit-событий.
+
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
   `node-key-sender`, нет нативных модулей ввода.
@@ -153,7 +197,9 @@ action pipeline + safety gates + in-memory audit events.
 - `preload.js` — contextBridge `window.clickflow.*`.
 - `src/` — renderer modules + `index.html` + `styles.css` + `i18n.js`.
   Включает `feature-flags.js`, `action-pipeline.js`, `safety-gates.js`,
-  `audit-events.js` (Step 16-17).
+  `audit-events.js` (Step 16-17), а также
+  `desktop-adapter-interface.js`, `mock-desktop-adapter.js`,
+  `adapter-registry.js` (Step 18).
 - `assets/` — packaging resources, локальный SVG-икон.
 - `docs/` — TEST_PLAN, MVP_CHECKLIST, SECURITY_CHECKLIST,
   SMOKE_TESTS, PACKAGING, DESKTOP_ADAPTER_PLAN, ACTION_SCHEMA,
@@ -188,8 +234,9 @@ action pipeline + safety gates + in-memory audit events.
 | 15 | Final stabilization: `npm run smoke`, Beta health, JSON corruption guard, `FINAL_BETA_REVIEW`. |
 | 16 | Handoff design: feature flags, go/no-go, audit log plan, privacy doc, next safety milestone UI. |
 | 17 | Controlled action pipeline + safety gates + in-memory audit events. Real actions blocked. |
+| 18 | Desktop adapter interface + mock adapter + registry. Mock active. Real adapter blocked. |
 
-## Что логично делать на шаге 18
+## Что логично делать на шаге 19
 
 - **Подготовка `v0.1.0-beta` GitHub pre-release**: тэг,
   `npm run dist` артефакты, README → release notes.
@@ -204,8 +251,13 @@ action pipeline + safety gates + in-memory audit events.
 - **Smoke-harness 2.0** — Playwright или альтернатива, поднимающая
   Electron headless и проверяющая «no real input fires», RU/EN
   переключение, dark theme, CSP не ослаблен, отказ
-  `executionMode: "real"` на уровне DevTools.
+  `executionMode: "real"` на уровне DevTools, отказ
+  `setActiveAdapter("real-desktop")`.
 - **Audit events UI 1.0** — отдельный sub-tab «Audit» с фильтрами,
   экспортом в JSON / JSONL (всё ещё in-memory; file persistence
   только в шаге, который реализует требования
   `REAL_ACTIONS_GO_NO_GO.md` §4).
+- **Adapter selection UI** (только для available adapter'ов) —
+  если когда-либо появятся дополнительные mock-варианты
+  (`mock-fast`, `mock-slow`), переключение между ними; real adapter
+  должен оставаться заблокированным.

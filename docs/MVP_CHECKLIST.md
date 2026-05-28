@@ -222,6 +222,32 @@ Status as of `0.1.0-beta` (Step 14).
       `AUDIT_LOG_PLAN`, `ACTION_SCHEMA`, `SECURITY_CHECKLIST`,
       `SMOKE_TESTS`, README, PROJECT_CONTEXT, CHANGELOG.
 
+## 18. Desktop adapter interface, mock adapter, registry (Step 18)
+
+- [x] `src/desktop-adapter-interface.js` — adapter contract,
+      `validateAdapterAction`, `normalizeAdapterAction`,
+      `createAdapterResult`, `getSupportedAdapterActions`,
+      `getAdapterContract`, `isRealAdapterAllowed` (hard-coded false).
+- [x] `src/mock-desktop-adapter.js` — only `available: true`
+      adapter. `executeMockAction`, `runMockAdapterSelfTest` (4
+      pure-JS checks), `getMockAdapterStatus`. No OS input.
+- [x] `src/adapter-registry.js` — registry with mock active by
+      default. `setActiveAdapter("real-desktop")` blocks and
+      emits `adapter.selection.blocked` + `adapter.real.unavailable`.
+- [x] `src/action-pipeline.js` — simulate path now routes through
+      active adapter. Defensive against any adapter that claims
+      `realActions: true`.
+- [x] `src/audit-events.js` allowlist gained 6 adapter event types.
+- [x] Advanced → Safety: **Desktop adapter status** card with
+      "Run adapter self-test" button.
+- [x] `Copy diagnostics` includes `Adapter:` line.
+- [x] `npm run smoke` covers Step 18 invariants and new files.
+- [x] `docs/ADAPTER_INTERFACE.md` created.
+- [x] Docs updated: `DESKTOP_ADAPTER_PLAN`,
+      `REAL_ACTIONS_GO_NO_GO`, `ACTION_SCHEMA`,
+      `SECURITY_CHECKLIST`, `SMOKE_TESTS`, README,
+      PROJECT_CONTEXT, CHANGELOG.
+
 ## 17. Known limitations (single source of truth)
 
 See [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md). Highlights:

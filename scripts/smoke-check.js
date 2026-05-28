@@ -87,7 +87,11 @@ function safeJson(rel) {
   'src/action-pipeline.js',
   'src/safety-gates.js',
   'src/audit-events.js',
-  'src/feature-flags.js'
+  'src/feature-flags.js',
+  // Step 18 modules
+  'src/desktop-adapter-interface.js',
+  'src/mock-desktop-adapter.js',
+  'src/adapter-registry.js'
 ].forEach(function (rel) {
   record('file exists: ' + rel, fileExists(rel));
 });
@@ -109,7 +113,9 @@ function safeJson(rel) {
   'docs/AUDIT_LOG_PLAN.md',
   'docs/FEATURE_FLAGS.md',
   'docs/PRIVACY.md',
-  'docs/FINAL_BETA_REVIEW.md'
+  'docs/FINAL_BETA_REVIEW.md',
+  // Step 18 doc
+  'docs/ADAPTER_INTERFACE.md'
 ].forEach(function (rel) {
   record('doc exists: ' + rel, fileExists(rel));
 });
@@ -219,7 +225,11 @@ var sourceFiles = [
   // Step 17 modules
   'src/action-pipeline.js',
   'src/safety-gates.js',
-  'src/audit-events.js'
+  'src/audit-events.js',
+  // Step 18 modules
+  'src/desktop-adapter-interface.js',
+  'src/mock-desktop-adapter.js',
+  'src/adapter-registry.js'
 ];
 var foundForbidden = [];
 sourceFiles.forEach(function (rel) {
@@ -288,6 +298,85 @@ var ffTxt = readText('src/feature-flags.js');
 record(
   'feature-flags.realDesktopActions = false in source',
   /realDesktopActions\s*:\s*false/.test(ffTxt)
+);
+
+// 13. Step 18: adapter registry source-level invariants.
+var arTxt = readText('src/adapter-registry.js');
+record(
+  'adapter-registry registers mock adapter',
+  /id:\s*['"]mock['"]/.test(arTxt) && /Mock Desktop Adapter/.test(arTxt)
+);
+record(
+  'adapter-registry registers real-desktop adapter as unavailable / planned',
+  /id:\s*['"]real-desktop['"]/.test(arTxt) &&
+  /available:\s*false/.test(arTxt) &&
+  /planned:\s*true/.test(arTxt)
+);
+record(
+  'adapter-registry sets activeId to mock by default',
+  /activeId:\s*['"]mock['"]/.test(arTxt)
+);
+record(
+  'adapter-registry blocks real adapter selection',
+  /adapter\.selection\.blocked/.test(arTxt) &&
+  /adapter\.real\.unavailable/.test(arTxt)
+);
+record(
+  'adapter-registry has Real desktop disabled reason',
+  arTxt.indexOf('Real desktop actions are not implemented in this build') !== -1
+);
+
+// 14. Step 18: mock adapter does not perform real OS input.
+var mockTxt = readText('src/mock-desktop-adapter.js');
+record(
+  'mock adapter declares realActions: false',
+  /realActions:\s*false/.test(mockTxt)
+);
+record(
+  'mock adapter declares simulationOnly: true',
+  /simulationOnly:\s*true/.test(mockTxt)
+);
+record(
+  'mock adapter exposes runMockAdapterSelfTest',
+  /function\s+runMockAdapterSelfTest/.test(mockTxt)
+);
+
+// 15. Step 18: adapter interface contract.
+var ifaceTxt = readText('src/desktop-adapter-interface.js');
+record(
+  'adapter interface contract has realActionsAllowed: false',
+  /realActionsAllowed:\s*false/.test(ifaceTxt)
+);
+record(
+  'adapter interface isRealAdapterAllowed returns false in 0.1.x',
+  /function\s+isRealAdapterAllowed[\s\S]{0,500}return\s+false/.test(ifaceTxt)
+);
+
+// 16. Step 18: audit allowlist contains the new adapter event types.
+var auditTxt = readText('src/audit-events.js');
+record(
+  'audit allowlist includes adapter.selftest.started',
+  auditTxt.indexOf("'adapter.selftest.started'") !== -1
+);
+record(
+  'audit allowlist includes adapter.selftest.completed',
+  auditTxt.indexOf("'adapter.selftest.completed'") !== -1
+);
+record(
+  'audit allowlist includes adapter.selftest.failed',
+  auditTxt.indexOf("'adapter.selftest.failed'") !== -1
+);
+record(
+  'audit allowlist includes adapter.selection.blocked',
+  auditTxt.indexOf("'adapter.selection.blocked'") !== -1
+);
+record(
+  'audit allowlist includes adapter.mock.executed',
+  auditTxt.indexOf("'adapter.mock.executed'") !== -1
+);
+record(
+  'audit allowlist includes adapter.real.unavailable',
+  auditTxt.indexOf("'adapter.real.unavailable'") !== -1
 );
 
 // --- Report ---

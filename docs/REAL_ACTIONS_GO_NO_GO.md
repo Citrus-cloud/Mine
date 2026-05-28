@@ -43,6 +43,39 @@ sign-off gate for the `0.3.x` release line.
 These additions are **preparation only**. They do not constitute
 implementation of real input. The list below is unchanged.
 
+## 0bis. What step 18 changed
+
+- [x] **Mock desktop adapter is ready** (`src/mock-desktop-adapter.js`).
+      It is the only `available: true` adapter in the registry. It
+      validates inputs, emits `adapter.mock.executed`, and returns a
+      structured result. It performs **no** OS input.
+- [x] **Adapter registry** (`src/adapter-registry.js`) lists both
+      adapters. The `real-desktop` adapter is registered with
+      `available: false`, `planned: true`, and a non-null
+      `disabledReason: "Real desktop actions are not implemented in
+      this build"`. `setActiveAdapter("real-desktop")` returns
+      `{ success: false, blocked: true, ... }` and emits both
+      `adapter.selection.blocked` and `adapter.real.unavailable`
+      audit events.
+- [x] **Adapter interface** (`src/desktop-adapter-interface.js`)
+      defines the contract — `getAdapterContract()`,
+      `validateAdapterAction()`, `normalizeAdapterAction()`,
+      `createAdapterResult()`, `getSupportedAdapterActions()`,
+      `isRealAdapterAllowed()` (hard-coded `false`).
+- [x] **Action pipeline** routes the simulate path through the
+      active adapter (mock). The real path is unchanged
+      (`blockRealAction()`).
+- [x] **Audit allowlist** gained six adapter event types.
+- [x] **UI** gained a `Desktop adapter status` card in
+      Advanced → Safety with a "Run adapter self-test" button.
+- [x] **Smoke check** verifies the new files and that
+      `setActiveAdapter("real-desktop")` cannot succeed in source.
+
+**The real adapter is still No-Go.** The list below is unchanged.
+
+These additions are **preparation only**. They do not constitute
+implementation of real input.
+
 ---
 
 ## 1. Required before implementation

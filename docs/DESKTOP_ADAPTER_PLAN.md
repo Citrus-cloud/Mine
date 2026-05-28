@@ -24,6 +24,31 @@ Step 17 introduced the architectural scaffolding the future adapter will plug in
 
 When the future real-input branch lands, it will subscribe to `executeAction()` for `executionMode === "real"`. Until every requirement in `REAL_ACTIONS_GO_NO_GO.md` is met, that branch will continue to be the `blockRealAction()` path.
 
+## 1.6. Step 18 preparation — adapter interface and mock adapter
+
+Step 18 split the adapter responsibility out of the pipeline into a dedicated interface plus a registry, and added a safe mock adapter. **No real input is performed.** What was added:
+
+- **`src/desktop-adapter-interface.js`** — the contract every adapter agrees on:
+  - `getAdapterContract()` returns `{ version: 1, supportedActions: ["click"], realActionsAllowed: false, simulationOnly: true, requiresMainProcess: true, requiresUserConfirmation: true, requiresEmergencyStop: true }`.
+  - `getSupportedAdapterActions()` returns `["click"]`.
+  - `validateAdapterAction(action)` and `normalizeAdapterAction(action)` are the adapter-level schema helpers.
+  - `createAdapterResult(success, data, error)` is the result envelope.
+  - `isRealAdapterAllowed(flags, settings)` is **hard-coded `false`** in `0.1.x`.
+- **`src/mock-desktop-adapter.js`** — the only `available: true` adapter:
+  - `getMockAdapterInfo()`, `checkMockAdapterAvailability()`.
+  - `executeMockAction(action, context)` validates, emits `adapter.mock.executed`, and returns `{ success: true, mode: "mock", simulated: true, action, timestamp, adapter: "mock-desktop-adapter" }`.
+  - `runMockAdapterSelfTest()` runs four pure-JS tests (validate click action, execute mock action, real action blocked, reject malformed action). It emits `adapter.selftest.started` and either `adapter.selftest.completed` or `adapter.selftest.failed`.
+  - `getMockAdapterStatus()` is the snapshot used by Diagnostics.
+- **`src/adapter-registry.js`** — the registry of adapters:
+  - `getAvailableAdapters()`, `getAdapterById(id)`, `getActiveAdapter()`, `getAdapterRegistryStatus()`, `runActiveAdapterSelfTest()`, `isRealAdapterRegistered()`, `isRealAdapterAvailable()`.
+  - `setActiveAdapter(id)` accepts any adapter that is `available: true` and is **not** `realActions: true`. Any attempt to activate the registered `real-desktop` adapter returns `{ success: false, blocked: true, error: "<disabledReason>" }` and emits `adapter.selection.blocked` plus `adapter.real.unavailable`.
+- **`src/action-pipeline.js`** — `executeAction()` now routes the simulate path through the active adapter (the mock adapter). If the active adapter ever claimed real actions, the pipeline still rejects via `blockRealAction()`. The real path is unchanged.
+- **`src/audit-events.js`** — the allowlist gained six new types: `adapter.selftest.started`, `adapter.selftest.completed`, `adapter.selftest.failed`, `adapter.selection.blocked`, `adapter.mock.executed`, `adapter.real.unavailable`.
+- **Renderer** — Advanced → Safety gained a new **Desktop adapter status** card with rows for active adapter, mock available, real available, real registered, real actions allowed, simulation only, last self-test result, and a **Run adapter self-test** button. `Copy diagnostics` gained an `Adapter:` line.
+- **Smoke check (`scripts/smoke-check.js`)** — new files are checked, registry source-level invariants (mock vs. real) are verified, and the audit allowlist is verified to include the six new types.
+
+When the future real-input branch lands, it will register `available: true` on the `real-desktop` adapter only after passing the four-layer flip described in `docs/ADAPTER_INTERFACE.md` §10.
+
 ## 2. Why Real Clicks Are NOT Implemented Yet
 
 - Architecture validation is still in progress

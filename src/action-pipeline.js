@@ -1,16 +1,20 @@
 // =====================================================================
-// ClickFlow — action-pipeline.js (Step 17)
+// ClickFlow — action-pipeline.js (Step 17, extended in Step 18)
 // ---------------------------------------------------------------------
 // Centralized pipeline that every scenario action flows through. It
 // validates the action, evaluates safety, picks an execution mode,
 // and either simulates the action or blocks a real-action attempt.
 //
+// Step 18: simulation now flows through the active desktop adapter
+// (the mock adapter). The pipeline still NEVER runs a real-action
+// adapter. Even if one were somehow active, executeAction() refuses.
+//
 // IMPORTANT
 //   - Real desktop actions are NOT implemented in this build.
-//   - executeAction() ALWAYS routes to executeSimulatedAction()
-//     unless the caller explicitly asks for executionMode === "real",
-//     in which case the request is blocked with a clear error and
-//     an "action.real.blocked" audit event.
+//   - executeAction() ALWAYS routes to the simulate path unless the
+//     caller explicitly asks for executionMode === "real", in which
+//     case the request is blocked with a clear error and an
+//     "action.real.blocked" audit event.
 //   - There is NO code path in this file that performs real input.
 // =====================================================================
 
@@ -129,11 +133,17 @@ function blockRealAction(action, context) {
 
 // --- Public entry point used by the click-engine. ---
 // Routing rules:
-//   - missing/empty executionMode    -> simulate
-//   - "simulation" or "simulate"     -> simulate
+//   - missing/empty executionMode    -> simulate via active adapter
+//   - "simulation" or "simulate"     -> simulate via active adapter
 //   - any other value (incl. "real") -> block
 // We also re-check schema before dispatching so a malformed action
 // never reaches even the simulate path.
+//
+// Step 18: simulate path goes through the adapter registry. If the
+// active adapter is the mock adapter, executeMockAction() runs. If
+// somehow the active adapter were a real-action adapter (it cannot
+// be in 0.1.x — adapter-registry.js refuses to activate it), the
+// pipeline still rejects via blockRealAction().
 function executeAction(action, context) {
   var schema = validateAction(action);
   if (!schema.ok) {
@@ -158,6 +168,40 @@ function executeAction(action, context) {
     : 'simulation';
 
   if (mode === 'simulation' || mode === 'simulate' || mode === '') {
+    // Step 18: defensive — never use an adapter that claims real actions.
+    if (typeof getActiveAdapter === 'function') {
+      var active = getActiveAdapter();
+      if (active && (active.realActions === true || active.type === 'real')) {
+        return blockRealAction(action, context);
+      }
+      // Route through the mock adapter when registered.
+      if (active && active.id === 'mock' && typeof executeMockAction === 'function') {
+        var mockResult = executeMockAction(action, context);
+        // Keep the existing action.simulated audit event for parity
+        // with Step 17 callers; the adapter itself records
+        // adapter.mock.executed.
+        if (typeof recordAuditEvent === 'function') {
+          recordAuditEvent('action.simulated', {
+            scenarioId: context && context.scenarioId,
+            actionType: action.type,
+            x: action.x,
+            y: action.y,
+            button: action.button,
+            adapter: 'mock'
+          });
+        }
+        return {
+          ok: !!mockResult.success,
+          mode: 'simulation',
+          simulated: true,
+          blocked: false,
+          action: action,
+          timestamp: mockResult.timestamp || new Date().toISOString(),
+          adapter: 'mock'
+        };
+      }
+    }
+    // Fallback: legacy simulate path (no adapter registered yet).
     return executeSimulatedAction(action, context);
   }
 

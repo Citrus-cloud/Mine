@@ -344,7 +344,30 @@ const translations = {
     notInstalled: "не установлено",
     notChecked: "не проверено",
     notPassed: "не пройден",
-    none2: "—"
+    none2: "—",
+
+    // Step 18: desktop adapter interface
+    desktopAdapterStatus: "Статус desktop adapter",
+    activeAdapter: "Активный adapter",
+    mockAdapter: "Mock Desktop Adapter",
+    realDesktopAdapter: "Real Desktop Adapter",
+    mockAdapterAvailable: "Mock adapter доступен",
+    realAdapterAvailable: "Real adapter доступен",
+    realAdapterRegistered: "Real adapter зарегистрирован",
+    realActionsAllowed: "Реальные действия разрешены",
+    runAdapterSelfTest: "Запустить self-test adapter",
+    adapterSelfTestStarted: "Self-test adapter запущен",
+    adapterSelfTestCompleted: "Self-test adapter пройден",
+    adapterSelfTestFailed: "Self-test adapter не пройден",
+    adapterSelectionBlocked: "Выбор adapter заблокирован",
+    adapterMockExecuted: "Mock adapter выполнил action",
+    adapterRealUnavailable: "Real adapter недоступен",
+    lastSelfTestResult: "Последний self-test",
+    selfTestPassed: "Пройден",
+    selfTestFailed: "Не пройден",
+    realAdapterDisabledReason: "Real desktop actions are not implemented in this build",
+    mockModeOnly: "Только mock-режим",
+    selfTestNeverRun: "Ещё не запускался"
   },
   en: {
     // Main screen
@@ -689,7 +712,30 @@ const translations = {
     notInstalled: "not installed",
     notChecked: "not checked",
     notPassed: "not passed",
-    none2: "—"
+    none2: "—",
+
+    // Step 18: desktop adapter interface
+    desktopAdapterStatus: "Desktop adapter status",
+    activeAdapter: "Active adapter",
+    mockAdapter: "Mock Desktop Adapter",
+    realDesktopAdapter: "Real Desktop Adapter",
+    mockAdapterAvailable: "Mock adapter available",
+    realAdapterAvailable: "Real adapter available",
+    realAdapterRegistered: "Real adapter registered",
+    realActionsAllowed: "Real actions allowed",
+    runAdapterSelfTest: "Run adapter self-test",
+    adapterSelfTestStarted: "Adapter self-test started",
+    adapterSelfTestCompleted: "Adapter self-test passed",
+    adapterSelfTestFailed: "Adapter self-test failed",
+    adapterSelectionBlocked: "Adapter selection blocked",
+    adapterMockExecuted: "Mock adapter executed action",
+    adapterRealUnavailable: "Real adapter unavailable",
+    lastSelfTestResult: "Last self-test result",
+    selfTestPassed: "Passed",
+    selfTestFailed: "Failed",
+    realAdapterDisabledReason: "Real desktop actions are not implemented in this build",
+    mockModeOnly: "Mock mode only",
+    selfTestNeverRun: "Not run yet"
   }
 };
 
