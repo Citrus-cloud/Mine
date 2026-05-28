@@ -758,7 +758,12 @@ function renderAdvancedSafety() {
     // Step 23 rows
     { key: 'releaseBlockersPresent',    label: t('releaseBlockers') },
     { key: 'packagedAppQaPresent',      label: t('packagedAppQa') },
-    { key: 'packagedAppTested',         label: t('packagedAppTested') }
+    { key: 'packagedAppTested',         label: t('packagedAppTested') },
+    // Step 24 rows
+    { key: 'finalReleaseSummaryPresent',  label: t('finalReleaseSummary') },
+    { key: 'preReleaseChecklistPresent',  label: t('preReleaseChecklist') },
+    { key: 'releaseTagPlanPresent',       label: t('releaseTagPlan') },
+    { key: 'releaseCommitMessagePresent', label: t('releaseCommitMessage') }
   ].forEach(item => {
     const row = document.createElement('div'); row.className = 'adv-card-row';
     const lbl = document.createElement('span'); lbl.className = 'adv-card-label'; lbl.textContent = item.label;
@@ -791,13 +796,20 @@ function renderAdvancedSafety() {
       placeholders.releaseBlockersPresent.textContent    = rs.releaseBlockersPresent ? t('present') : t('absent');
       placeholders.packagedAppQaPresent.textContent      = rs.packagedAppQaPresent ? t('present') : t('absent');
       placeholders.packagedAppTested.textContent         = rs.packagedAppTested ? t('yes') : t('manualPackagedTestingRequired');
-      // Step 22+23: badge prefers readyAfterManualQa over docs-only readiness.
-      const ready = (typeof rs.readyAfterManualQa === 'boolean')
-        ? rs.readyAfterManualQa
-        : (typeof rs.readyForManualRelease === 'boolean'
-            ? rs.readyForManualRelease
-            : !!rs.releaseDocsReady);
-      rsBadge.textContent = ready ? t('readyAfterManualQa') : t('releaseNotReady');
+      // Step 24 rows
+      placeholders.finalReleaseSummaryPresent.textContent  = rs.finalReleaseSummaryPresent ? t('present') : t('absent');
+      placeholders.preReleaseChecklistPresent.textContent  = rs.preReleaseChecklistPresent ? t('present') : t('absent');
+      placeholders.releaseTagPlanPresent.textContent       = rs.releaseTagPlanPresent ? t('present') : t('absent');
+      placeholders.releaseCommitMessagePresent.textContent = rs.releaseCommitMessagePresent ? t('present') : t('absent');
+      // Step 22+23+24: badge prefers readyForPreReleaseAfterManualQa.
+      const ready = (typeof rs.readyForPreReleaseAfterManualQa === 'boolean')
+        ? rs.readyForPreReleaseAfterManualQa
+        : (typeof rs.readyAfterManualQa === 'boolean'
+            ? rs.readyAfterManualQa
+            : (typeof rs.readyForManualRelease === 'boolean'
+                ? rs.readyForManualRelease
+                : !!rs.releaseDocsReady));
+      rsBadge.textContent = ready ? t('readyForPreReleaseAfterManualQa') : t('releaseNotReady');
     }).catch(() => {
       rsVerVal.textContent = '?';
       Object.values(placeholders).forEach(p => p.textContent = '?');
@@ -853,7 +865,7 @@ async function copyDiagnostics() {
     } catch (e) {}
     sbLine = `Sandbox: dryRunAvailable=${sb.dryRunAvailable}, realActionsAllowed=${sb.realActionsAllowed}, realActionsImplemented=${sb.realActionsImplemented}, blockedReasons=${blockedCount}, checklistReady=${readyCount}, lastDryRunAt=${sb.lastDryRunAt || 'none'}, lastDryRunActionCount=${sb.lastDryRunActionCount}`;
   }
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();

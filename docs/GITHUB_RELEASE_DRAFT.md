@@ -73,7 +73,13 @@ QA may add entries.
   `docs/RELEASE_BLOCKERS.md` and `docs/PACKAGED_APP_QA.md`;
   smoke-check expanded; release decision is "Ready after manual
   packaged-app QA".
-- Localization RU + EN, parity verified (368 keys each).
+- **Step 24:** final beta release preparation. Added
+  `docs/FINAL_RELEASE_SUMMARY.md`,
+  `docs/PRE_RELEASE_CHECKLIST.md`,
+  `docs/RELEASE_TAG_PLAN.md`, and
+  `docs/RELEASE_COMMIT_MESSAGE.md`. The release plan is now a
+  fully-linked manual walk-through.
+- Localization RU + EN, parity verified (~370+ keys each).
 
 ## Safety model
 
@@ -205,6 +211,8 @@ ClickFlow-0.1.0-beta-linux-x64.AppImage
 ```
 
 ## Feedback / bug reports
+
+All feedback goes through GitHub Issues:
 
 - **Bug:** [`.github/ISSUE_TEMPLATE/bug_report.md`](../.github/ISSUE_TEMPLATE/bug_report.md)
 - **Feature request:** [`.github/ISSUE_TEMPLATE/feature_request.md`](../.github/ISSUE_TEMPLATE/feature_request.md)

@@ -6,15 +6,17 @@ step that touches release readiness.
 
 ## Status
 
-- **Current status:** **Pending manual verification.** All
+- **Current status:** **Pending manual verification.**
+  No automated/static release blockers at this stage. All
   static / structural / source-level checks pass at the close of
-  step 23. The only remaining gate is the manual packaged-app QA
-  walk on at least one target OS — see
-  [`docs/PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md).
-- **Smoke check:** `npm run smoke` reports `Failed: 0` (149+ checks
-  at step 23).
-- **Last updated:** end of Step 23 — Post-pack QA and release
-  blocker pass.
+  step 24. **Manual packaged-app QA on at least one target OS
+  is still required before publishing.** See
+  [`docs/PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md) and
+  [`docs/PRE_RELEASE_CHECKLIST.md`](./PRE_RELEASE_CHECKLIST.md).
+- **Smoke check:** `npm run smoke` reports `Failed: 0` (170+ checks
+  at step 24).
+- **Last updated:** end of Step 24 — Final beta release
+  preparation.
 
 ---
 
@@ -22,7 +24,7 @@ step that touches release readiness.
 
 | ID  | Severity | Area | Description | Status | Notes |
 |-----|----------|------|-------------|--------|-------|
-| —   | —        | —    | _No release blockers found at the close of step 23 (after automated and static checks)._ | — | Manual QA on a packaged binary is still required — that walk may add entries to this table. |
+| —   | —        | —    | _No known automated/static release blockers at this stage. Manual packaged-app QA on at least one target OS is still required before publishing._ | — | The walk may add entries to this table. |
 
 > If you add a row here, also update **Status** above and the
 > **Release decision** at the bottom of this page.

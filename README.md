@@ -29,12 +29,14 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, **post-pack QA pass пройден** (no release blockers after automated/static checks).
-  Перед публикацией тэга `v0.1.0-beta` обязательно прохождение [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) на хотя бы одной целевой ОС
-  и подтверждение «Release decision = Ready» в [`docs/RELEASE_BLOCKERS.md`](./docs/RELEASE_BLOCKERS.md).
-  Команды публикации — [`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md).
+- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов**.
+  Перед публикацией тэга `v0.1.0-beta` обязательны:
+  [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
+  [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
+  Release decision = "Ready" в [`docs/RELEASE_BLOCKERS.md`](./docs/RELEASE_BLOCKERS.md).
+  Команды публикации — [`docs/RELEASE_TAG_PLAN.md`](./docs/RELEASE_TAG_PLAN.md).
 - Последние шаги развития:
   - Шаг 13 — визуальная полировка, дизайн-токены, тёмная тема,
     `assets/`.
@@ -131,6 +133,32 @@ safety review).
     `docs/RELEASE_FINAL_CHECK.md` / `docs/TAG_AND_RELEASE_GUIDE.md`
     / `docs/GITHUB_RELEASE_DRAFT.md` / `RELEASE_NOTES.md`;
     добавлены 7 новых i18n-ключей RU + EN.
+  - **Шаг 24 — Final beta release preparation:**
+    добавлены [`docs/FINAL_RELEASE_SUMMARY.md`](./docs/FINAL_RELEASE_SUMMARY.md)
+    (single-page snapshot релиза),
+    [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md)
+    (manual checklist перед тэгом),
+    [`docs/RELEASE_TAG_PLAN.md`](./docs/RELEASE_TAG_PLAN.md)
+    (manual command sequence для tag/push/publish), и
+    [`docs/RELEASE_COMMIT_MESSAGE.md`](./docs/RELEASE_COMMIT_MESSAGE.md)
+    (recommended commit title и body + forbidden body lines —
+    запрещено заявлять о real input / OCR / image recognition /
+    mobile / `realDesktopActions` flip). Обновлены
+    `docs/RELEASE_FINAL_CHECK.md` (ссылки на 4 новых документа,
+    Release decision = "Ready for beta pre-release after manual
+    packaged-app QA"), `docs/RELEASE_BLOCKERS.md` (status
+    обновлён до Step 24, Release decision уточнён) и
+    `docs/GITHUB_RELEASE_DRAFT.md` (Step 24 в highlights, intro
+    к Feedback section). IPC `system:get-release-status`
+    дополнен полями `finalReleaseSummaryPresent`,
+    `preReleaseChecklistPresent`, `releaseTagPlanPresent`,
+    `releaseCommitMessagePresent`,
+    `readyForPreReleaseAfterManualQa`. Карточка Release status
+    в Advanced → Safety расширена 4 новыми строками (всего 18)
+    и переключилась на бейдж `Ready for pre-release after
+    manual QA`. Smoke-check расширен до **193 проверок**.
+    Добавлено 7 новых i18n-ключей RU + EN. **Tag и публикация
+    GitHub Release остаются ручными действиями.**
 
 ---
 
@@ -374,6 +402,10 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md) — manual git/GitHub-команды для публикации pre-release (Step 22).
 - [`docs/RELEASE_BLOCKERS.md`](./docs/RELEASE_BLOCKERS.md) — текущий список release blockers (на конец Step 23 — пусто после автоматических проверок).
 - [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) — manual checklist для проверки собранного приложения после `npm run pack` / `npm run dist` (Step 23).
+- [`docs/FINAL_RELEASE_SUMMARY.md`](./docs/FINAL_RELEASE_SUMMARY.md) — single-page snapshot финального beta release (Step 24).
+- [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) — manual checklist перед тэгом (Step 24).
+- [`docs/RELEASE_TAG_PLAN.md`](./docs/RELEASE_TAG_PLAN.md) — manual git/GitHub command sequence для tag/push/publish (Step 24).
+- [`docs/RELEASE_COMMIT_MESSAGE.md`](./docs/RELEASE_COMMIT_MESSAGE.md) — recommended commit message для release-prep commit (Step 24).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
@@ -433,6 +465,7 @@ npm run dist     # релизные артефакты в dist/
 | 21 | Beta release packaging pass | `.gitignore`, extended package.json `build` block, `RELEASE_CHECKLIST.md`, `BUILD_ARTIFACTS.md`, `GITHUB_RELEASE_DRAFT.md`, `VERSIONING.md`, Release status diagnostics, smoke-check at 113 checks. |
 | 22 | GitHub beta release finalization | `docs/RELEASE_FINAL_CHECK.md`, `docs/TAG_AND_RELEASE_GUIDE.md`, finalized `RELEASE_NOTES.md` / `GITHUB_RELEASE_DRAFT.md`, expanded Release status card, smoke-check at 137 checks. Tag and publication remain manual. |
 | 23 | Post-pack QA and release blocker pass | `docs/RELEASE_BLOCKERS.md`, `docs/PACKAGED_APP_QA.md`, expanded Release status card (14 rows, 2 new rows), smoke-check at 168 checks. Manual packaged-app QA remains the last gate. |
+| 24 | Final beta release preparation | `docs/FINAL_RELEASE_SUMMARY.md`, `docs/PRE_RELEASE_CHECKLIST.md`, `docs/RELEASE_TAG_PLAN.md`, `docs/RELEASE_COMMIT_MESSAGE.md`, expanded Release status card (18 rows + ready-for-pre-release-after-manual-QA badge), smoke-check at 193 checks. Tag and publication remain manual; explicit list of forbidden commit body lines. |
 
 ---
 

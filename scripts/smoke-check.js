@@ -130,7 +130,12 @@ function safeJson(rel) {
   'docs/TAG_AND_RELEASE_GUIDE.md',
   // Step 23 docs
   'docs/RELEASE_BLOCKERS.md',
-  'docs/PACKAGED_APP_QA.md'
+  'docs/PACKAGED_APP_QA.md',
+  // Step 24 docs
+  'docs/FINAL_RELEASE_SUMMARY.md',
+  'docs/PRE_RELEASE_CHECKLIST.md',
+  'docs/RELEASE_TAG_PLAN.md',
+  'docs/RELEASE_COMMIT_MESSAGE.md'
 ].forEach(function (rel) {
   record('doc exists: ' + rel, fileExists(rel));
 });
@@ -744,7 +749,7 @@ record(
 );
 record(
   'docs/RELEASE_BLOCKERS.md asserts no known blockers from automated checks',
-  /no\s+release\s+blockers|no\s+known\s+release\s+blockers|No release blockers found/i.test(rbTxt)
+  /no\s+release\s+blockers|no\s+known\s+release\s+blockers|No release blockers found|no\s+(known\s+)?automated\/static\s+release\s+blockers/i.test(rbTxt)
 );
 
 var pqTxt = readText('docs/PACKAGED_APP_QA.md');
@@ -774,7 +779,7 @@ record(
 );
 record(
   'docs/RELEASE_FINAL_CHECK.md says ready for beta release after packaged app QA',
-  /Ready\s+for\s+beta\s+release\s+after\s+packaged\s+app\s+QA/i.test(rfcTxt2)
+  /Ready\s+for\s+beta\s+(pre-?)?release\s+after\s+(manual\s+)?packaged-?app\s+QA/i.test(rfcTxt2)
 );
 
 // 46. TAG_AND_RELEASE_GUIDE references PACKAGED_APP_QA / RELEASE_BLOCKERS.
@@ -840,6 +845,135 @@ record(
 record(
   'docs/SECURITY_CHECKLIST.md asserts nodeIntegration: false',
   scTxtLow.indexOf('nodeintegration: false') !== -1
+);
+
+// --- Step 24: final beta release preparation ---
+
+// 51. Step 24 docs content sanity.
+var frsTxt = readText('docs/FINAL_RELEASE_SUMMARY.md');
+record(
+  'docs/FINAL_RELEASE_SUMMARY.md mentions 0.1.0-beta',
+  frsTxt.indexOf('0.1.0-beta') !== -1
+);
+record(
+  'docs/FINAL_RELEASE_SUMMARY.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(frsTxt)
+);
+record(
+  'docs/FINAL_RELEASE_SUMMARY.md "Release recommendation" mentions packaged-app QA',
+  /Release recommendation[\s\S]{0,400}packaged.{0,30}QA/i.test(frsTxt)
+);
+record(
+  'docs/FINAL_RELEASE_SUMMARY.md lists the six safety layers',
+  /six\s+independent\s+layers/i.test(frsTxt) ||
+  (/feature[- ]flags/i.test(frsTxt) &&
+   /safety[- ]gates/i.test(frsTxt) &&
+   /adapter[- ]interface/i.test(frsTxt) &&
+   /adapter[- ]registry/i.test(frsTxt) &&
+   /action[- ]pipeline/i.test(frsTxt) &&
+   /sandbox/i.test(frsTxt))
+);
+
+var prcTxt = readText('docs/PRE_RELEASE_CHECKLIST.md');
+record(
+  'docs/PRE_RELEASE_CHECKLIST.md uses [ ] checkbox format',
+  prcTxt.indexOf('- [ ]') !== -1
+);
+record(
+  'docs/PRE_RELEASE_CHECKLIST.md mentions npm run smoke',
+  /npm run smoke/.test(prcTxt)
+);
+record(
+  'docs/PRE_RELEASE_CHECKLIST.md mentions PACKAGED_APP_QA.md',
+  prcTxt.indexOf('PACKAGED_APP_QA.md') !== -1
+);
+record(
+  'docs/PRE_RELEASE_CHECKLIST.md asserts no real clicks',
+  /no real (cursor movement|clicks|input)/i.test(prcTxt)
+);
+
+var tpTxt = readText('docs/RELEASE_TAG_PLAN.md');
+record(
+  'docs/RELEASE_TAG_PLAN.md mentions git tag -a v0.1.0-beta',
+  /git\s+tag\s+-a\s+v0\.1\.0-beta/.test(tpTxt)
+);
+record(
+  'docs/RELEASE_TAG_PLAN.md mentions git push origin v0.1.0-beta',
+  tpTxt.indexOf('git push origin v0.1.0-beta') !== -1
+);
+record(
+  'docs/RELEASE_TAG_PLAN.md says tag and publication remain manual',
+  /manual|manually|will not create a tag|will not.*publish/i.test(tpTxt)
+);
+record(
+  'docs/RELEASE_TAG_PLAN.md mentions pre-release',
+  /pre-?release/i.test(tpTxt)
+);
+
+var rcmTxt = readText('docs/RELEASE_COMMIT_MESSAGE.md');
+record(
+  'docs/RELEASE_COMMIT_MESSAGE.md provides the recommended title',
+  rcmTxt.indexOf('Prepare ClickFlow 0.1.0-beta release') !== -1
+);
+record(
+  'docs/RELEASE_COMMIT_MESSAGE.md lists forbidden body lines',
+  /forbidden body lines/i.test(rcmTxt) &&
+  rcmTxt.indexOf('Implements real desktop actions') !== -1
+);
+
+// 52. RELEASE_FINAL_CHECK references the Step 24 docs.
+var rfcTxt3 = readText('docs/RELEASE_FINAL_CHECK.md');
+record(
+  'docs/RELEASE_FINAL_CHECK.md references FINAL_RELEASE_SUMMARY.md',
+  rfcTxt3.indexOf('FINAL_RELEASE_SUMMARY.md') !== -1
+);
+record(
+  'docs/RELEASE_FINAL_CHECK.md references PRE_RELEASE_CHECKLIST.md',
+  rfcTxt3.indexOf('PRE_RELEASE_CHECKLIST.md') !== -1
+);
+record(
+  'docs/RELEASE_FINAL_CHECK.md references RELEASE_TAG_PLAN.md',
+  rfcTxt3.indexOf('RELEASE_TAG_PLAN.md') !== -1
+);
+record(
+  'docs/RELEASE_FINAL_CHECK.md references RELEASE_COMMIT_MESSAGE.md',
+  rfcTxt3.indexOf('RELEASE_COMMIT_MESSAGE.md') !== -1
+);
+record(
+  'docs/RELEASE_FINAL_CHECK.md says ready for beta pre-release after manual packaged-app QA',
+  /Ready\s+for\s+beta\s+pre-?release\s+after\s+manual\s+packaged-?app\s+QA/i.test(rfcTxt3)
+);
+
+// 53. README / PROJECT_CONTEXT mention step 24.
+record(
+  'README or PROJECT_CONTEXT mentions step 24',
+  /step\s*24|шаг\s*24|Step 24|Шаг 24/.test(readText('README.md')) ||
+  /step\s*24|шаг\s*24|Step 24|Шаг 24/.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 54. RELEASE_NOTES.md still asserts simulation-only / no real clicks at step 24.
+record(
+  'RELEASE_NOTES.md asserts no real clicks or simulation-only',
+  /no real (system )?clicks/i.test(readText('RELEASE_NOTES.md')) ||
+  /simulation-only|simulation only/i.test(readText('RELEASE_NOTES.md'))
+);
+
+// 55. RELEASE_BLOCKERS.md asserts no automated/static blockers at step 24.
+var rbTxt2 = readText('docs/RELEASE_BLOCKERS.md');
+record(
+  'docs/RELEASE_BLOCKERS.md asserts no automated/static release blockers',
+  /no\s+(known\s+)?automated\/static\s+release\s+blockers/i.test(rbTxt2) ||
+  /No release blockers found|No known release blockers/i.test(rbTxt2)
+);
+record(
+  'docs/RELEASE_BLOCKERS.md says manual packaged-app QA required',
+  /manual packaged-?app QA|manual\s+QA\s+is\s+still\s+required/i.test(rbTxt2)
+);
+
+// 56. README.md mentions 0.1.0-beta at step 24.
+record(
+  'README.md mentions 0.1.0-beta (step 24)',
+  readText('README.md').indexOf('0.1.0-beta') !== -1
 );
 
 // --- Report ---

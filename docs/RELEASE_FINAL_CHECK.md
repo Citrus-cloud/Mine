@@ -7,10 +7,19 @@ or producing OS-specific installers cannot be confirmed inside the
 Kiro sandbox and must be walked locally on the target OS.
 
 > **Cross-references.** Use this page together with
-> [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md) (the long-form
-> checklist) and [`TAG_AND_RELEASE_GUIDE.md`](./TAG_AND_RELEASE_GUIDE.md)
-> (the manual git / GitHub command sequence). This page is the
-> short summary that a maintainer signs off on.
+> [`FINAL_RELEASE_SUMMARY.md`](./FINAL_RELEASE_SUMMARY.md) (the
+> single-page snapshot),
+> [`PRE_RELEASE_CHECKLIST.md`](./PRE_RELEASE_CHECKLIST.md) (the
+> boxes the maintainer ticks),
+> [`RELEASE_TAG_PLAN.md`](./RELEASE_TAG_PLAN.md) (the manual
+> command sequence),
+> [`RELEASE_COMMIT_MESSAGE.md`](./RELEASE_COMMIT_MESSAGE.md)
+> (the recommended commit message),
+> [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md) (long-form
+> checklist), and
+> [`TAG_AND_RELEASE_GUIDE.md`](./TAG_AND_RELEASE_GUIDE.md) (the
+> longer git / GitHub command sequence). This page is the
+> short summary the maintainer signs off on.
 
 ---
 
@@ -101,6 +110,19 @@ not** count as failed. Document the deferral in the PR.
 - [ ] [`docs/PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md) has been
       walked on at least one target OS and the sign-off line is
       filled.
+- [ ] [`docs/FINAL_RELEASE_SUMMARY.md`](./FINAL_RELEASE_SUMMARY.md)
+      "Release recommendation" line says "Ready for beta
+      pre-release after manual packaged-app QA" and the sign-off
+      line is filled.
+- [ ] [`docs/PRE_RELEASE_CHECKLIST.md`](./PRE_RELEASE_CHECKLIST.md)
+      has every box ticked; the maintainer line at the bottom
+      records `Decision: Proceed`.
+- [ ] [`docs/RELEASE_TAG_PLAN.md`](./RELEASE_TAG_PLAN.md) has
+      been read; the prerequisite chain at the top of that page
+      is satisfied.
+- [ ] [`docs/RELEASE_COMMIT_MESSAGE.md`](./RELEASE_COMMIT_MESSAGE.md)
+      provides the recommended title and body if a release-prep
+      commit is needed.
 
 ## Manual QA checks
 
@@ -136,18 +158,25 @@ Walk the relevant section of
 
 ## Release decision
 
-- **Release decision:** **Ready for beta release after packaged
-  app QA.**
+- **Release decision:** **Ready for beta pre-release after
+  manual packaged-app QA.**
   - Static checks all pass (`npm run smoke` exit 0; smoke check
     files / docs / security / packaging invariants all OK).
   - **Packaged-app QA from
     [`docs/PACKAGED_APP_QA.md`](./PACKAGED_APP_QA.md) must be
     walked on at least one target OS** before the tag is
     created.
+  - **All boxes in
+    [`docs/PRE_RELEASE_CHECKLIST.md`](./PRE_RELEASE_CHECKLIST.md)
+    must be ticked.**
   - Any new blocker discovered during that walk is recorded in
     [`docs/RELEASE_BLOCKERS.md`](./RELEASE_BLOCKERS.md). Tag is
     not created while the **Release decision** at the bottom of
     `RELEASE_BLOCKERS.md` is "Not ready".
+  - Tag and publication follow
+    [`docs/RELEASE_TAG_PLAN.md`](./RELEASE_TAG_PLAN.md). The
+    repository will not create a tag or publish a release for
+    you.
   - The maintainer signing off this page records which platform(s)
     were tested.
 

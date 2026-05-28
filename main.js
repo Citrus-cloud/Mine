@@ -246,6 +246,11 @@ ipcMain.handle('system:get-release-status', async () => {
   // Step 23 docs
   const releaseBlockersPresent  = fileExistsInApp(path.join('docs', 'RELEASE_BLOCKERS.md'));
   const packagedAppQaPresent    = fileExistsInApp(path.join('docs', 'PACKAGED_APP_QA.md'));
+  // Step 24 docs
+  const finalReleaseSummaryPresent  = fileExistsInApp(path.join('docs', 'FINAL_RELEASE_SUMMARY.md'));
+  const preReleaseChecklistPresent  = fileExistsInApp(path.join('docs', 'PRE_RELEASE_CHECKLIST.md'));
+  const releaseTagPlanPresent       = fileExistsInApp(path.join('docs', 'RELEASE_TAG_PLAN.md'));
+  const releaseCommitMessagePresent = fileExistsInApp(path.join('docs', 'RELEASE_COMMIT_MESSAGE.md'));
 
   let appVersion = '?';
   let packagingConfigured = false;
@@ -273,7 +278,9 @@ ipcMain.handle('system:get-release-status', async () => {
     versioningPresent && changelogPresent && releaseNotesPresent &&
     smokeCheckScript && gitignorePresent &&
     releaseFinalCheckPresent && tagAndReleaseGuidePresent &&
-    releaseBlockersPresent && packagedAppQaPresent;
+    releaseBlockersPresent && packagedAppQaPresent &&
+    finalReleaseSummaryPresent && preReleaseChecklistPresent &&
+    releaseTagPlanPresent && releaseCommitMessagePresent;
 
   // Step 22: separate aggregate for the "ready for manual release"
   // signal. We keep it separate from releaseDocsReady so a future
@@ -287,6 +294,13 @@ ipcMain.handle('system:get-release-status', async () => {
   // diagnostics card.
   const packagedAppTested = false;
   const readyAfterManualQa = readyForManualRelease;
+  // Step 24: final beta release preparation.
+  // readyForPreReleaseAfterManualQa = readyAfterManualQa AND all
+  // step 24 docs present. Keep the older flag for backward
+  // compatibility with the Step 22/23 diagnostics line.
+  const readyForPreReleaseAfterManualQa = readyAfterManualQa &&
+    finalReleaseSummaryPresent && preReleaseChecklistPresent &&
+    releaseTagPlanPresent && releaseCommitMessagePresent;
 
   return {
     appVersion,
@@ -307,8 +321,13 @@ ipcMain.handle('system:get-release-status', async () => {
     tagAndReleaseGuidePresent,
     releaseBlockersPresent,
     packagedAppQaPresent,
+    finalReleaseSummaryPresent,
+    preReleaseChecklistPresent,
+    releaseTagPlanPresent,
+    releaseCommitMessagePresent,
     packagedAppTested,
     readyAfterManualQa,
+    readyForPreReleaseAfterManualQa,
     releaseDocsReady,
     readyForManualRelease
   };

@@ -8,6 +8,111 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-24
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, and the Step 24 final beta
+release preparation. **Still simulation-only.**
+
+### Added (Step 24 — Final beta release preparation)
+
+- `docs/FINAL_RELEASE_SUMMARY.md` — single-page release snapshot
+  with sections Release / Current status / Included in this beta
+  / Not included (intentional) / Safety status (six-layer table)
+  / Required before publishing / Release recommendation =
+  "Ready for beta pre-release after manual packaged-app QA" +
+  sign-off lines.
+- `docs/PRE_RELEASE_CHECKLIST.md` — the boxes the maintainer
+  ticks before tagging: Repo / Static smoke / Run from source /
+  Manual main flow / Packaged app / Safety invariants /
+  Documentation freshness / Sign-offs / Pre-release flag /
+  Result.
+- `docs/RELEASE_TAG_PLAN.md` — the manual command sequence:
+  pre-tag verification → optional release-prep commit → tag
+  commands (`git tag -a v0.1.0-beta`, `git push origin
+  v0.1.0-beta`) → publish via web UI or `gh release create
+  --prerelease` → post-publication checks → hard rules
+  (no automation, no force-push, no retag, no `realDesktopActions`
+  flip).
+- `docs/RELEASE_COMMIT_MESSAGE.md` — recommended commit title
+  (`Prepare ClickFlow 0.1.0-beta release`) and body, plus an
+  explicit list of **forbidden body lines** (no claims of real
+  input / OCR / image recognition / mobile / `realDesktopActions`
+  flip).
+- IPC `system:get-release-status` extended with
+  `finalReleaseSummaryPresent`, `preReleaseChecklistPresent`,
+  `releaseTagPlanPresent`, `releaseCommitMessagePresent`,
+  `readyForPreReleaseAfterManualQa`
+  (= `readyAfterManualQa && all four step-24 docs present`).
+- Renderer — **Release status** card now has 18 rows (added
+  Final release summary, Pre-release checklist, Release tag
+  plan, Release commit message). Bottom badge switched to
+  `Ready for pre-release after manual QA` /
+  `Not ready for release`.
+- `Copy diagnostics` includes the new release fields.
+- 7 new RU + EN i18n keys: `finalReleaseSummary`,
+  `preReleaseChecklist`, `releaseTagPlan`, `readyForPreRelease`,
+  `manualQaRequired`, `releaseCommitMessage`,
+  `readyForPreReleaseAfterManualQa`.
+
+### Changed (Step 24)
+
+- `docs/RELEASE_FINAL_CHECK.md` — Documentation checks section
+  references the four new docs; Release decision = "Ready for
+  beta pre-release after manual packaged-app QA"; cross-references
+  block extended.
+- `docs/RELEASE_BLOCKERS.md` — Status updated to "No automated/
+  static release blockers at this stage"; Last updated to end
+  of Step 24.
+- `docs/GITHUB_RELEASE_DRAFT.md` — Step 24 added to highlights;
+  Feedback section gained an intro line.
+- `RELEASE_NOTES.md` — closes Steps 1–24; new Step 24 section.
+- `scripts/smoke-check.js` — extended from 168 to 193 checks
+  with Step 24 invariants (new docs presence + content sanity
+  for each, cross-references RELEASE_FINAL_CHECK → 4 new docs,
+  README mentions 0.1.0-beta, RELEASE_NOTES asserts no real
+  clicks, RELEASE_BLOCKERS asserts no automated/static blockers
+  and manual QA required).
+- README, PROJECT_CONTEXT, CHANGELOG updated to step 24.
+
+### Verified (Step 24 — no source-level safety changes required)
+
+- All six runtime safety layers still hard-coded false (verified
+  by vm-based unit-style harness): feature flags, safety gates,
+  adapter interface, adapter registry, action pipeline, sandbox
+  readiness.
+- `package.json` declares no `robotjs` / `nut.js` / `iohook` /
+  `uiohook-napi` / `node-key-sender`.
+- CSP unchanged. `contextIsolation: true`, `nodeIntegration: false`
+  unchanged.
+- `node --check` passes for every modified or new JS file.
+- `npm run smoke` — 193 / 193 OK, exit 0.
+- i18n parity: 382 ru = 382 en, 0 mismatches.
+
+### Security (Step 24)
+
+- New IPC fields stay inside `app.getAppPath()`. No private user
+  paths flow to the renderer.
+- `docs/RELEASE_COMMIT_MESSAGE.md` makes the forbidden commit
+  body lines explicit, so any release-prep commit that contradicts
+  the build is caught at review time.
+- `docs/RELEASE_TAG_PLAN.md` re-asserts that the repository
+  will not create a tag, push, or publish a release for the
+  maintainer.
+
+### Not included yet
+
+Same as the `0.1.0-beta` baseline: no real clicks, no OCR, no
+image recognition, no mobile, no cloud sync, no auto-update, no
+code signing.
+
+---
+
 ## [Unreleased] — Steps 15-23
 
 Final stabilization of the simulation-only beta, design-only handoff
@@ -912,3 +1017,4 @@ See `docs/KNOWN_LIMITATIONS.md` and `docs/ROADMAP.md`.
 | 21 | Beta release packaging | `.gitignore`, extended `package.json` `build` block, `RELEASE_CHECKLIST.md`, `BUILD_ARTIFACTS.md`, `GITHUB_RELEASE_DRAFT.md`, `VERSIONING.md`, Release status diagnostics, smoke-check 113 checks. |
 | 22 | GitHub beta release finalization | `RELEASE_FINAL_CHECK.md`, `TAG_AND_RELEASE_GUIDE.md`, finalized RELEASE_NOTES / GITHUB_RELEASE_DRAFT, expanded Release status card, smoke-check 137 checks. Tag and publication remain manual. |
 | 23 | Post-pack QA and release blocker pass | `RELEASE_BLOCKERS.md`, `PACKAGED_APP_QA.md`, expanded Release status card (14 rows + ready-after-manual-QA badge), smoke-check 168 checks. Manual packaged-app QA remains the last gate. |
+| 24 | Final beta release preparation | `FINAL_RELEASE_SUMMARY.md`, `PRE_RELEASE_CHECKLIST.md`, `RELEASE_TAG_PLAN.md`, `RELEASE_COMMIT_MESSAGE.md`, expanded Release status card (18 rows + ready-for-pre-release-after-manual-QA badge), smoke-check 193 checks. Tag and publication remain manual. |
