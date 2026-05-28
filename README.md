@@ -29,10 +29,12 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, `0.1.0-beta packaging pass` готов; перед публикацией тэга `v0.1.0-beta` нужен ручной smoke-run по
-  [`docs/SMOKE_TESTS.md`](./docs/SMOKE_TESTS.md) Step 20 и прохождение [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md).
+- Состояние: simulation-only MVP, **GitHub beta release finalization** готов;
+  для публикации тэга `v0.1.0-beta` см. [`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md);
+  перед публикацией обязательно прохождение [`docs/RELEASE_FINAL_CHECK.md`](./docs/RELEASE_FINAL_CHECK.md)
+  и manual smoke-run по [`docs/SMOKE_TESTS.md`](./docs/SMOKE_TESTS.md) Step 20 / Step 22.
 - Последние шаги развития:
   - Шаг 13 — визуальная полировка, дизайн-токены, тёмная тема,
     `assets/`.
@@ -87,6 +89,27 @@ safety review).
     **Release status** в Advanced → Safety с проверкой 8
     release-артефактов; smoke-check расширен до 113 проверок;
     19 новых i18n-ключей RU + EN.
+  - **Шаг 22 — GitHub beta release finalization:**
+    добавлены [`docs/RELEASE_FINAL_CHECK.md`](./docs/RELEASE_FINAL_CHECK.md)
+    (короткий pre-tag sign-off) и
+    [`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md)
+    (manual git/GitHub-команды);
+    [`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md)
+    финализирован (явные «no real clicks / no OCR / no image
+    recognition / mock adapter only / dry-run sandbox does not
+    execute real actions»); [`RELEASE_NOTES.md`](./RELEASE_NOTES.md)
+    обновлён до Steps 1 — 22 с разделами для шагов 17—22;
+    `docs/SECURITY_CHECKLIST.md` дополнен секцией
+    «Final release security»; `docs/KNOWN_LIMITATIONS.md`
+    дополнен секцией 8 (Beta release); `docs/SMOKE_TESTS.md`
+    дополнен «Step 22 — Release smoke sequence» (#135–#150);
+    карточка Release status расширена двумя новыми строками
+    (`Final release check`, `Tag and release guide`) и
+    переключилась на бейдж `readyForManualRelease` /
+    `releaseNotReady`; `Copy diagnostics` дополнен; smoke-check
+    расширен до 137 проверок; 9 новых i18n-ключей RU + EN.
+    **Tag и публикация GitHub Release остаются ручными
+    действиями** — см. `docs/TAG_AND_RELEASE_GUIDE.md`.
 
 ---
 
@@ -326,6 +349,8 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/BUILD_ARTIFACTS.md`](./docs/BUILD_ARTIFACTS.md) — описание выходных артефактов `pack`/`dist` и naming-схема для GitHub release assets (Step 21).
 - [`docs/GITHUB_RELEASE_DRAFT.md`](./docs/GITHUB_RELEASE_DRAFT.md) — готовый текст для GitHub Release `v0.1.0-beta` (Step 21).
 - [`docs/VERSIONING.md`](./docs/VERSIONING.md) — semver-подход и план будущих линий релизов (Step 21).
+- [`docs/RELEASE_FINAL_CHECK.md`](./docs/RELEASE_FINAL_CHECK.md) — короткий pre-tag sign-off для maintainer'а (Step 22).
+- [`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md) — manual git/GitHub-команды для публикации pre-release (Step 22).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
@@ -383,6 +408,7 @@ npm run dist     # релизные артефакты в dist/
 | 19 | Real-action sandbox | `real-action-sandbox.js`. Dry-run preview, permission checklist, blocked reasons. No real execution. |
 | 20 | Final beta QA | Structural audit (0 dup ids, perfect i18n parity 342/342), expanded smoke-check (96 checks), `BETA_QA_REPORT.md`, `I18N_CHECKLIST.md`. Manual testing required before tag. |
 | 21 | Beta release packaging pass | `.gitignore`, extended package.json `build` block, `RELEASE_CHECKLIST.md`, `BUILD_ARTIFACTS.md`, `GITHUB_RELEASE_DRAFT.md`, `VERSIONING.md`, Release status diagnostics, smoke-check at 113 checks. |
+| 22 | GitHub beta release finalization | `docs/RELEASE_FINAL_CHECK.md`, `docs/TAG_AND_RELEASE_GUIDE.md`, finalized `RELEASE_NOTES.md` / `GITHUB_RELEASE_DRAFT.md`, expanded Release status card, smoke-check at 137 checks. Tag and publication remain manual. |
 
 ---
 

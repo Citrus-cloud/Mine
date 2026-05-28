@@ -217,3 +217,31 @@ least one platform.
 | 132  | Corrupted JSON fallback               | Quit. Manually corrupt `userData/scenarios.json` (write `{not json`). Relaunch. App boots; default scenario shown; warning log; broken file renamed to `<file>.broken-<timestamp>` next to the original location. Repeat for `settings.json` and `profiles.json`. |
 | 133  | Check real actions disabled           | DevTools console: `executeAction({type:'click',x:1,y:1,button:'left'},{executionMode:'real'})` returns `{ ok: false, mode: 'real', blocked: true, error: 'Real desktop actions are disabled. Dry-run preview is available only.' }`. `setActiveAdapter('real-desktop')` returns `{ success: false, blocked: true, ... }`. |
 | 134  | Diagnostics line                      | Copy diagnostics → paste. Output contains `Sandbox: dryRunAvailable=true, realActionsAllowed=false, realActionsImplemented=false`. |
+
+
+## Step 22 — Release smoke sequence
+
+This is the **manual** smoke run that immediately precedes
+publishing the `v0.1.0-beta` GitHub pre-release. It is the bridge
+between [`docs/RELEASE_FINAL_CHECK.md`](./RELEASE_FINAL_CHECK.md)
+and [`docs/TAG_AND_RELEASE_GUIDE.md`](./TAG_AND_RELEASE_GUIDE.md).
+Walk every step on the build host that will produce the artifacts.
+
+| #    | Step                                  | Expected                                                                                                          |
+|------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| 135  | `git status` is clean                 | `nothing to commit, working tree clean`. No untracked files.                                                       |
+| 136  | `npm install`                         | Completes without errors.                                                                                          |
+| 137  | `npm run smoke`                       | All checks `OK`. **Failed: 0**. The smoke check at step 22 is 130+ checks.                                          |
+| 138  | `npm start`                           | App window opens with no console errors.                                                                            |
+| 139  | Manual main flow                      | Walk #117–#129 from the Step 20 section. **No real cursor movement, no input arrives anywhere else.**              |
+| 140  | Manual advanced flow                  | Cycle all 7 tabs in Advanced. Each renders without console errors.                                                 |
+| 141  | Adapter self-test                     | Advanced → Safety → "Run adapter self-test". Log: `Adapter self-test passed (4/4)`.                                |
+| 142  | Dry-run preview                       | Advanced → Safety → "Create dry-run preview" → "Confirm dry-run". Logs `Dry-run confirmed. No real actions executed.` then `Dry-run completed safely`. **No real actions.** |
+| 143  | No real click verification            | While running any scenario for 60 s, watch the cursor and a focused text editor: cursor unchanged, editor receives no input. |
+| 144  | Diagnostics line                      | Advanced → Safety → Copy diagnostics → paste. Output contains `Simulation only: true`, `Sandbox: realActionsAllowed=false`, `Adapter: active=mock, ...realActionsAllowed=false`, `Release: ..., releaseDocsReady=true`. |
+| 145  | `npm run pack`                        | Completes on the build host. `dist/<platform>-unpacked/` appears. (Skip if the host cannot build for any target.) |
+| 146  | `npm run dist`                        | Completes on the build host. Final installers / images appear under `dist/`.                                       |
+| 147  | Inspect `dist/`                       | No `node_modules/.cache`, no `*.broken-*` files, no nested `dist/`. Only the expected installer / image files.    |
+| 148  | Smoke-launch the artifact             | Launch the produced binary on the target OS. Repeat #138 / #139 / #143 / #144 against the launched binary.         |
+| 149  | Rename per `BUILD_ARTIFACTS.md`       | Rename produced files to `ClickFlow-0.1.0-beta-<platform>-<arch>.<ext>` before upload.                              |
+| 150  | (Manual) Walk `RELEASE_FINAL_CHECK.md`| Sign off the maintainer line at the bottom of the file before any tag is created.                                  |

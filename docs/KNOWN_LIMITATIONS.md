@@ -4,6 +4,11 @@ This document is a single source of truth for what ClickFlow
 **does not** do in this release. Some items are temporary; some are
 permanently out of scope. Each entry says which.
 
+> **Beta note (Step 22).** `0.1.0-beta` is the first public
+> pre-release. The list below is the contract beta testers see;
+> nothing on it is a surprise. Open a Safety report if you observe
+> behavior that contradicts any entry here.
+
 ---
 
 ## 1. Execution model
@@ -135,3 +140,57 @@ project for you.
   this document says it is not).
 - Read `docs/ROADMAP.md` for which limitations are scheduled to
   be lifted, and when.
+
+
+
+---
+
+## 8. Beta release (Step 22)
+
+The items below are scoped to the `v0.1.0-beta` GitHub pre-release.
+They will be revisited (or closed) in subsequent `0.1.x` patches.
+
+### 8.1 Simulation-only is a hard contract for `0.1.x`
+- The runtime never produces OS input. Six independent layers
+  agree on this; see `docs/REAL_ACTION_SANDBOX.md` §7.
+- Even confirming a dry-run plan does **not** invoke any adapter.
+
+### 8.2 Dry-run sandbox is preview-only
+- `Confirm dry-run` records the user's "I have inspected the plan"
+  decision. It does not ask any adapter to execute.
+- Any caller using `executionMode: "real"` is rejected with the
+  literal message
+  `Real desktop actions are disabled. Dry-run preview is available only.`.
+
+### 8.3 Mock adapter only
+- `mock` is the only `available: true` adapter in the registry.
+- `real-desktop` is registered with `available: false,
+  planned: true, disabledReason: "Real desktop actions are not
+  implemented in this build"`. Activation is blocked at the
+  registry layer.
+
+### 8.4 Packaging needs OS-specific verification
+- `npm run pack` and `npm run dist` produce platform-specific
+  installers / images. Cross-builds are not configured in
+  `0.1.0-beta`. Each target OS must be built **on that OS**.
+- Verify each artifact per `docs/BUILD_ARTIFACTS.md` §7 before
+  uploading to a GitHub release.
+- macOS DMGs are **not** notarized; Windows installers are
+  **not** Authenticode-signed in `0.1.0-beta`. Code-signing is on
+  the `0.1.x` polish backlog.
+
+### 8.5 Global hotkeys may vary by OS
+- `globalShortcut` semantics depend on the desktop environment,
+  the compositor (X11 vs. Wayland on Linux), and OS-level
+  permission policies. ClickFlow surfaces success / failure via
+  Advanced → Safety → Global hotkeys.
+
+### 8.6 Tray may vary by OS
+- Tray availability depends on the OS shell. ClickFlow ships a
+  placeholder `nativeImage` icon in `0.1.0-beta`. Public packaged
+  builds should produce platform-specific raster icons before a
+  wider release.
+
+### 8.7 No automated CI yet
+- `npm run smoke` is run locally for `v0.1.0-beta`. GitHub Actions
+  wiring is planned for the next step.

@@ -57,3 +57,42 @@
 - [ ] Code signing (planned)
 - [ ] Auto-update (planned)
 - [x] App metadata configured
+
+
+## Final release security (Step 22)
+
+Run this before every public release tag. All items must be `[x]`.
+
+- [ ] Prohibited dependencies absent from `package.json`:
+      `robotjs`, `nut.js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`. (Verified by `npm run smoke`.)
+- [ ] No real desktop action adapter is bundled. The
+      `real-desktop` entry in `src/adapter-registry.js` is
+      registered as `available: false, planned: true` with a
+      non-null `disabledReason`. (Verified by `npm run smoke`.)
+- [ ] Action pipeline blocks `executionMode: "real"` with the
+      literal message
+      `Real desktop actions are disabled. Dry-run preview is
+      available only.`. (Verified by `npm run smoke`.)
+- [ ] Real-action sandbox is dry-run only.
+      `evaluateRealActionReadiness()` returns `allowed: false`,
+      `confirmDryRunPlan()` returns `realExecution: false`.
+      (Verified by `npm run smoke`.)
+- [ ] Mock adapter only — self-test 4 / 4 passing on the build
+      host. (Verified manually.)
+- [ ] No OCR engine, no OpenCV, no `sharp`-based template
+      matching is bundled or imported.
+- [ ] Electron security settings checked — `contextIsolation: true`,
+      `nodeIntegration: false`, CSP unchanged. (Verified by
+      `npm run smoke`.)
+- [ ] `preload.js` does not expose `ipcRenderer` directly. The
+      smoke check `preload.js does not expose ipcRenderer
+      directly` is `OK`.
+- [ ] `Copy diagnostics` output contains `Simulation only: true`
+      and the `Sandbox: realActionsAllowed=false`,
+      `Adapter: active=mock, ...realActionsAllowed=false`,
+      `Release: ..., releaseDocsReady=true` lines on the build
+      host.
+- [ ] Release artifacts are verified manually on the target OS
+      per `docs/BUILD_ARTIFACTS.md` §7 before they are uploaded
+      to GitHub.

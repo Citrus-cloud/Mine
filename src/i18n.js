@@ -418,7 +418,18 @@ const translations = {
     packagingDocs: "Документация по упаковке",
     versioning: "Версионирование",
     present: "есть",
-    absent: "нет"
+    absent: "нет",
+
+    // Step 22: GitHub beta release finalization
+    releaseFinalization: "Финализация релиза",
+    releaseTarget: "Цель релиза",
+    finalReleaseCheck: "Final release check",
+    tagAndReleaseGuide: "Tag and release guide",
+    readyForManualRelease: "Готов к ручному релизу",
+    githubReleaseDraft: "GitHub release draft",
+    betaPrerelease: "Beta pre-release",
+    releaseDocsReady: "Release-документы готовы",
+    manualVerificationRequired: "Требуется ручная проверка"
   },
   en: {
     // Main screen
@@ -837,7 +848,18 @@ const translations = {
     packagingDocs: "Packaging docs",
     versioning: "Versioning",
     present: "present",
-    absent: "absent"
+    absent: "absent",
+
+    // Step 22: GitHub beta release finalization
+    releaseFinalization: "Release finalization",
+    releaseTarget: "Release target",
+    finalReleaseCheck: "Final release check",
+    tagAndReleaseGuide: "Tag and release guide",
+    readyForManualRelease: "Ready for manual release",
+    githubReleaseDraft: "GitHub release draft",
+    betaPrerelease: "Beta pre-release",
+    releaseDocsReady: "Release docs ready",
+    manualVerificationRequired: "Manual verification required"
   }
 };
 
