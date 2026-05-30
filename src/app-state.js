@@ -30,6 +30,23 @@ const appState = {
     lastError: null,
     lastCapturedAt: null
   },
+  // Step 26 — Region Selector Foundation. Renderer-side memory only.
+  // `region` is in PREVIEW pixel space; `normalizedRegion` is the
+  // same rectangle re-projected onto the original screenshot
+  // (image-space). previewSize / imageSize accompany them so a
+  // future image-matching step can re-use the projection without
+  // re-deriving anything. Nothing here is persisted to disk
+  // automatically — only the explicit "Attach to scenario" action
+  // saves an image-space region into the active scenario.
+  regionSelector: {
+    selectedRegion: null,
+    normalizedRegion: null,
+    isSelecting: false,
+    previewSize: null,
+    imageSize: null,
+    lastUpdatedAt: null,
+    lastError: null
+  },
   settings: {
     language: "ru",
     theme: "system",
@@ -59,6 +76,15 @@ function getState() {
       isLoading: appState.screenCapture.isLoading,
       lastError: appState.screenCapture.lastError,
       lastCapturedAt: appState.screenCapture.lastCapturedAt
+    },
+    regionSelector: {
+      selectedRegion:   appState.regionSelector.selectedRegion   ? { ...appState.regionSelector.selectedRegion }   : null,
+      normalizedRegion: appState.regionSelector.normalizedRegion ? { ...appState.regionSelector.normalizedRegion } : null,
+      isSelecting:      appState.regionSelector.isSelecting,
+      previewSize:      appState.regionSelector.previewSize ? { ...appState.regionSelector.previewSize } : null,
+      imageSize:        appState.regionSelector.imageSize   ? { ...appState.regionSelector.imageSize }   : null,
+      lastUpdatedAt:    appState.regionSelector.lastUpdatedAt,
+      lastError:        appState.regionSelector.lastError
     },
     settings: {
       ...appState.settings,
@@ -166,4 +192,81 @@ function resetScreenCaptureState() {
   appState.screenCapture.isLoading = false;
   appState.screenCapture.lastError = null;
   appState.screenCapture.lastCapturedAt = null;
+}
+
+
+// --- Step 26: Region selector state (renderer memory only) ---
+// All eight mutators accept loose / null inputs and never throw;
+// invalid values collapse to safe defaults. The renderer is the
+// only writer, and it goes through these helpers (never touching
+// appState.regionSelector directly) so we keep the slice serialisable.
+function setRegionSelecting(isSelecting) {
+  appState.regionSelector.isSelecting = !!isSelecting;
+}
+function setSelectedRegion(region) {
+  if (region && typeof region === 'object') {
+    appState.regionSelector.selectedRegion = {
+      x:      Number(region.x)      || 0,
+      y:      Number(region.y)      || 0,
+      width:  Number(region.width)  || 0,
+      height: Number(region.height) || 0
+    };
+    appState.regionSelector.lastUpdatedAt = new Date().toISOString();
+  } else {
+    appState.regionSelector.selectedRegion = null;
+  }
+}
+function setNormalizedRegion(region) {
+  if (region && typeof region === 'object') {
+    appState.regionSelector.normalizedRegion = {
+      x:      Number(region.x)      || 0,
+      y:      Number(region.y)      || 0,
+      width:  Number(region.width)  || 0,
+      height: Number(region.height) || 0
+    };
+  } else {
+    appState.regionSelector.normalizedRegion = null;
+  }
+}
+function setRegionPreviewSize(size) {
+  if (size && typeof size === 'object' &&
+      Number(size.width)  > 0 &&
+      Number(size.height) > 0) {
+    appState.regionSelector.previewSize = {
+      width:  Math.round(Number(size.width)),
+      height: Math.round(Number(size.height))
+    };
+  } else {
+    appState.regionSelector.previewSize = null;
+  }
+}
+function setRegionImageSize(size) {
+  if (size && typeof size === 'object' &&
+      Number(size.width)  > 0 &&
+      Number(size.height) > 0) {
+    appState.regionSelector.imageSize = {
+      width:  Math.round(Number(size.width)),
+      height: Math.round(Number(size.height))
+    };
+  } else {
+    appState.regionSelector.imageSize = null;
+  }
+}
+function setRegionError(error) {
+  appState.regionSelector.lastError = (typeof error === 'string' && error.length > 0) ? error : null;
+}
+function clearSelectedRegion() {
+  appState.regionSelector.selectedRegion = null;
+  appState.regionSelector.normalizedRegion = null;
+  appState.regionSelector.lastUpdatedAt = new Date().toISOString();
+  appState.regionSelector.lastError = null;
+}
+function resetRegionSelectorState() {
+  appState.regionSelector.selectedRegion = null;
+  appState.regionSelector.normalizedRegion = null;
+  appState.regionSelector.isSelecting = false;
+  appState.regionSelector.previewSize = null;
+  appState.regionSelector.imageSize = null;
+  appState.regionSelector.lastUpdatedAt = null;
+  appState.regionSelector.lastError = null;
 }

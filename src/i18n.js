@@ -473,7 +473,31 @@ const translations = {
     screenCaptureStatus: "Статус захвата экрана",
     previewAvailable: "Preview доступен",
     selectedScreenSource: "Выбранный источник",
-    sourcesCount: "Количество источников"
+    sourcesCount: "Количество источников",
+
+    // Step 26: region selector foundation
+    regionSelector: "Выбор области",
+    enableRegionSelection: "Включить выделение области",
+    disableRegionSelection: "Отключить выделение области",
+    clearRegion: "Очистить область",
+    saveRegion: "Сохранить область",
+    attachRegionToScenario: "Привязать к активному сценарию",
+    selectedRegion: "Выбранная область",
+    normalizedRegion: "Нормализованная область",
+    regionArea: "Площадь",
+    noRegionSelected: "Область не выбрана",
+    capturePreviewFirst: "Сначала получите preview скриншота.",
+    regionSelectionStarted: "Начато выделение области",
+    regionSelectionCompleted: "Область выделена",
+    regionSelectionCleared: "Область очищена",
+    regionAttachedToScenario: "Область привязана к сценарию",
+    regionValidationFailed: "Область не прошла проверку",
+    previewCoordinates: "Координаты preview",
+    imageCoordinates: "Координаты screenshot",
+    selectionTooSmall: "Выделение слишком маленькое",
+    regionSelectorStatus: "Статус выбора области",
+    attachedToScenario: "Привязано к сценарию",
+    clearScenarioRegion: "Удалить область из сценария"
   },
   en: {
     // Main screen
@@ -947,7 +971,31 @@ const translations = {
     screenCaptureStatus: "Screen capture status",
     previewAvailable: "Preview available",
     selectedScreenSource: "Selected source",
-    sourcesCount: "Sources count"
+    sourcesCount: "Sources count",
+
+    // Step 26: region selector foundation
+    regionSelector: "Region Selector",
+    enableRegionSelection: "Enable region selection",
+    disableRegionSelection: "Disable region selection",
+    clearRegion: "Clear region",
+    saveRegion: "Save region",
+    attachRegionToScenario: "Attach to active scenario",
+    selectedRegion: "Selected region",
+    normalizedRegion: "Normalized region",
+    regionArea: "Area",
+    noRegionSelected: "No region selected",
+    capturePreviewFirst: "Capture a screenshot preview first.",
+    regionSelectionStarted: "Region selection started",
+    regionSelectionCompleted: "Region selection completed",
+    regionSelectionCleared: "Region cleared",
+    regionAttachedToScenario: "Region attached to scenario",
+    regionValidationFailed: "Region validation failed",
+    previewCoordinates: "Preview coordinates",
+    imageCoordinates: "Screenshot coordinates",
+    selectionTooSmall: "Selection too small",
+    regionSelectorStatus: "Region selector status",
+    attachedToScenario: "Attached to scenario",
+    clearScenarioRegion: "Remove region from scenario"
   }
 };
 

@@ -702,6 +702,36 @@ function renderAdvancedSafety() {
   addCardRow(scCard, 'lastError', scState.lastError || t('none2'));
   c.appendChild(scCard);
 
+  // --- Step 26: Region selector status (compact diagnostics block) ---
+  const regCard = document.createElement('div'); regCard.className = 'adv-card';
+  const regTitle = document.createElement('div'); regTitle.className = 'adv-card-title'; regTitle.textContent = t('regionSelectorStatus'); regCard.appendChild(regTitle);
+  const regState = state.regionSelector || { selectedRegion: null, normalizedRegion: null, isSelecting: false, previewSize: null, imageSize: null, lastUpdatedAt: null, lastError: null };
+  addCardRow(regCard, t('selectedRegion'), regState.selectedRegion ? t('yes') : t('no'));
+  addCardRow(regCard, t('normalizedRegion'), regState.normalizedRegion ? t('yes') : t('no'));
+  if (regState.selectedRegion) {
+    addCardRow(regCard, t('previewCoordinates'),
+      `${regState.selectedRegion.x | 0},${regState.selectedRegion.y | 0} · ${regState.selectedRegion.width | 0}×${regState.selectedRegion.height | 0}`);
+  }
+  if (regState.normalizedRegion) {
+    addCardRow(regCard, t('imageCoordinates'),
+      `${regState.normalizedRegion.x | 0},${regState.normalizedRegion.y | 0} · ${regState.normalizedRegion.width | 0}×${regState.normalizedRegion.height | 0}`);
+  }
+  let regArea = 0;
+  if (typeof getRegionArea === 'function') regArea = getRegionArea(regState.selectedRegion);
+  addCardRow(regCard, t('regionArea'), String(regArea));
+  // attached-to-scenario indicator
+  let regAttached = t('no');
+  if (state.selectedScenarioId && typeof getScenarioById === 'function') {
+    const _scForReg = getScenarioById(state.selectedScenarioId);
+    if (_scForReg && _scForReg.settings && _scForReg.settings.region) {
+      regAttached = `${state.selectedScenarioId} (${_scForReg.settings.region.width | 0}×${_scForReg.settings.region.height | 0})`;
+    }
+  }
+  addCardRow(regCard, t('attachedToScenario'), regAttached);
+  addCardRow(regCard, t('capturedAt'), regState.lastUpdatedAt || t('none2'));
+  addCardRow(regCard, 'lastError', regState.lastError || t('none2'));
+  c.appendChild(regCard);
+
   // --- Step 18: Desktop adapter status ---
   const adCard = document.createElement('div'); adCard.className = 'adv-card';
   const adTitle = document.createElement('div'); adTitle.className = 'adv-card-title'; adTitle.textContent = t('desktopAdapterStatus'); adCard.appendChild(adTitle);
@@ -901,7 +931,18 @@ async function copyDiagnostics() {
   try { if (typeof getScreenCaptureStatus === 'function') screenCaptureStatus = await getScreenCaptureStatus(); } catch(e) {}
   const sc = state.screenCapture || { sources: [], selectedSourceId: null, preview: null, lastError: null, lastCapturedAt: null };
   const scLine = `Screen capture: available=${screenCaptureStatus ? !!screenCaptureStatus.available : '?'}, supported=${screenCaptureStatus ? !!screenCaptureStatus.supported : '?'}, sourcesCount=${(sc.sources || []).length}, selectedSource=${sc.selectedSourceId || 'none'}, previewAvailable=${!!sc.preview}, lastCapturedAt=${sc.lastCapturedAt || 'none'}, lastError=${sc.lastError || 'none'}, ocrImplemented=false, imageRecognitionImplemented=false, savesScreenshotsToDisk=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  // Step 26: region selector line (numeric metadata only, never pixels).
+  const rs = state.regionSelector || { selectedRegion: null, normalizedRegion: null, lastUpdatedAt: null, lastError: null };
+  const rsArea2 = (typeof getRegionArea === 'function') ? getRegionArea(rs.selectedRegion) : 0;
+  let rsAttachedScenario = 'none';
+  if (state.selectedScenarioId && typeof getScenarioById === 'function') {
+    const _sc = getScenarioById(state.selectedScenarioId);
+    if (_sc && _sc.settings && _sc.settings.region) {
+      rsAttachedScenario = `${state.selectedScenarioId}(${_sc.settings.region.width | 0}x${_sc.settings.region.height | 0})`;
+    }
+  }
+  const rsLine = `Region selector: selectedRegion=${!!rs.selectedRegion}, normalizedRegion=${!!rs.normalizedRegion}, regionWidth=${rs.selectedRegion ? (rs.selectedRegion.width|0) : 0}, regionHeight=${rs.selectedRegion ? (rs.selectedRegion.height|0) : 0}, regionArea=${rsArea2}, attachedScenario=${rsAttachedScenario}, lastUpdatedAt=${rs.lastUpdatedAt || 'none'}, lastError=${rs.lastError || 'none'}, ocrImplemented=false, imageMatchingImplemented=false, realClicksImplemented=false`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();

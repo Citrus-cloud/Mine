@@ -1799,3 +1799,138 @@ body {
     max-height: 90px;
   }
 }
+
+
+
+/* ---------------------------------------------------------------------
+   18. Region Selector (Step 26 — preview-only, simulation-only)
+   ---------------------------------------------------------------------
+   The wrapper exists ONLY to give the overlay a positioning context
+   that matches the displayed image bounds. The overlay is inert
+   (`pointer-events: none`) until the user enables selection; this
+   keeps page scroll / image hover from being hijacked when the
+   region UI is dormant.
+   --------------------------------------------------------------------- */
+
+.screen-preview-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  /* The wrapper inherits the natural <img> dimensions; box-sizing
+     and line-height keep the overlay flush against the image. */
+  line-height: 0;
+  /* Block native cursor-text feedback on the wrapper so a long drag
+     doesn't trigger text selection of nearby DOM nodes. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The wrapper's child image still uses the size rules from
+   .screen-capture-preview-image; we only re-affirm display:block to
+   eliminate the inline-baseline gap. */
+.screen-preview-wrapper > .screen-capture-preview-image {
+  display: block;
+  margin: 0; /* override the section-17 vertical margin */
+}
+
+.region-overlay {
+  position: absolute;
+  inset: 0;
+  /* The overlay is the same size as the wrapper / image. */
+  border-radius: var(--radius-md);
+}
+
+.region-overlay-disabled {
+  pointer-events: none;
+}
+
+.region-overlay-enabled {
+  pointer-events: auto;
+  cursor: crosshair;
+  /* A faint frame so the user can SEE selection mode is on. */
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+.region-selection {
+  position: absolute;
+  display: none; /* shown by JS once the rectangle has size > 0 */
+  /* Pointer-events:none ensures the selection rectangle never eats
+     the user's drag — the overlay underneath always wins. */
+  pointer-events: none;
+  border: 2px solid var(--accent);
+  background-color: rgba(79, 142, 247, 0.18);
+  box-sizing: border-box;
+  border-radius: var(--radius-xs);
+}
+
+.region-coordinate-badge {
+  position: absolute;
+  display: none; /* shown by JS along with .region-selection */
+  pointer-events: none;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Region selector card (controls + info block). Reuses .adv-card. */
+.region-selector-card .adv-btn-group.region-selector-actions {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.region-info-block {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.region-info-subtitle {
+  margin-top: var(--space-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.region-info-subtitle:first-child {
+  margin-top: 0;
+}
+
+.region-selector-empty {
+  /* Inherit .adv-log-empty look. */
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* Dark theme tweaks */
+[data-theme="dark"] .region-selection {
+  border-color: var(--accent);
+  background-color: rgba(79, 142, 247, 0.22);
+}
+
+[data-theme="dark"] .region-coordinate-badge {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .region-overlay-enabled {
+  outline-color: var(--accent);
+}
+
+@media (max-width: 760px) {
+  .region-coordinate-badge {
+    font-size: 0.68rem;
+    padding: 1px 4px;
+  }
+}

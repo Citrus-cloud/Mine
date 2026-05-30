@@ -132,6 +132,14 @@ function renderScreenCapture() {
   // 7. Preview card
   c.appendChild(renderScreenPreview());
 
+  // 8. Region selector card (Step 26). Lives below the preview so
+  //    the user always sees the rectangle in the same column. The
+  //    card is empty-state aware — it renders a "capture preview
+  //    first" message when there is no preview to draw on.
+  if (typeof renderRegionSelectorCard === 'function') {
+    c.appendChild(renderRegionSelectorCard());
+  }
+
   // Capture button is enabled only when a valid selection exists.
   captureBtn.disabled = !selectedId;
 }
@@ -282,11 +290,36 @@ function renderScreenPreview() {
     return card;
   }
 
+  // Step 26 — preview is wrapped in a positioning container so the
+  // region-selector overlay can stack on top with the SAME bounds
+  // as the displayed image. Both the wrapper and the overlay sit
+  // INSIDE the existing preview card, so all of the screen-capture
+  // styles still apply.
+  var wrapper = document.createElement('div');
+  wrapper.className = 'screen-preview-wrapper';
+  wrapper.id = 'screen-preview-wrapper';
+
   // Image — DataURL came from the safe IPC; goes only to img.src.
-  var img = document.createElement('img'); img.className = 'screen-capture-preview-image';
+  var img = document.createElement('img');
+  img.className = 'screen-capture-preview-image';
+  img.id = 'screen-preview-image';
   img.alt = '';
   img.src = preview.imageDataUrl || '';
-  card.appendChild(img);
+  // Prevent native drag-image (which would otherwise hijack the
+  // mouse-down gesture before our overlay sees it).
+  img.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  wrapper.appendChild(img);
+
+  card.appendChild(wrapper);
+
+  // Bind the region-selector overlay AFTER the wrapper is in the
+  // DOM so getBoundingClientRect() returns sensible numbers. The
+  // overlay module is renderer-only, draws an absolutely-positioned
+  // div, and never inserts pixel data anywhere.
+  if (typeof attachRegionOverlay === 'function') {
+    // Wait one frame so the image has its rendered size.
+    setTimeout(function () { attachRegionOverlay(wrapper, img); }, 0);
+  }
 
   // Metadata rows (textContent only).
   var meta = document.createElement('div'); meta.className = 'screen-capture-preview-meta';
@@ -412,6 +445,13 @@ function clearScreenPreview() {
   // slice. See the note in screen-capture-client.js.
   if (typeof clearScreenCapturePreview === 'function') {
     try { clearScreenCapturePreview(); } catch (e) {}
+  }
+  // Step 26 — clearing the preview also drops any region drawn on
+  // top of it, since preview-space coordinates are no longer valid
+  // without an image. We do NOT clear scenarios that already have
+  // a region stored in `settings.region`.
+  if (typeof resetRegionSelectorState === 'function') {
+    try { resetRegionSelectorState(); } catch (e) {}
   }
   _scAudit('screen.capture.preview.cleared', {});
   _scLog('info', (typeof t === 'function') ? t('clearPreview') : 'Preview cleared');

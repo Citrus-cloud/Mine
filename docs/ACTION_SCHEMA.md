@@ -79,6 +79,65 @@ No actual OS-level mouse action occurs.
 
 ---
 
+## Optional `settings.region` (Step 26)
+
+> **Step 26 update.** `simple_click` scenarios may now carry an
+> optional `settings.region` rectangle in the **original
+> screenshot's coordinate space**. The field is **inert** in
+> `0.1.x` — the click engine never reads it; it exists as an
+> anchor for future image-matching / OCR steps that have not yet
+> shipped (and that will go through `docs/REAL_ACTIONS_GO_NO_GO.md`
+> before they do). See [`docs/REGION_SELECTOR.md`](./REGION_SELECTOR.md)
+> for the user-facing description.
+
+```json
+{
+  "id": "demo",
+  "name": "Demo",
+  "type": "simple_click",
+  "settings": {
+    "x": 500,
+    "y": 400,
+    "intervalMs": 500,
+    "repeatCount": 100,
+    "button": "left",
+    "region": { "x": 320, "y": 180, "width": 480, "height": 270 }
+  },
+  "meta": { "createdAt": "...", "updatedAt": "..." }
+}
+```
+
+### Region fields
+
+| Field          | Type   | Required | Description                                                                  |
+|----------------|--------|----------|------------------------------------------------------------------------------|
+| region         | object | no       | Optional rectangle in the original screenshot's pixel space.                 |
+| region.x       | number | yes (if region present) | Top-left X, must be a non-negative finite number.             |
+| region.y       | number | yes (if region present) | Top-left Y, must be a non-negative finite number.             |
+| region.width   | number | yes (if region present) | Must be a positive finite number.                             |
+| region.height  | number | yes (if region present) | Must be a positive finite number.                             |
+
+### Validation rules (Step 26)
+
+`scenario-manager.validateRegionSettings(region)` returns
+`{ valid: boolean, error: string|null }`:
+
+- `region === null` / `undefined` → valid (the field is optional).
+- All four members must be finite numbers.
+- `region.x >= 0`, `region.y >= 0`.
+- `region.width > 0`, `region.height > 0`.
+
+### Backwards compatibility
+
+- Old scenarios without `settings.region` keep working unchanged.
+- The click engine ignores `settings.region`; the field is consumed
+  by future image-matching / OCR steps only.
+- `clearScenarioRegion(scenarioId)` removes only the `region` field
+  and stamps `meta.updatedAt`; everything else under `settings.*`
+  is preserved.
+
+---
+
 ## Future Action Types (Planned, NOT Implemented)
 
 ### doubleClick

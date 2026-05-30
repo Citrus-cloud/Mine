@@ -167,3 +167,59 @@ simulation-only contract of the rest of the build.
 
 See [`docs/SCREEN_CAPTURE.md`](./SCREEN_CAPTURE.md) for the full
 description, the IPC flow, and per-OS limitations.
+
+
+
+## Region selector (Step 26)
+
+ClickFlow `0.1.x` exposes a **region selector foundation** — a
+rectangular drag selector that sits on top of the Step 25
+screen-capture preview. It is **preview-only** and shares the
+simulation-only contract of the rest of the build.
+
+- [x] No real clicks. The region selector never fires a click,
+      never opens a context menu, never enqueues a real action.
+      `realActionsImplemented=false` and `realDesktopActions=false`
+      are unchanged.
+- [x] No OCR. `package.json` declares no `tesseract.js`,
+      `tesseract`, or any OCR library at Step 26. Verified by
+      `npm run smoke`.
+- [x] No image recognition. `package.json` declares no
+      `opencv4nodejs`, `@u4/opencv4nodejs`, `sharp`, or template
+      matching dependency at Step 26. Verified by `npm run smoke`.
+- [x] No automatic action triggered by a region. Nothing in the
+      app reads `appState.regionSelector` or
+      `scenario.settings.region` to trigger a click, an OCR call,
+      or any other side effect.
+- [x] Preview is not saved to disk. Step 25 contract unchanged:
+      no screenshot file is written by the application.
+- [x] Region is stored as **numbers**, not pixels. Both
+      `appState.regionSelector` and the optional
+      `scenario.settings.region` carry `{ x, y, width, height }`
+      only. No `imageDataUrl`, no cropped pixel buffer.
+- [x] Audit payloads carry **no pixels**. The six new allowlisted
+      event types
+      (`region.selection.started`,
+      `region.selection.updated`,
+      `region.selection.completed`,
+      `region.selection.cleared`,
+      `region.attached.toScenario`,
+      `region.validation.failed`)
+      carry only rectangle dimensions and the scenario id (for
+      attach). No `imageDataUrl`.
+- [x] No new IPC channel. The region selector runs entirely in
+      the renderer; nothing crosses the Electron IPC boundary
+      because of it. `contextIsolation: true`,
+      `nodeIntegration: false`, CSP — unchanged.
+- [x] Renderer DOM safety. The overlay is a tree of empty
+      `<div>`s. The coordinate badge renders text via
+      `textContent`. `innerHTML` is used only as `= ''`
+      (container clear).
+- [x] Backwards compatibility. Old scenarios without
+      `settings.region` keep working unchanged.
+      `validateRegionSettings(null)` is `valid: true`.
+- [x] No mobile platforms. Region selector remains a desktop-only
+      surface.
+
+See [`docs/REGION_SELECTOR.md`](./REGION_SELECTOR.md) for the full
+description, the coordinate-space model, and the future-step gating.

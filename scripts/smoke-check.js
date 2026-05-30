@@ -1307,6 +1307,364 @@ record(
   htmlTxt3.indexOf('unsafe-eval') === -1
 );
 
+// --- Step 26: Region Selector Foundation ---
+
+// 74. New source / doc files exist.
+[
+  'src/region-selector.js',
+  'src/region-selector-ui.js'
+].forEach(function (rel) {
+  record('Step 26 file exists: ' + rel, fileExists(rel));
+});
+record('Step 26 doc exists: docs/REGION_SELECTOR.md', fileExists('docs/REGION_SELECTOR.md'));
+
+// 75. region-selector.js (pure logic) declares the documented surface.
+var rsCore = readText('src/region-selector.js');
+[
+  'function createRegion',
+  'function normalizeRegion',
+  'function validateRegion',
+  'function scaleRegionToImage',
+  'function scaleRegionToPreview',
+  'function getRegionArea',
+  'function formatRegion',
+  'function createEmptyRegionState'
+].forEach(function (needle) {
+  record(
+    'region-selector.js declares ' + needle,
+    rsCore.indexOf(needle) !== -1
+  );
+});
+record(
+  'region-selector.js does not require electron or ipcRenderer',
+  rsCore.indexOf("require('electron')") === -1 &&
+  rsCore.indexOf("require('ipcRenderer')") === -1 &&
+  rsCore.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'region-selector.js does not touch the DOM or fs',
+  rsCore.indexOf('document.') === -1 &&
+  rsCore.indexOf('fs.write') === -1 &&
+  rsCore.indexOf('localStorage') === -1
+);
+
+// 76. region-selector-ui.js declares the documented surface and is DOM-safe.
+var rsUi = readText('src/region-selector-ui.js');
+[
+  'function initRegionSelectorUi',
+  'function attachRegionOverlay',
+  'function enableRegionSelection',
+  'function disableRegionSelection',
+  'function handleRegionMouseDown',
+  'function handleRegionMouseMove',
+  'function handleRegionMouseUp',
+  'function renderRegionSelection',
+  'function renderRegionInfo',
+  'function renderRegionSelectorCard',
+  'function clearRegionSelection',
+  'function saveRegionSelection',
+  'function attachRegionToActiveScenario',
+  'function getPreviewElementSize',
+  'function getImageOriginalSize',
+  'function getPointerPositionInPreview'
+].forEach(function (needle) {
+  record(
+    'region-selector-ui.js declares ' + needle,
+    rsUi.indexOf(needle) !== -1
+  );
+});
+record(
+  'region-selector-ui.js does not require electron or ipcRenderer',
+  rsUi.indexOf("require('electron')") === -1 &&
+  rsUi.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'region-selector-ui.js never persists previews via localStorage',
+  (function () {
+    var stripped = rsUi
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map(function (ln) { return ln.replace(/\/\/.*$/, ''); })
+      .join('\n');
+    return stripped.indexOf('localStorage') === -1;
+  })()
+);
+record(
+  'region-selector-ui.js never assigns innerHTML to user data',
+  (function () {
+    var lines = rsUi.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var code = lines[i].replace(/\/\/.*$/, '').trim();
+      if (code.indexOf('innerHTML') === -1) continue;
+      if (!/innerHTML\s*=\s*(['"])\s*\1\s*;?\s*$/.test(code)) return false;
+    }
+    return true;
+  })()
+);
+
+// 77. app-state.js declares the regionSelector slice and 8 mutators.
+record(
+  'app-state.js declares appState.regionSelector slice',
+  /regionSelector\s*:\s*\{[\s\S]{0,400}selectedRegion/.test(appStateTxt)
+);
+[
+  'function setRegionSelecting',
+  'function setSelectedRegion',
+  'function setNormalizedRegion',
+  'function setRegionPreviewSize',
+  'function setRegionImageSize',
+  'function setRegionError',
+  'function clearSelectedRegion',
+  'function resetRegionSelectorState'
+].forEach(function (needle) {
+  record(
+    'app-state.js declares ' + needle,
+    appStateTxt.indexOf(needle) !== -1
+  );
+});
+
+// 78. audit-events.js allowlist contains the six new region.* types.
+[
+  "'region.selection.started'",
+  "'region.selection.updated'",
+  "'region.selection.completed'",
+  "'region.selection.cleared'",
+  "'region.attached.toScenario'",
+  "'region.validation.failed'"
+].forEach(function (needle) {
+  record(
+    'audit allowlist includes ' + needle.replace(/'/g, ''),
+    auditTxt.indexOf(needle) !== -1
+  );
+});
+
+// 79. scenario-manager.js gained the three region helpers.
+var smTxt = readText('src/scenario-manager.js');
+[
+  'function validateRegionSettings',
+  'function updateScenarioRegion',
+  'function clearScenarioRegion'
+].forEach(function (needle) {
+  record(
+    'scenario-manager.js declares ' + needle,
+    smTxt.indexOf(needle) !== -1
+  );
+});
+record(
+  'scenario-manager.js validateRegionSettings treats null/undefined as valid (region is optional)',
+  /validateRegionSettings[\s\S]{0,400}region\s*===\s*null/.test(smTxt) ||
+  /region\s*===\s*null[\s\S]{0,200}\{\s*valid:\s*true/.test(smTxt)
+);
+
+// 80. index.html wires the new scripts in the correct order.
+record(
+  'index.html loads region-selector.js',
+  /src=['"]region-selector\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads region-selector-ui.js',
+  /src=['"]region-selector-ui\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads region-selector.js BEFORE region-selector-ui.js',
+  htmlTxt3.indexOf('region-selector.js') !== -1 &&
+  htmlTxt3.indexOf('region-selector-ui.js') !== -1 &&
+  htmlTxt3.indexOf('region-selector.js') < htmlTxt3.indexOf('region-selector-ui.js')
+);
+record(
+  'index.html loads region-selector-ui.js BEFORE renderer.js',
+  htmlTxt3.indexOf('region-selector-ui.js') !== -1 &&
+  htmlTxt3.indexOf('renderer.js') !== -1 &&
+  htmlTxt3.indexOf('region-selector-ui.js') < htmlTxt3.indexOf('renderer.js')
+);
+
+// 81. screen-capture-ui.js wraps the preview and attaches the overlay.
+record(
+  'screen-capture-ui.js wraps preview in .screen-preview-wrapper',
+  scUi.indexOf("class = 'screen-preview-wrapper'") !== -1 ||
+  scUi.indexOf("'screen-preview-wrapper'") !== -1
+);
+record(
+  'screen-capture-ui.js calls attachRegionOverlay on the preview',
+  scUi.indexOf('attachRegionOverlay(') !== -1
+);
+record(
+  'screen-capture-ui.js appends the region selector card',
+  scUi.indexOf('renderRegionSelectorCard(') !== -1
+);
+
+// 82. renderer.js diagnostics + copyDiagnostics line.
+var rendTxt = readText('src/renderer.js');
+record(
+  'renderer.js has Region selector diagnostics card',
+  rendTxt.indexOf("t('regionSelectorStatus')") !== -1
+);
+record(
+  'renderer.js Copy diagnostics has Region selector line',
+  /Region selector:[\s\S]{0,800}imageMatchingImplemented=false/.test(rendTxt)
+);
+
+// 83. README / PROJECT_CONTEXT mention step 26 / region selector.
+record(
+  'README or PROJECT_CONTEXT mentions step 26',
+  /step\s*26|шаг\s*26|Step 26|Шаг 26/.test(readText('README.md')) ||
+  /step\s*26|шаг\s*26|Step 26|Шаг 26/.test(readText('PROJECT_CONTEXT.md'))
+);
+record(
+  'README or PROJECT_CONTEXT mentions region selector / выделение области',
+  /region\s*selector|Region Selector|выделение\s*области|выбор\s*области|выбран(ная|ной)\s*области/i.test(readText('README.md')) ||
+  /region\s*selector|Region Selector|выделение\s*области|выбор\s*области|выбран(ная|ной)\s*области/i.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 84. docs/REGION_SELECTOR.md asserts simulation-only / preview-only.
+var rsDoc = readText('docs/REGION_SELECTOR.md');
+record(
+  'docs/REGION_SELECTOR.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(rsDoc)
+);
+record(
+  'docs/REGION_SELECTOR.md asserts preview only',
+  /preview[- ]only|preview\s+only/i.test(rsDoc)
+);
+record(
+  'docs/REGION_SELECTOR.md asserts no real clicks / OCR / image matching at step 26',
+  /(no real clicks|never\s+performs\s+a\s+click|real mouse\s*\/\s*keyboard input)/i.test(rsDoc) &&
+  /(no ocr|never runs ocr|ocr is\s+(not|deliberately)|ocr scoped)/i.test(rsDoc) &&
+  /(no image matching|no image recognition|no template matching|never runs image matching|template matching scoped)/i.test(rsDoc)
+);
+record(
+  'docs/REGION_SELECTOR.md describes preview vs image coordinates',
+  /preview[\s-]+coord|preview\s+pixels|image\s+pixels|image[\s-]+coord/i.test(rsDoc)
+);
+
+// 85. SECURITY_CHECKLIST has a Region selector (Step 26) section.
+var rsSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has Region selector (Step 26) section',
+  /region\s+selector\s*\(?step\s*26/i.test(rsSec) ||
+  /## Region selector/i.test(rsSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts region selector does not execute actions',
+  /no real clicks/i.test(rsSec) &&
+  /no automatic action triggered by a region|never\s+(fires|triggers)\s+a\s+click/i.test(rsSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts region uses preview only / numbers only',
+  /numbers\s+only|four\s+numbers|stored\s+as\s+numbers/i.test(rsSec) ||
+  /preview-only/i.test(rsSec)
+);
+
+// 86. KNOWN_LIMITATIONS / SMOKE_TESTS / SCREEN_CAPTURE / ACTION_SCHEMA reference step 26.
+var klTxt3 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has a Region selector (Step 26) section',
+  /region\s+selector\s*\(?step\s*26/i.test(klTxt3) ||
+  /##\s*10\.\s*Region selector/i.test(klTxt3)
+);
+var stTxt2 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 26 region selector block',
+  /Step\s*26\s*[—-]\s*Region Selector/i.test(stTxt2) ||
+  /Step 26.*Region Selector/i.test(stTxt2)
+);
+var scDoc2 = readText('docs/SCREEN_CAPTURE.md');
+record(
+  'docs/SCREEN_CAPTURE.md links to REGION_SELECTOR.md',
+  scDoc2.indexOf('REGION_SELECTOR.md') !== -1
+);
+var asDoc = readText('docs/ACTION_SCHEMA.md');
+record(
+  'docs/ACTION_SCHEMA.md describes optional settings.region (Step 26)',
+  /Optional\s+`?settings\.region`?\s*\(?Step\s*26\)?/i.test(asDoc) &&
+  /region\.x|region\.width|region:\s*\{/.test(asDoc)
+);
+
+// 87. CHANGELOG mentions Step 26 / Region Selector Foundation.
+var chTxt2 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 26 — Region Selector Foundation',
+  /Step\s*26.*Region Selector Foundation/i.test(chTxt2) ||
+  /Шаг\s*26.*Region Selector/i.test(chTxt2) ||
+  /Region Selector Foundation/i.test(chTxt2)
+);
+
+// 88. package.json must STILL NOT pull in OCR / OpenCV / robotjs / nut.js
+//     / image recognition / template matching / sharp at step 26.
+if (pkg) {
+  var allDeps3 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step26Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps3, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 26',
+    step26Forbidden.length === 0,
+    step26Forbidden.length ? step26Forbidden.join(', ') : ''
+  );
+}
+
+// 89. Source files don't import OCR / OpenCV / image-recognition / sharp at step 26.
+var step26SourceFiles = [
+  'main.js', 'preload.js',
+  'src/region-selector.js',
+  'src/region-selector-ui.js',
+  'src/scenario-manager.js'
+];
+var step26Imports = ['tesseract.js', 'tesseract', 'opencv4nodejs', '@u4/opencv4nodejs', 'sharp', 'jimp', 'pixelmatch', 'looks-same'];
+var foundStep26Imports = [];
+step26SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step26Imports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep26Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching modules required in step 26 source files',
+  foundStep26Imports.length === 0,
+  foundStep26Imports.length ? foundStep26Imports.join(', ') : ''
+);
+
+// 90. Region selector adds no new IPC channel (renderer-only).
+record(
+  'main.js does not register any region.* IPC handler at step 26',
+  !/ipcMain\.handle\(['"]region\./.test(mainTxt)
+);
+record(
+  'preload.js does not expose any region.* API at step 26',
+  preloadTxt.indexOf("'region.") === -1 &&
+  preloadTxt.indexOf('"region.') === -1
+);
+
+// 91. main.js still does not flip the simulation-only safety flags at step 26.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 26)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 26)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 26 (no unsafe-inline / unsafe-eval)',
+  htmlTxt3.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt3.indexOf('unsafe-inline') === -1 &&
+  htmlTxt3.indexOf('unsafe-eval') === -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

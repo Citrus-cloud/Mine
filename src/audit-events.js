@@ -46,7 +46,18 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   ScreenCapturePreviewRequested:    'screen.capture.preview.requested',
   ScreenCapturePreviewCreated:      'screen.capture.preview.created',
   ScreenCapturePreviewCleared:      'screen.capture.preview.cleared',
-  ScreenCaptureError:               'screen.capture.error'
+  ScreenCaptureError:               'screen.capture.error',
+  // Step 26: region selector foundation events.
+  // Payloads carry only numeric rectangle metadata
+  // (x/y/width/height) and the target scenario id — never an
+  // imageDataUrl, never a screenshot, never PII. The events
+  // describe the user's mouse gesture, not any pixel content.
+  RegionSelectionStarted:           'region.selection.started',
+  RegionSelectionUpdated:           'region.selection.updated',
+  RegionSelectionCompleted:         'region.selection.completed',
+  RegionSelectionCleared:           'region.selection.cleared',
+  RegionAttachedToScenario:         'region.attached.toScenario',
+  RegionValidationFailed:           'region.validation.failed'
 });
 
 var KNOWN_TYPES = Object.freeze(

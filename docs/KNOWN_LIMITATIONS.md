@@ -251,3 +251,60 @@ of `0.1.x`.
 - Screen capture is invoked only on `Refresh sources` or
   `Capture preview` clicks. There is no timer, no auto-refresh,
   and no capture at app launch.
+
+
+
+---
+
+## 10. Region selector (Step 26)
+
+Step 26 introduces a **rectangular region selector** that sits on
+top of the screen-capture preview from Step 25. The selector is
+preview-only — the smart visual features (find image, find icon,
+find text, template matching, OCR, visual scenario builder) are
+**not** part of `0.1.x`.
+
+### 10.1 Foundation only
+- The region selector turns a mouse drag into a four-number
+  rectangle (`{ x, y, width, height }`) in two coordinate spaces
+  (preview pixels and original-screenshot pixels).
+- Nothing in the app currently reads the region to take an action.
+  It exists as an anchor for future image-matching / OCR steps.
+- "Attach to active scenario" stores an image-space rectangle
+  inside the scenario's `settings.region`. The click engine
+  ignores the field — old scenarios and scenarios with a region
+  are executed identically.
+
+### 10.2 Single rectangle only
+- Only one rectangle is tracked at a time
+  (`appState.regionSelector.selectedRegion`).
+- Multi-region selection, polygons, ellipses, and rotated
+  rectangles are out of scope for `0.1.x`.
+
+### 10.3 Preview must exist
+- Drawing a region requires a captured preview. With no preview,
+  the Region Selector card shows
+  *"Capture a screenshot preview first."* and the buttons are
+  inert.
+- Clearing the screenshot preview also clears the region — the
+  preview-space coordinates are no longer meaningful without an
+  image.
+
+### 10.4 Validation thresholds
+- Selections smaller than ~6 px on either side are rejected as
+  accidental clicks (`validateRegion` requires `width > 5` and
+  `height > 5`). The user sees a "selection too small" log entry
+  and an audit `region.validation.failed` event.
+
+### 10.5 No image matching, no OCR, no auto-clicks yet
+- "Click on the centre of the region" is **not** implemented.
+- Template matching scoped to the region is **not** implemented.
+- OCR scoped to the region is **not** implemented.
+- These remain blocked by the existing safety contract; future
+  work goes through `docs/REAL_ACTIONS_GO_NO_GO.md`.
+
+### 10.6 No persistence by default
+- The drag itself never writes to disk.
+- Only the explicit **Attach to active scenario** action stores
+  the rectangle, and only inside the scenario JSON
+  (numbers only — no pixels).
