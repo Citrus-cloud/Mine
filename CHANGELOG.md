@@ -8,6 +8,165 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-26
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, the Step 24 final beta
+release preparation, the Step 25 Screen Capture Foundation, and the
+**Step 26 Region Selector Foundation** (rectangular drag selector
+on top of the screen-capture preview — only the foundation, the
+features themselves are still not implemented). **Still
+simulation-only.**
+
+### Added (Step 26 — Region Selector Foundation)
+
+- `src/region-selector.js` — new pure-logic module:
+  `createRegion`, `normalizeRegion`, `validateRegion`,
+  `scaleRegionToImage`, `scaleRegionToPreview`, `getRegionArea`,
+  `formatRegion`, `createEmptyRegionState`. No DOM, no IPC, no
+  disk I/O. Sandbox-tested for swapped-corner round-tripping,
+  out-of-bounds clamping, and tiny-gesture rejection.
+- `src/region-selector-ui.js` — new renderer module driving the
+  drag overlay above the screen-capture preview:
+  `attachRegionOverlay(wrapper, img)`,
+  `enable/disableRegionSelection`,
+  `handleRegionMouseDown/Move/Up`,
+  `renderRegionSelectorCard`,
+  `renderRegionSelection`, `renderRegionInfo`,
+  `clearRegionSelection`, `saveRegionSelection`,
+  `attachRegionToActiveScenario`,
+  `getPreviewElementSize`, `getImageOriginalSize`,
+  `getPointerPositionInPreview`, `initRegionSelectorUi`.
+  `mousemove` / `mouseup` are bound on `document` only for the
+  duration of an active drag and detached on release. The
+  overlay is inert (`pointer-events: none`) until the user
+  enables selection. All user-visible text via `textContent`;
+  `innerHTML` only as `= ''`.
+- `src/app-state.js` — `appState.regionSelector` slice
+  (`selectedRegion`, `normalizedRegion`, `isSelecting`,
+  `previewSize`, `imageSize`, `lastUpdatedAt`, `lastError`)
+  plus 8 mutators (`setRegionSelecting`, `setSelectedRegion`,
+  `setNormalizedRegion`, `setRegionPreviewSize`,
+  `setRegionImageSize`, `setRegionError`,
+  `clearSelectedRegion`, `resetRegionSelectorState`).
+  `getState()` deep-copies the slice.
+- `src/scenario-manager.js` — `validateRegionSettings(region)`
+  (treats `null`/`undefined` as valid since the field is
+  optional), `updateScenarioRegion(scenarioId, region)` and
+  `clearScenarioRegion(scenarioId)`. Both helpers preserve all
+  unrelated `settings.*` fields, stamp `meta.updatedAt`, never
+  throw, and return `{ success: true, scenario }` or
+  `{ success: false, error }`. `clearScenarioRegion` is
+  idempotent. Old scenarios without `settings.region` keep
+  working unchanged.
+- `src/audit-events.js` — 6 new allowlisted event types:
+  `region.selection.started`, `region.selection.updated`,
+  `region.selection.completed`, `region.selection.cleared`,
+  `region.attached.toScenario`, `region.validation.failed`.
+  Payloads carry only rectangle dimensions and the scenario id
+  (for `attached.toScenario`). No `imageDataUrl`, no PII.
+- `src/screen-capture-ui.js` — `renderScreenPreview` now wraps
+  the `<img>` in `.screen-preview-wrapper` and binds the region
+  overlay via `attachRegionOverlay`; `renderScreenCapture`
+  appends `renderRegionSelectorCard()` after the preview card.
+  `clearScreenPreview` also calls `resetRegionSelectorState()`
+  so the rectangle is dropped together with the preview
+  (scenario `settings.region` values are preserved on disk).
+- `src/index.html` — `<script src="region-selector.js">` and
+  `<script src="region-selector-ui.js">` loaded after
+  `screen-capture-ui.js`, before `renderer.js`.
+- `src/styles.css` — Section 18 (Region Selector):
+  `.screen-preview-wrapper`, `.region-overlay` +
+  `.region-overlay-enabled` / `.region-overlay-disabled`,
+  `.region-selection`, `.region-coordinate-badge`,
+  `.region-selector-card`, `.region-info-block`,
+  `.region-info-subtitle`. Light/dark theme parity, responsive
+  breakpoint at 760 px.
+- `src/renderer.js` — new compact **Region selector status**
+  diagnostic card in Advanced → Safety, immediately after the
+  Step 25 Screen capture card. Rows: `selectedRegion`,
+  `normalizedRegion`, `previewCoordinates`, `imageCoordinates`,
+  `regionArea`, `attachedToScenario`, `lastUpdatedAt`,
+  `lastError`. `Copy diagnostics` extended with a new
+  `Region selector: selectedRegion=…, normalizedRegion=…,
+  regionWidth=…, regionHeight=…, regionArea=…,
+  attachedScenario=…, lastUpdatedAt=…, lastError=…,
+  ocrImplemented=false, imageMatchingImplemented=false,
+  realClicksImplemented=false` line.
+- `docs/REGION_SELECTOR.md` — new document covering Purpose,
+  Current status, How region selection works (gesture + listener
+  lifecycle + idempotency), Preview vs. image coordinates,
+  Scenario region settings (validation + backwards compatibility),
+  What is **not** implemented yet, Future use for image matching
+  / OCR (gated by safety review), Privacy / safety notes.
+- 22 new RU + EN i18n keys: `regionSelector`,
+  `enableRegionSelection`, `disableRegionSelection`,
+  `clearRegion`, `saveRegion`, `attachRegionToScenario`,
+  `selectedRegion`, `normalizedRegion`, `regionArea`,
+  `noRegionSelected`, `capturePreviewFirst`,
+  `regionSelectionStarted`, `regionSelectionCompleted`,
+  `regionSelectionCleared`, `regionAttachedToScenario`,
+  `regionValidationFailed`, `previewCoordinates`,
+  `imageCoordinates`, `selectionTooSmall`,
+  `regionSelectorStatus`, `attachedToScenario`,
+  `clearScenarioRegion`. Parity 428/428.
+
+### Changed (Step 26)
+
+- `docs/SCREEN_CAPTURE.md` — new "Step 26 — Region Selector
+  Foundation" link section pointing at `docs/REGION_SELECTOR.md`.
+- `docs/ACTION_SCHEMA.md` — new "Optional `settings.region`
+  (Step 26)" section describing the inert image-space rectangle
+  on `simple_click` scenarios, validation rules
+  (`validateRegionSettings`), and backwards compatibility.
+- `docs/SECURITY_CHECKLIST.md` — new "Region selector (Step 26)"
+  section: no real clicks, no OCR, no image recognition, no
+  automatic action triggered by a region, region stored as
+  numbers only, audit payloads carry no pixels, no new IPC
+  channel, renderer DOM safety, backwards compatibility, no
+  mobile platforms.
+- `docs/KNOWN_LIMITATIONS.md` — new section 10 (Region
+  selector): foundation only, single rectangle only, preview
+  must exist, validation thresholds (`width > 5`, `height > 5`),
+  no image matching / OCR / auto-clicks yet, no persistence by
+  default.
+- `docs/SMOKE_TESTS.md` — new manual checklist (#167–#188)
+  including: open Advanced → Screen Capture, capture preview,
+  enable region selection, draw / clear / save / attach a
+  region, verify scenario JSON shape, verify backwards
+  compatibility, verify diagnostics block, verify no real
+  clicks while drawing.
+- `scripts/smoke-check.js` — extended with Step 26 invariants.
+- `README.md`, `PROJECT_CONTEXT.md` updated to step 26.
+
+### Security (Step 26)
+
+- The region selector never fires a click, runs OCR, or runs
+  image matching. `realActionsImplemented=false` and
+  `realDesktopActions=false` are unchanged.
+- Nothing in the app reads `appState.regionSelector` or
+  `scenario.settings.region` to trigger any side effect; the
+  rectangle is metadata only.
+- Region is stored as four numbers only. No `imageDataUrl`, no
+  cropped pixel buffer, no on-disk file is written because of
+  the region selector.
+- The screen-capture preview contract from Step 25 is
+  unchanged — no screenshot is persisted to disk by the
+  application.
+- Audit payloads carry only rectangle dimensions and the
+  scenario id. No `imageDataUrl`, no PII.
+- No new IPC channel — the entire region selector is renderer-
+  side. `contextIsolation: true`, `nodeIntegration: false`, CSP,
+  and `preload.js` not exposing raw `ipcRenderer` — all
+  unchanged.
+
+---
+
 ## [Unreleased] — Steps 15-25
 
 Final stabilization of the simulation-only beta, design-only handoff

@@ -7,7 +7,61 @@
 
 ## Текущий шаг
 
-**Шаг 25 завершён.** Screen Capture Foundation. Проект остаётся
+**Шаг 26 завершён.** Region Selector Foundation. Проект остаётся
+в стадии `0.1.0-beta` (simulation-only). На шаге 26 поверх
+Screen Capture preview из шага 25 добавлен **прямоугольный
+region-selector**, на котором будут строиться будущие умные
+функции (image matching, OCR, клик по картинке/тексту,
+визуальный конструктор) — **сами умные функции по-прежнему
+не реализованы**. Добавлены два модуля:
+[`src/region-selector.js`](./src/region-selector.js) с чистой
+логикой (`createRegion`, `normalizeRegion`, `validateRegion`,
+`scaleRegionToImage` / `scaleRegionToPreview`, `getRegionArea`,
+`formatRegion`, `createEmptyRegionState`; нет DOM, нет IPC, нет
+диска, нет сетевых вызовов) и
+[`src/region-selector-ui.js`](./src/region-selector-ui.js) с
+drag-overlay поверх `<img>` (mousedown/move/up; mousemove и
+mouseup биндятся ТОЛЬКО на время активного drag и отвязываются
+на mouseup), кнопками **Enable/Disable region selection**,
+**Clear region**, **Save region**, **Attach to active scenario**,
+карточкой info с двумя пространствами координат (preview и
+image). В `src/app-state.js` добавлен slice `regionSelector`
+(`selectedRegion`, `normalizedRegion`, `isSelecting`,
+`previewSize`, `imageSize`, `lastUpdatedAt`, `lastError`) с 8
+мутаторами; `getState()` делает deep-copy. В
+`src/scenario-manager.js` — `validateRegionSettings`,
+`updateScenarioRegion`, `clearScenarioRegion`. Опциональное поле
+`scenario.settings.region = { x, y, width, height }` (image-space
+координаты) — старые сценарии без `region` продолжают работать
+как раньше, движок сценариев его игнорирует. В
+`src/audit-events.js` — 6 новых allowlisted типов
+(`region.selection.started/updated/completed/cleared`,
+`region.attached.toScenario`, `region.validation.failed`); payload
+содержит только числа и id, **никогда** `imageDataUrl`. В Advanced
+→ Safety добавлена компактная карточка **Region selector status**
+(selectedRegion, normalizedRegion, previewCoordinates,
+imageCoordinates, regionArea, attachedToScenario, lastUpdatedAt,
+lastError); в `Copy diagnostics` — строка `Region selector:
+selectedRegion=…, normalizedRegion=…, regionWidth=…, regionHeight=…,
+regionArea=…, attachedScenario=…, lastUpdatedAt=…, lastError=…,
+ocrImplemented=false, imageMatchingImplemented=false,
+realClicksImplemented=false`. Добавлено 22 новых i18n-ключа RU + EN
+(parity 428/428). Создан
+[`docs/REGION_SELECTOR.md`](./docs/REGION_SELECTOR.md); обновлены
+`docs/SCREEN_CAPTURE.md`, `docs/ACTION_SCHEMA.md`,
+`docs/SECURITY_CHECKLIST.md`, `docs/KNOWN_LIMITATIONS.md`,
+`docs/SMOKE_TESTS.md`. Smoke-check расширен Step-26-инвариантами.
+Скриншот **никогда не сохраняется на диск**; регион хранится
+только как четыре числа, **никогда** как `imageDataUrl`.
+**Реальные клики / OCR / image matching / template matching /
+OpenCV / robotjs / nut.js / iohook по-прежнему не реализованы.**
+`realDesktopActions=false`, `simulationOnly=true`,
+`contextIsolation: true`, `nodeIntegration: false`, CSP — без
+изменений.
+
+## Прошлый шаг
+
+**Шаг 25.** Screen Capture Foundation. Проект остаётся
 в стадии `0.1.0-beta` (simulation-only) и параллельно открывает
 **новую линию умных визуальных функций** (поиск картинки/иконки,
 поиск текста, выбор области экрана, template matching, OCR,
@@ -35,16 +89,7 @@ capture status в Advanced → Safety; новая строка `Screen capture: 
 [`docs/SCREEN_CAPTURE.md`](./docs/SCREEN_CAPTURE.md). Скриншот
 **никогда не сохраняется на диск**, рендерится только через
 `img.src` (textContent для всего остального), preview хранится
-только в памяти renderer. **Реальные клики / OCR / image
-recognition / template matching / OpenCV / robotjs / nut.js /
-iohook по-прежнему не реализованы.** `realDesktopActions=false`,
-`simulationOnly=true`, `contextIsolation: true`,
-`nodeIntegration: false` — без изменений. Smoke-check расширен
-Step-25-инвариантами.
-
-## Прошлый шаг
-
-**Шаг 24.** Final beta release preparation.
+только в памяти renderer.
 [`docs/FINAL_RELEASE_SUMMARY.md`](./docs/FINAL_RELEASE_SUMMARY.md)
 (single-page snapshot релиза),
 [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md)
@@ -757,6 +802,7 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
 | 23 | Post-pack QA and release blocker pass: `RELEASE_BLOCKERS.md`, `PACKAGED_APP_QA.md`, expanded Release status card (14 rows + ready-after-manual-QA badge), smoke-check 168 checks. Manual packaged-app QA remains the last gate. |
 | 24 | Final beta release preparation: `FINAL_RELEASE_SUMMARY.md`, `PRE_RELEASE_CHECKLIST.md`, `RELEASE_TAG_PLAN.md`, `RELEASE_COMMIT_MESSAGE.md`, expanded Release status card (18 rows + ready-for-pre-release-after-manual-QA badge), smoke-check 193 checks. Tag and publication remain manual; explicit list of forbidden commit body lines. |
 | 25 | Screen Capture Foundation (new line of smart visual features — features themselves not implemented yet): three IPC handlers via `desktopCapturer`, safe `window.clickflow.screenCapture` preload API, `screen-capture-client.js` (validation + memory cache), `screen-capture-ui.js` (new Advanced → Screen Capture tab with safety notice, sources grid with thumbnails, preview card), `appState.screenCapture` slice, six new audit-event types, compact Screen capture status diagnostics card, 24 RU + EN i18n keys, `docs/SCREEN_CAPTURE.md`. Screenshots never written to disk. **Real clicks / OCR / image recognition / template matching / OpenCV / robotjs / nut.js / iohook still absent.** |
+| 26 | Region Selector Foundation (rectangular drag selector on top of the Step 25 preview — features themselves still not implemented): pure-logic `region-selector.js` (`createRegion`, `validateRegion`, `scaleRegionToImage` / `scaleRegionToPreview`, `getRegionArea`, `formatRegion`, `createEmptyRegionState`), `region-selector-ui.js` (drag overlay; mousemove/mouseup bound only during drag), `appState.regionSelector` slice + 8 mutators, optional `scenario.settings.region` via new scenario-manager helpers (`validateRegionSettings`, `updateScenarioRegion`, `clearScenarioRegion`; old scenarios untouched), six new audit-event types (`region.selection.started/updated/completed/cleared`, `region.attached.toScenario`, `region.validation.failed`), compact Region selector status diagnostics card + new `Region selector: …` line in Copy diagnostics, 22 RU + EN i18n keys (parity 428/428), `docs/REGION_SELECTOR.md`. Region stored as four numbers only — never pixels. **Real clicks / OCR / image matching / template matching / OpenCV / robotjs / nut.js / iohook still absent.** |
 
 ## Что логично делать после шага 24
 

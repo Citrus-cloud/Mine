@@ -214,3 +214,15 @@ Until then, the screen-capture preview is read-only and inert.
 - `docs/SCREEN_CAPTURE.md` (this file).
 - README, PROJECT_CONTEXT, CHANGELOG, SMOKE_TESTS,
   SECURITY_CHECKLIST, KNOWN_LIMITATIONS — Step 25 entries.
+
+---
+
+## 11. Step 26 — Region Selector Foundation
+
+The screen-capture preview is now the canvas the **region selector**
+draws on. See [`docs/REGION_SELECTOR.md`](./REGION_SELECTOR.md) for
+the rectangular selection primitive, preview-vs-image coordinate
+spaces, and how regions are attached (optionally) to scenarios as
+`settings.region`. Step 26 still ships **no real clicks, no OCR,
+no image matching, and no on-disk screenshot persistence** — those
+remain blocked by the existing safety contract.

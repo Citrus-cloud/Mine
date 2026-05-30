@@ -272,3 +272,37 @@ recognition — Step 25 only adds the foundation.
 | 164  | Headless / CI path                    | If `desktopCapturer` is unavailable, the IPC returns `{ success: false, error: "Screen capture is not available on this system" }`. The diagnostics block shows `available=false`. The app does not crash. |
 | 165  | Switch language                       | Settings → English → Save. Walk #154–#159 again. All Screen Capture strings appear in English. Switch back to Russian. |
 | 166  | Hard guarantees                       | DevTools console: `getState().screenCapture.preview` is `null` after Clear preview; `getState().screenCapture.sources` is an array; `validateScreenSource({id:"unknown", name:"x"})` returns `false`. `setActiveAdapter('real-desktop')` still returns `{ success: false, blocked: true, ... }` — Step 25 did not flip any safety flag. |
+
+
+
+## Step 26 — Region Selector Foundation smoke checks
+
+These manual checks verify the new **Region Selector** card and
+overlay in the **Screen Capture** tab. They never expect a real
+click, OCR, or image recognition — Step 26 only adds the rectangle
+foundation.
+
+| #    | Step                                  | Expected                                                                                                          |
+|------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| 167  | `npm install`                         | Completes without errors. No new native modules.                                                                   |
+| 168  | `npm run smoke`                       | All checks `OK`. **Failed: 0**. Smoke-check is now extended with Step 26 invariants (region-selector / region-selector-ui / REGION_SELECTOR.md / scenario-manager region helpers / audit allowlist / no OCR / no OpenCV). |
+| 169  | `npm start`                           | App window opens with no console errors.                                                                            |
+| 170  | Open Advanced → Screen Capture        | Click Advanced → switch to **Screen Capture**. Header / safety notice / Refresh / Capture / Clear buttons render as in Step 25. |
+| 171  | No preview yet                        | Region Selector card shows *"Capture a screenshot preview first."*. Enable / Clear / Save / Attach buttons are inert (or hidden). |
+| 172  | Capture preview                       | Refresh sources → Select a source → Capture preview. The preview image appears wrapped in `.screen-preview-wrapper`; the Region Selector card is now populated. |
+| 173  | Enable region selection               | Click **Enable region selection**. The overlay above the preview gets a dashed accent outline; the cursor turns into a crosshair. |
+| 174  | Draw a region                         | Press the left mouse button on the preview, drag, release. A solid-bordered translucent rectangle appears. The coordinate badge below it shows `x,y · w×h`. |
+| 175  | Selected region rows                  | Region Selector card shows preview-space x / y / width / height and image-space x / y / width / height. Both rectangles are populated. Area is `width × height` of the preview rectangle. |
+| 176  | Tiny gesture rejected                 | With selection enabled, click and immediately release without moving (or with a < 6 px move). The rectangle does NOT stick; a "Selection too small" warning appears in the log. |
+| 177  | Clear region                          | Click **Clear region**. The rectangle disappears; both selectedRegion and normalizedRegion rows show "No region selected". |
+| 178  | Save region                           | Re-draw a rectangle. Click **Save region**. A success log entry is emitted; the image-space rectangle stays in sync after a window resize. |
+| 179  | Attach to active scenario             | Verify Settings → choose a scenario as active in the main view. Re-draw + Save. Click **Attach to active scenario**. A success log appears: *"Region attached to scenario"*. The card's `attachedToScenario` row updates. |
+| 180  | Scenario JSON shape                   | DevTools console: `getScenarioById(state.selectedScenarioId).settings.region` returns `{ x, y, width, height }`. Other settings (`x`, `y`, `intervalMs`, `repeatCount`, `button`) are unchanged. `meta.updatedAt` is fresh. |
+| 181  | Backward compatibility                | Pick a different scenario without a region. Region row shows "no". Start it. Simulation runs as before — the region field is ignored by the engine. |
+| 182  | Disable selection                     | Click **Disable region selection**. The dashed outline disappears; clicking the preview no longer starts a drag. The existing rectangle remains visible. |
+| 183  | Diagnostics block                     | Switch to Advanced → Safety. The **Region selector status** card shows `selectedRegion`, `normalizedRegion`, `previewCoordinates`, `imageCoordinates`, `regionArea`, `attachedToScenario`, `lastUpdatedAt`, `lastError`. |
+| 184  | Copy diagnostics                      | Advanced → Safety → **Copy diagnostics** → paste. Output contains a `Region selector: selectedRegion=…, normalizedRegion=…, regionWidth=…, regionHeight=…, regionArea=…, attachedScenario=…, lastUpdatedAt=…, lastError=…, ocrImplemented=false, imageMatchingImplemented=false, realClicksImplemented=false` line. |
+| 185  | Clear preview drops region            | Click **Clear preview** in the Screen Capture controls. Both the preview AND the region selector are dropped. The scenario's stored `settings.region`, however, is **preserved** (the on-disk attached region survives). |
+| 186  | No real clicks                        | While the Screen Capture tab is open, draw / save / attach / clear a region. Watch the cursor and a focused text editor for 30 s. Cursor unchanged; editor receives no input. |
+| 187  | Switch language                       | Settings → English → Save. Walk #170–#185. All Region Selector strings appear in English. Switch back to Russian. |
+| 188  | Hard guarantees                       | DevTools console: `getState().regionSelector.selectedRegion` reflects the live rectangle; `validateRegionSettings({x:-1,y:0,width:10,height:10})` returns `{valid:false, error:…}`. `setActiveAdapter('real-desktop')` still returns `{ success: false, blocked: true, ... }` — Step 26 did not flip any safety flag. |

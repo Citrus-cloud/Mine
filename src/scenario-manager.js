@@ -142,3 +142,101 @@ function importScenarios(importedScenarios) {
   });
   return { success: true, count };
 }
+
+
+// =====================================================================
+// Step 26 — Region Selector Foundation
+// ---------------------------------------------------------------------
+// Optional `settings.region` on `simple_click` scenarios. When
+// present it carries an IMAGE-space rectangle (i.e. coordinates
+// relative to the original screenshot, not the displayed preview).
+// Old scenarios without `settings.region` keep working unchanged —
+// every read is gated by `if (sc.settings.region)` and every write
+// goes through these helpers, never directly.
+//
+// The region is just numbers (x / y / width / height). It NEVER
+// carries an `imageDataUrl`, a screenshot, or any pixel data — a
+// future image-matching step would have to load pixels separately
+// at runtime, by which time it goes through its own safety review.
+// =====================================================================
+
+// Pure validation: returns { valid: bool, error: string|null }.
+// Spec from the step:
+//   - x >= 0, y >= 0
+//   - width > 0, height > 0
+//   - all four must be finite numbers
+function validateRegionSettings(region) {
+  if (region === null || region === undefined) return { valid: true, error: null }; // optional
+  if (typeof region !== 'object') return { valid: false, error: 'region must be an object' };
+  var nx = Number(region.x);
+  var ny = Number(region.y);
+  var nw = Number(region.width);
+  var nh = Number(region.height);
+  if (!isFinite(nx) || nx < 0) return { valid: false, error: 'region.x must be a non-negative finite number' };
+  if (!isFinite(ny) || ny < 0) return { valid: false, error: 'region.y must be a non-negative finite number' };
+  if (!isFinite(nw) || nw <= 0) return { valid: false, error: 'region.width must be a positive finite number' };
+  if (!isFinite(nh) || nh <= 0) return { valid: false, error: 'region.height must be a positive finite number' };
+  return { valid: true, error: null };
+}
+
+// Attach / replace the region on a scenario by id. Updates
+// meta.updatedAt. Never touches any other field. Returns
+// `{ success: true, scenario }` or `{ success: false, error }`.
+function updateScenarioRegion(scenarioId, region) {
+  if (typeof scenarioId !== 'string' || scenarioId.length === 0) {
+    return { success: false, error: 'scenarioId is required' };
+  }
+  var index = scenarios.findIndex(function (s) { return s.id === scenarioId; });
+  if (index === -1) return { success: false, error: 'Сценарий не найден' };
+  var v = validateRegionSettings(region);
+  if (!v.valid) return { success: false, error: v.error };
+  if (region === null || region === undefined) {
+    return { success: false, error: 'region is required' };
+  }
+  var existing = scenarios[index];
+  var existingSettings = existing.settings || {};
+  scenarios[index] = {
+    ...existing,
+    settings: {
+      ...existingSettings,
+      region: {
+        x:      Math.round(Number(region.x)),
+        y:      Math.round(Number(region.y)),
+        width:  Math.round(Number(region.width)),
+        height: Math.round(Number(region.height))
+      }
+    },
+    meta: {
+      ...(existing.meta || {}),
+      updatedAt: new Date().toISOString()
+    }
+  };
+  return { success: true, scenario: scenarios[index] };
+}
+
+// Drop the region from a scenario. Updates meta.updatedAt. Other
+// fields are preserved. Returns `{ success: true, scenario }` or
+// `{ success: false, error }`.
+function clearScenarioRegion(scenarioId) {
+  if (typeof scenarioId !== 'string' || scenarioId.length === 0) {
+    return { success: false, error: 'scenarioId is required' };
+  }
+  var index = scenarios.findIndex(function (s) { return s.id === scenarioId; });
+  if (index === -1) return { success: false, error: 'Сценарий не найден' };
+  var existing = scenarios[index];
+  if (!existing.settings || !existing.settings.region) {
+    // Idempotent: clearing an already-clear region is a no-op success.
+    return { success: true, scenario: existing };
+  }
+  var newSettings = { ...existing.settings };
+  delete newSettings.region;
+  scenarios[index] = {
+    ...existing,
+    settings: newSettings,
+    meta: {
+      ...(existing.meta || {}),
+      updatedAt: new Date().toISOString()
+    }
+  };
+  return { success: true, scenario: scenarios[index] };
+}
