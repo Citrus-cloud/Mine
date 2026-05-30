@@ -8,6 +8,146 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-25
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, the Step 24 final beta
+release preparation, and the **Step 25 Screen Capture Foundation**
+(new line of smart visual features — only the foundation, the
+features themselves are not implemented yet). **Still
+simulation-only.**
+
+### Added (Step 25 — Screen Capture Foundation)
+
+- `main.js` — three new IPC handlers built on Electron
+  `desktopCapturer`:
+  `screen-capture:list-sources`,
+  `screen-capture:capture-preview`,
+  `screen-capture:get-status`. Sources are normalised to a safe
+  shape (`id`, `name`, `type`, `thumbnailDataUrl`, `display_id`,
+  `width`, `height`, `capturedAt`) before crossing the IPC
+  boundary; `sourceId` is validated by prefix (`screen:` /
+  `window:`) and length; errors are mapped to generic strings;
+  the handlers never throw, never write to disk, never run OCR
+  or image recognition.
+- `preload.js` — `window.clickflow.screenCapture` API
+  (`listSources`, `capturePreview`, `getStatus`). No raw
+  `ipcRenderer` is exposed.
+- `src/screen-capture-client.js` — renderer-side wrapper:
+  `listScreenSources`, `captureScreenPreview`,
+  `getScreenCaptureStatus`, `validateScreenSource`, plus
+  in-memory cache helpers (`getLastScreenCapturePreview`,
+  `setLastScreenCapturePreview`, `clearScreenCapturePreview`).
+  The `clearScreenCapturePreview` declaration intentionally
+  unifies with the same-named app-state mutator: a single call
+  clears both the cache and the state slice.
+- `src/screen-capture-ui.js` — new Advanced → **Screen Capture**
+  tab: header, safety notice, **Refresh sources / Capture
+  preview / Clear preview** buttons, sources grid with
+  thumbnails, selected source card, preview card with metadata
+  (`name`, `type`, `id`, size, `capturedAt`, "Preview only"
+  reminder). All user-visible text rendered with `textContent`;
+  `innerHTML` used only as `= ''` (container clear).
+- `src/app-state.js` — `appState.screenCapture` slice
+  (`sources`, `selectedSourceId`, `preview`, `isLoading`,
+  `lastError`, `lastCapturedAt`); 7 mutators:
+  `setScreenCaptureSources`, `setSelectedScreenSource`,
+  `setScreenCapturePreview`, `setScreenCaptureLoading`,
+  `setScreenCaptureError`, `clearScreenCapturePreview`,
+  `resetScreenCaptureState`. `getState()` returns a deep copy.
+- `src/audit-events.js` — 6 new allowlisted event types
+  (`screen.capture.sources.requested`,
+  `screen.capture.sources.loaded`,
+  `screen.capture.preview.requested`,
+  `screen.capture.preview.created`,
+  `screen.capture.preview.cleared`,
+  `screen.capture.error`). Payloads carry only counts / ids /
+  source types — never `imageDataUrl`.
+- `src/index.html` — 8th Advanced tab `screenCapture`, new
+  `#advanced-tab-screenCapture` section, scripts
+  `screen-capture-client.js` and `screen-capture-ui.js` loaded
+  after `i18n.js` and before `renderer.js`.
+- `src/styles.css` — Section 17 (`.screen-capture-*` styles):
+  sources grid auto-fill 180px, source-card hover/selected
+  state, thumb max-height 110px, preview image
+  `max-width: 100%; max-height: 360px`, light/dark theme
+  parity, responsive breakpoint at 760px.
+- `src/renderer.js` — `renderAdvancedDashboard` switch
+  dispatches `screenCapture` to `renderScreenCapture()`; new
+  compact **Screen capture status** diagnostic card in
+  Advanced → Safety; `Copy diagnostics` extended with a
+  `Screen capture: available=…, supported=…, sourcesCount=…,
+  selectedSource=…, previewAvailable=…, lastCapturedAt=…,
+  lastError=…, ocrImplemented=false, imageRecognitionImplemented=false,
+  savesScreenshotsToDisk=false` line.
+- `docs/SCREEN_CAPTURE.md` — new document describing purpose,
+  current status, what works, what is **not** implemented,
+  privacy model, no-disk-saving guarantee, IPC flow, future
+  use for image matching / OCR (gated by safety review),
+  known limitations by OS.
+- 24 new RU + EN i18n keys: `screenCapture`, `refreshSources`,
+  `capturePreview`, `clearPreview`, `screenSources`,
+  `noScreenSources`, `selectedSource`, `noSelectedSource`,
+  `screenPreview`, `noPreview`, `previewOnly`, `sourceType`,
+  `sourceScreen`, `sourceWindow`, `capturedAt`,
+  `captureFailed`, `sourcesLoadFailed`,
+  `screenCaptureSafetyNotice`, `previewNotSaved`,
+  `permissionMayBeRequired`, `screenCaptureStatus`,
+  `previewAvailable`, `selectedScreenSource`, `sourcesCount`.
+  Parity 406/406, no duplicates.
+
+### Changed (Step 25)
+
+- `docs/SECURITY_CHECKLIST.md` — new "Screen capture (Step 25)"
+  section: screenshots not saved by default, screen capture
+  only via IPC, no OCR, no image recognition, no real clicks,
+  preview-only contract.
+- `docs/KNOWN_LIMITATIONS.md` — new "Screen capture (Step 25)"
+  section: permissions may vary by OS (macOS Screen Recording
+  prompt, Linux Wayland Pipewire portal, Windows remote
+  sessions, headless / CI), preview only, no image matching /
+  OCR yet.
+- `docs/SMOKE_TESTS.md` — new Step 25 row block with the manual
+  walk-through (open Advanced → Screen Capture → Refresh
+  sources → select → Capture preview → Clear preview, observe
+  no real cursor movement, no input arrives elsewhere).
+- `scripts/smoke-check.js` — extended with Step 25 invariants:
+  `src/screen-capture-client.js` exists,
+  `src/screen-capture-ui.js` exists,
+  `docs/SCREEN_CAPTURE.md` exists,
+  `preload.js` exposes `screenCapture` API,
+  `main.js` registers `screen-capture:list-sources` and
+  `screen-capture:capture-preview` and `screen-capture:get-status`,
+  README or PROJECT_CONTEXT mentions screen capture / захват
+  экрана, `package.json` declares no OCR / OpenCV / robotjs /
+  nut.js / iohook / uiohook-napi / tesseract / `sharp`-based
+  template matching, audit allowlist contains the 6 new types.
+- README, PROJECT_CONTEXT updated to step 25.
+
+### Security (Step 25)
+
+- Screenshots are never persisted to disk by the application.
+  The preview lives only in renderer memory.
+- Screen capture is only invoked in response to a user action
+  (`Refresh sources` or `Capture preview`). No background
+  capture, no auto-capture at app launch.
+- `contextIsolation: true`, `nodeIntegration: false`, CSP, and
+  `preload.js` not exposing raw `ipcRenderer` — all unchanged.
+- IPC payloads are allowlisted: only `id`, `name`, `type`,
+  `thumbnailDataUrl`, `display_id`, `width`, `height`,
+  `capturedAt`. No window owners, no PIDs, no filesystem paths,
+  no full Electron `Display` objects.
+- `realDesktopActions=false`, `simulationOnly=true`,
+  `realActionsImplemented=false`, `ocrImplemented=false`,
+  `imageRecognitionImplemented=false` — unchanged.
+
+---
+
 ## [Unreleased] — Steps 15-24
 
 Final stabilization of the simulation-only beta, design-only handoff

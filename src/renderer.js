@@ -281,6 +281,7 @@ function renderAdvancedDashboard() {
     case 'logs': renderAdvancedLogs(); break;
     case 'settings': renderAdvancedSettings(); break;
     case 'safety': renderAdvancedSafety(); break;
+    case 'screenCapture': if (typeof renderScreenCapture === 'function') renderScreenCapture(); break;
     case 'future': renderAdvancedFuture(); break;
   }
 }
@@ -680,6 +681,27 @@ function renderAdvancedSafety() {
     auditSummary.last ? (auditSummary.last.type + ' @ ' + auditSummary.last.timestamp) : t('none2'));
   c.appendChild(aeCard);
 
+  // --- Step 25: Screen capture status (compact diagnostics block) ---
+  const scCard = document.createElement('div'); scCard.className = 'adv-card';
+  const scTitle = document.createElement('div'); scTitle.className = 'adv-card-title'; scTitle.textContent = t('screenCaptureStatus'); scCard.appendChild(scTitle);
+  const scState = state.screenCapture || { sources: [], selectedSourceId: null, preview: null, lastCapturedAt: null, lastError: null };
+  // available — async; show placeholder until status resolves.
+  const scAvailRow = document.createElement('div'); scAvailRow.className = 'adv-card-row';
+  const scAvailLbl = document.createElement('span'); scAvailLbl.className = 'adv-card-label'; scAvailLbl.textContent = 'available';
+  const scAvailVal = document.createElement('span'); scAvailVal.className = 'adv-card-value'; scAvailVal.textContent = '...';
+  scAvailRow.appendChild(scAvailLbl); scAvailRow.appendChild(scAvailVal); scCard.appendChild(scAvailRow);
+  if (typeof getScreenCaptureStatus === 'function') {
+    getScreenCaptureStatus().then(st => { scAvailVal.textContent = st && st.available ? t('yes') : t('no'); }).catch(() => { scAvailVal.textContent = '?'; });
+  } else {
+    scAvailVal.textContent = '?';
+  }
+  addCardRow(scCard, t('sourcesCount'), String((scState.sources || []).length));
+  addCardRow(scCard, t('selectedScreenSource'), scState.selectedSourceId || t('none2'));
+  addCardRow(scCard, t('previewAvailable'), scState.preview ? t('yes') : t('no'));
+  addCardRow(scCard, t('capturedAt'), scState.lastCapturedAt || t('none2'));
+  addCardRow(scCard, 'lastError', scState.lastError || t('none2'));
+  c.appendChild(scCard);
+
   // --- Step 18: Desktop adapter status ---
   const adCard = document.createElement('div'); adCard.className = 'adv-card';
   const adTitle = document.createElement('div'); adTitle.className = 'adv-card-title'; adTitle.textContent = t('desktopAdapterStatus'); adCard.appendChild(adTitle);
@@ -874,7 +896,12 @@ async function copyDiagnostics() {
     } catch (e) {}
     sbLine = `Sandbox: dryRunAvailable=${sb.dryRunAvailable}, realActionsAllowed=${sb.realActionsAllowed}, realActionsImplemented=${sb.realActionsImplemented}, blockedReasons=${blockedCount}, checklistReady=${readyCount}, lastDryRunAt=${sb.lastDryRunAt || 'none'}, lastDryRunActionCount=${sb.lastDryRunActionCount}`;
   }
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  // Step 25: screen capture line (no imageDataUrl ever embedded).
+  let screenCaptureStatus = null;
+  try { if (typeof getScreenCaptureStatus === 'function') screenCaptureStatus = await getScreenCaptureStatus(); } catch(e) {}
+  const sc = state.screenCapture || { sources: [], selectedSourceId: null, preview: null, lastError: null, lastCapturedAt: null };
+  const scLine = `Screen capture: available=${screenCaptureStatus ? !!screenCaptureStatus.available : '?'}, supported=${screenCaptureStatus ? !!screenCaptureStatus.supported : '?'}, sourcesCount=${(sc.sources || []).length}, selectedSource=${sc.selectedSourceId || 'none'}, previewAvailable=${!!sc.preview}, lastCapturedAt=${sc.lastCapturedAt || 'none'}, lastError=${sc.lastError || 'none'}, ocrImplemented=false, imageRecognitionImplemented=false, savesScreenshotsToDisk=false`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();

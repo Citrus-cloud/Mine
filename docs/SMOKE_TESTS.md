@@ -245,3 +245,30 @@ Walk every step on the build host that will produce the artifacts.
 | 148  | Smoke-launch the artifact             | Launch the produced binary on the target OS. Repeat #138 / #139 / #143 / #144 against the launched binary.         |
 | 149  | Rename per `BUILD_ARTIFACTS.md`       | Rename produced files to `ClickFlow-0.1.0-beta-<platform>-<arch>.<ext>` before upload.                              |
 | 150  | (Manual) Walk `RELEASE_FINAL_CHECK.md`| Sign off the maintainer line at the bottom of the file before any tag is created.                                  |
+
+
+
+## Step 25 — Screen Capture Foundation smoke checks
+
+These manual checks verify the new **Screen Capture** tab in the
+Advanced dashboard. They never expect a real click, OCR, or image
+recognition — Step 25 only adds the foundation.
+
+| #    | Step                                  | Expected                                                                                                          |
+|------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| 151  | `npm install`                         | Completes without errors. No new native modules, no new dependencies (the foundation is pure Electron API).        |
+| 152  | `npm run smoke`                       | All checks `OK`. **Failed: 0**. The smoke check is now extended with Step 25 invariants (screen-capture-client / screen-capture-ui / SCREEN_CAPTURE.md / preload screenCapture API / main.js IPC handlers / no OCR / no OpenCV / no robotjs / no nut.js). |
+| 153  | `npm start`                           | App window opens with no console errors.                                                                            |
+| 154  | Open Advanced → Screen Capture        | Click Advanced mode → switch to the **Screen Capture** tab. Header `Screen Capture` is visible. Safety notice card with the simulation-only / no-real-clicks / not-saved-without-action wording is visible. Three buttons: **Refresh sources**, **Capture preview** (disabled until a source is selected), **Clear preview**. |
+| 155  | Refresh sources                       | Click **Refresh sources**. The sources grid populates with the available `screen` and `window` thumbnails. Each card shows a thumbnail, the source name (via `textContent`), a `screen` / `window` type badge, and a **Select** button. Empty state, error state, and permission notice render correctly when applicable (e.g. macOS Screen Recording prompt). |
+| 156  | Select a source                       | Click **Select** on one card. The card gains the `.selected` highlight. The **Selected source** card shows the name, type, and id. The **Capture preview** button becomes enabled. |
+| 157  | Capture preview                       | Click **Capture preview**. The **Screen preview** card displays the captured thumbnail (preview only, ~1280×720), source name, type, id, size, captured-at timestamp, and the literal "Preview only · Not saved to disk" reminder. **No real cursor movement, no input arrives in any other application.** |
+| 158  | Clear preview                         | Click **Clear preview**. The Screen preview card returns to the empty state. The renderer-only memory cache is also dropped. |
+| 159  | Diagnostics block                     | Switch to Advanced → Safety. The **Screen capture status** card shows `available`, `sourcesCount`, `selectedSource`, `previewAvailable`, `capturedAt`, `lastError`. |
+| 160  | Copy diagnostics                      | Advanced → Safety → **Copy diagnostics** → paste. Output contains a `Screen capture: available=…, supported=…, sourcesCount=…, selectedSource=…, previewAvailable=…, lastCapturedAt=…, lastError=…, ocrImplemented=false, imageRecognitionImplemented=false, savesScreenshotsToDisk=false` line. |
+| 161  | No disk persistence                   | After capturing a preview, inspect `userData/`. There is **no** new screenshot file. Restart the app — the preview is empty (it was never persisted). |
+| 162  | No real clicks                        | While the Screen Capture tab is open and a preview is shown, watch the cursor and a focused text editor for 60 s. The cursor does not move; the editor receives no input. |
+| 163  | Permissions denied path               | (macOS only) Without the Screen Recording grant, `Refresh sources` shows an empty list and a notice that OS permissions may be required. The app does not crash. |
+| 164  | Headless / CI path                    | If `desktopCapturer` is unavailable, the IPC returns `{ success: false, error: "Screen capture is not available on this system" }`. The diagnostics block shows `available=false`. The app does not crash. |
+| 165  | Switch language                       | Settings → English → Save. Walk #154–#159 again. All Screen Capture strings appear in English. Switch back to Russian. |
+| 166  | Hard guarantees                       | DevTools console: `getState().screenCapture.preview` is `null` after Clear preview; `getState().screenCapture.sources` is an array; `validateScreenSource({id:"unknown", name:"x"})` returns `false`. `setActiveAdapter('real-desktop')` still returns `{ success: false, blocked: true, ... }` — Step 25 did not flip any safety flag. |

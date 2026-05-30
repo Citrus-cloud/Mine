@@ -38,7 +38,15 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   RealSandboxDryRunCancelled:       'real.sandbox.dryrun.cancelled',
   RealSandboxBlocked:               'real.sandbox.blocked',
   RealPermissionChecklistCreated:   'real.permission.checklist.created',
-  RealBlockedReasonGenerated:       'real.blocked.reason.generated'
+  RealBlockedReasonGenerated:       'real.blocked.reason.generated',
+  // Step 25: screen capture foundation events.
+  // No events here ever carry a screenshot or imageDataUrl.
+  ScreenCaptureSourcesRequested:    'screen.capture.sources.requested',
+  ScreenCaptureSourcesLoaded:       'screen.capture.sources.loaded',
+  ScreenCapturePreviewRequested:    'screen.capture.preview.requested',
+  ScreenCapturePreviewCreated:      'screen.capture.preview.created',
+  ScreenCapturePreviewCleared:      'screen.capture.preview.cleared',
+  ScreenCaptureError:               'screen.capture.error'
 });
 
 var KNOWN_TYPES = Object.freeze(

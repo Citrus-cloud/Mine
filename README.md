@@ -29,9 +29,9 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов**.
+- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлен read-only **Screen Capture Foundation** (Step 25 — preview only, без OCR / image matching / real clicks).
   Перед публикацией тэга `v0.1.0-beta` обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
@@ -159,6 +159,42 @@ safety review).
     manual QA`. Smoke-check расширен до **193 проверок**.
     Добавлено 7 новых i18n-ключей RU + EN. **Tag и публикация
     GitHub Release остаются ручными действиями.**
+  - **Шаг 25 — Screen Capture Foundation (новая линия умных
+    визуальных функций):**
+    добавлен безопасный foundation для будущих умных функций
+    (поиск картинки/иконки, поиск текста, выбор области экрана,
+    template matching, OCR, визуальный конструктор). На этом
+    шаге сами функции **не реализованы** — это только
+    инфраструктура. В `main.js` появились три IPC-обработчика
+    через Electron `desktopCapturer`
+    (`screen-capture:list-sources`,
+    `screen-capture:capture-preview`,
+    `screen-capture:get-status`); в `preload.js` —
+    `window.clickflow.screenCapture` (без сырого `ipcRenderer`);
+    в `src/screen-capture-client.js` — валидация и in-memory
+    cache; в `src/screen-capture-ui.js` — новая вкладка
+    **Screen Capture** в Advanced dashboard с safety notice,
+    кнопками Refresh sources / Capture preview / Clear preview,
+    grid с thumbnails и preview-карточкой; в `src/app-state.js`
+    — `screenCapture` state slice (sources, selectedSourceId,
+    preview, isLoading, lastError, lastCapturedAt) с 7
+    мутаторами; в `src/audit-events.js` — 6 новых allowlisted
+    типов (`screen.capture.sources.requested`,
+    `screen.capture.sources.loaded`,
+    `screen.capture.preview.requested`,
+    `screen.capture.preview.created`,
+    `screen.capture.preview.cleared`,
+    `screen.capture.error`). Скриншот **никогда** не пишется
+    на диск, рендерится только через `img.src` (без
+    `innerHTML`), preview хранится только в памяти renderer.
+    Добавлен документ
+    [`docs/SCREEN_CAPTURE.md`](./docs/SCREEN_CAPTURE.md);
+    обновлены `docs/SECURITY_CHECKLIST.md`,
+    `docs/KNOWN_LIMITATIONS.md`, `docs/SMOKE_TESTS.md`. Smoke-check
+    расширен Step-25-инвариантами. Добавлено 24 новых i18n-ключа
+    RU + EN. **Реальные клики / OCR / image recognition /
+    template matching / OpenCV / robotjs / nut.js / iohook
+    по-прежнему отсутствуют.**
 
 ---
 
@@ -184,8 +220,9 @@ safety review).
 - Импорт / экспорт / сброс настроек.
 
 ### Расширенный режим
-Семь вкладок: Overview, Scenarios, Execution, Logs, Settings,
-Safety, Future. Diagnostics, история ошибок, профили, импорт /
+Восемь вкладок: Overview, Scenarios, Execution, Logs, Settings,
+Safety, **Screen Capture** (Step 25 — preview only), Future.
+Diagnostics, история ошибок, профили, импорт /
 экспорт, readiness-чеклист desktop-адаптера, **Beta health card**
 (Step 15), **Feature flags card** (Step 16), **Next safety milestone**
 карточка во вкладке Future. **Step 17:** карточки **Action pipeline**,
@@ -196,6 +233,10 @@ Safety, Future. Diagnostics, история ошибок, профили, имп
 **Step 19:** карточка **Real action sandbox** с кнопкой
 **Create dry-run preview** + inline preview-карточка с
 permission checklist и blocked reasons.
+**Step 25:** новая вкладка **Screen Capture** + компактная
+карточка **Screen capture status** в Advanced → Safety
+(`available`, `sourcesCount`, `selectedSource`, `previewAvailable`,
+`lastCapturedAt`, `lastError`).
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -241,9 +282,13 @@ Linux (AppImage). Подробнее — [`docs/PACKAGING.md`](./docs/PACKAGING.
 ClickFlow `0.1.0-beta` — **simulation-only**. Сознательно отсутствуют:
 
 - реальные системные клики и реальный ввод с клавиатуры
-  (нет `robotjs`, `nut.js`, `iohook`);
+  (нет `robotjs`, `nut.js`, `iohook`, `uiohook-napi`);
 - OCR;
-- распознавание изображений / OpenCV;
+- распознавание изображений / OpenCV / template matching;
+- автоклик по найденной картинке / иконке / тексту (Step 25
+  добавил только preview через `desktopCapturer`);
+- сохранение скриншотов на диск (preview хранится только в
+  памяти renderer и сбрасывается на Clear preview);
 - мобильная версия;
 - cloud sync;
 - auto-update;

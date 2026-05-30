@@ -46,5 +46,14 @@ contextBridge.exposeInMainWorld('clickflow', {
     getBetaHealth: () => ipcRenderer.invoke('system:get-beta-health'),
     getReleaseStatus: () => ipcRenderer.invoke('system:get-release-status'),
     setExecutionRunning: (running) => ipcRenderer.invoke('app-state:set-execution-running-status', running)
+  },
+  // Step 25 — Screen Capture Foundation. Preview-only:
+  // - never persists to disk, never executes real clicks,
+  //   never runs OCR or image recognition;
+  // - the renderer cannot reach ipcRenderer directly.
+  screenCapture: {
+    listSources: () => ipcRenderer.invoke('screen-capture:list-sources'),
+    capturePreview: (sourceId) => ipcRenderer.invoke('screen-capture:capture-preview', sourceId),
+    getStatus: () => ipcRenderer.invoke('screen-capture:get-status')
   }
 });

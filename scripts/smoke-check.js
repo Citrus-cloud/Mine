@@ -976,6 +976,337 @@ record(
   readText('README.md').indexOf('0.1.0-beta') !== -1
 );
 
+// --- Step 25: Screen Capture Foundation ---
+
+// 57. New source / doc files exist.
+[
+  'src/screen-capture-client.js',
+  'src/screen-capture-ui.js'
+].forEach(function (rel) {
+  record('Step 25 file exists: ' + rel, fileExists(rel));
+});
+record('Step 25 doc exists: docs/SCREEN_CAPTURE.md', fileExists('docs/SCREEN_CAPTURE.md'));
+
+// 58. preload.js exposes the screenCapture API (no raw ipcRenderer).
+record(
+  'preload.js exposes screenCapture API',
+  /screenCapture\s*:\s*\{[\s\S]{0,500}listSources/.test(preloadTxt) &&
+  preloadTxt.indexOf("'screen-capture:list-sources'") !== -1 &&
+  preloadTxt.indexOf("'screen-capture:capture-preview'") !== -1 &&
+  preloadTxt.indexOf("'screen-capture:get-status'") !== -1
+);
+// preload.js still does not expose ipcRenderer (re-asserted from earlier check).
+// (Already covered by check #20; no need to duplicate.)
+
+// 59. main.js registers the three IPC handlers and imports desktopCapturer.
+record(
+  'main.js imports desktopCapturer',
+  /require\(['"]electron['"]\)/.test(mainTxt) &&
+  /\bdesktopCapturer\b/.test(mainTxt)
+);
+record(
+  "main.js handles ipcMain 'screen-capture:list-sources'",
+  mainTxt.indexOf("ipcMain.handle('screen-capture:list-sources'") !== -1
+);
+record(
+  "main.js handles ipcMain 'screen-capture:capture-preview'",
+  mainTxt.indexOf("ipcMain.handle('screen-capture:capture-preview'") !== -1
+);
+record(
+  "main.js handles ipcMain 'screen-capture:get-status'",
+  mainTxt.indexOf("ipcMain.handle('screen-capture:get-status'") !== -1
+);
+record(
+  'main.js validates sourceId prefix (screen:/window:)',
+  mainTxt.indexOf("'screen:'") !== -1 && mainTxt.indexOf("'window:'") !== -1
+);
+record(
+  'main.js does not write screenshots to disk',
+  // The handlers in main.js use desktopCapturer + getSources only;
+  // they never call fs.writeFile* with thumbnail / image data.
+  !/desktopCapturer[\s\S]{0,3000}fs\.writeFile/.test(mainTxt)
+);
+
+// 60. screen-capture-client.js exports the documented surface.
+var scClient = readText('src/screen-capture-client.js');
+[
+  'function listScreenSources',
+  'function captureScreenPreview',
+  'function getScreenCaptureStatus',
+  'function validateScreenSource',
+  'function getLastScreenCapturePreview',
+  'function setLastScreenCapturePreview',
+  'function clearScreenCapturePreview'
+].forEach(function (needle) {
+  record(
+    'screen-capture-client.js declares ' + needle,
+    scClient.indexOf(needle) !== -1
+  );
+});
+record(
+  'screen-capture-client.js does not require ipcRenderer or electron',
+  scClient.indexOf("require('electron')") === -1 &&
+  scClient.indexOf("require('ipcRenderer')") === -1 &&
+  scClient.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'screen-capture-client.js never persists previews via localStorage',
+  // Strip line/block comments before checking.
+  (function () {
+    var stripped = scClient
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map(function (ln) { return ln.replace(/\/\/.*$/, ''); })
+      .join('\n');
+    return stripped.indexOf('localStorage') === -1;
+  })()
+);
+
+// 61. screen-capture-ui.js exports the documented surface and is DOM-safe.
+var scUi = readText('src/screen-capture-ui.js');
+[
+  'function openScreenCaptureTab',
+  'function renderScreenCapture',
+  'function renderScreenCaptureStatus',
+  'function renderScreenSourceList',
+  'function renderScreenPreview',
+  'function refreshScreenSources',
+  'function selectScreenSource',
+  'function captureSelectedScreenPreview',
+  'function clearScreenPreview'
+].forEach(function (needle) {
+  record(
+    'screen-capture-ui.js declares ' + needle,
+    scUi.indexOf(needle) !== -1
+  );
+});
+record(
+  'screen-capture-ui.js never assigns innerHTML to user data',
+  // innerHTML may only appear as `= ''` (container clear), nowhere else.
+  // Allow `.innerHTML = ''` and `.innerHTML = ""`; reject any other RHS.
+  (function () {
+    var lines = scUi.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      // strip line comments first
+      var code = ln.replace(/\/\/.*$/, '').trim();
+      if (code.indexOf('innerHTML') === -1) continue; // only in comment, fine
+      // must be of the form `<x>.innerHTML = '';` or "";
+      if (!/innerHTML\s*=\s*(['"])\s*\1\s*;?\s*$/.test(code)) return false;
+    }
+    return true;
+  })()
+);
+record(
+  'screen-capture-ui.js does not require ipcRenderer or electron',
+  scUi.indexOf("require('electron')") === -1 &&
+  scUi.indexOf('ipcRenderer.invoke') === -1
+);
+
+// 62. app-state.js declares the screenCapture slice and mutators.
+var appStateTxt = readText('src/app-state.js');
+record(
+  'app-state.js declares appState.screenCapture slice',
+  /screenCapture\s*:\s*\{[\s\S]{0,400}sources/.test(appStateTxt)
+);
+[
+  'function setScreenCaptureSources',
+  'function setSelectedScreenSource',
+  'function setScreenCapturePreview',
+  'function setScreenCaptureLoading',
+  'function setScreenCaptureError',
+  'function clearScreenCapturePreview',
+  'function resetScreenCaptureState'
+].forEach(function (needle) {
+  record(
+    'app-state.js declares ' + needle,
+    appStateTxt.indexOf(needle) !== -1
+  );
+});
+
+// 63. audit-events.js allowlist contains the six new types.
+[
+  "'screen.capture.sources.requested'",
+  "'screen.capture.sources.loaded'",
+  "'screen.capture.preview.requested'",
+  "'screen.capture.preview.created'",
+  "'screen.capture.preview.cleared'",
+  "'screen.capture.error'"
+].forEach(function (needle) {
+  record(
+    'audit allowlist includes ' + needle.replace(/'/g, ''),
+    auditTxt.indexOf(needle) !== -1
+  );
+});
+
+// 64. index.html wires the new tab + scripts.
+var htmlTxt3 = readText('src/index.html');
+record(
+  'index.html has Screen Capture tab button',
+  /data-advanced-tab=['"]screenCapture['"]/.test(htmlTxt3)
+);
+record(
+  'index.html has Screen Capture section',
+  /id=['"]advanced-tab-screenCapture['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads screen-capture-client.js',
+  /src=['"]screen-capture-client\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads screen-capture-ui.js',
+  /src=['"]screen-capture-ui\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads screen-capture-client.js BEFORE screen-capture-ui.js',
+  htmlTxt3.indexOf('screen-capture-client.js') !== -1 &&
+  htmlTxt3.indexOf('screen-capture-ui.js') !== -1 &&
+  htmlTxt3.indexOf('screen-capture-client.js') < htmlTxt3.indexOf('screen-capture-ui.js')
+);
+record(
+  'index.html loads screen-capture-ui.js BEFORE renderer.js',
+  htmlTxt3.indexOf('screen-capture-ui.js') !== -1 &&
+  htmlTxt3.indexOf('renderer.js') !== -1 &&
+  htmlTxt3.indexOf('screen-capture-ui.js') < htmlTxt3.indexOf('renderer.js')
+);
+
+// 65. README / PROJECT_CONTEXT mention step 25 and screen capture.
+record(
+  'README or PROJECT_CONTEXT mentions step 25',
+  /step\s*25|шаг\s*25|Step 25|Шаг 25/.test(readText('README.md')) ||
+  /step\s*25|шаг\s*25|Step 25|Шаг 25/.test(readText('PROJECT_CONTEXT.md'))
+);
+record(
+  'README or PROJECT_CONTEXT mentions screen capture / захват экрана',
+  /screen[\s-]capture|захват\s*экрана|Screen Capture/i.test(readText('README.md')) ||
+  /screen[\s-]capture|захват\s*экрана|Screen Capture/i.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 66. docs/SCREEN_CAPTURE.md asserts simulation-only / preview-only / no-disk-saving.
+var scDoc = readText('docs/SCREEN_CAPTURE.md');
+record(
+  'docs/SCREEN_CAPTURE.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(scDoc)
+);
+record(
+  'docs/SCREEN_CAPTURE.md asserts preview only',
+  /preview[- ]only|preview\s+only/i.test(scDoc)
+);
+record(
+  'docs/SCREEN_CAPTURE.md asserts no disk saving',
+  /never\s+(saved|written)\s+to\s+disk|no\s+disk\s+saving|not\s+saved\s+to\s+disk/i.test(scDoc)
+);
+record(
+  'docs/SCREEN_CAPTURE.md mentions OS limitations (macOS / Wayland / Windows)',
+  /macOS/i.test(scDoc) && /Wayland|Linux/i.test(scDoc) && /Windows/i.test(scDoc)
+);
+
+// 67. SECURITY_CHECKLIST has a Screen capture (Step 25) section.
+var scSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has Screen capture (Step 25) section',
+  /screen\s+capture\s*\(?step\s*25/i.test(scSec) ||
+  /## Screen capture/i.test(scSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts screenshots not saved to disk',
+  // Allow markdown emphasis (`**not**`) between the words.
+  /not[\s\S]{0,8}saved\s+to\s+disk|never[\s\S]{0,8}(saved|written)[\s\S]{0,8}to\s+disk/i.test(scSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts no OCR / image recognition / real clicks at step 25',
+  /no ocr/i.test(scSec) && /no image recognition|no template matching/i.test(scSec) && /no real clicks/i.test(scSec)
+);
+
+// 68. KNOWN_LIMITATIONS / SMOKE_TESTS reference step 25.
+var klTxt2 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has a Screen capture (Step 25) section',
+  /screen\s+capture\s*\(?step\s*25/i.test(klTxt2) ||
+  /##\s*9\.\s*Screen capture/i.test(klTxt2)
+);
+var stTxt = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 25 screen capture block',
+  /Step\s*25\s*[—-]\s*Screen Capture/i.test(stTxt) ||
+  /Step 25.*Screen Capture/i.test(stTxt)
+);
+
+// 69. CHANGELOG mentions Step 25 / Screen Capture Foundation.
+var chTxt = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 25 — Screen Capture Foundation',
+  /Step\s*25.*Screen Capture Foundation/i.test(chTxt) ||
+  /Шаг\s*25.*Screen Capture/i.test(chTxt) ||
+  /Screen Capture Foundation/i.test(chTxt)
+);
+
+// 70. package.json must NOT pull in OCR / OpenCV / robotjs / nut.js / image
+//     recognition libraries.
+if (pkg) {
+  var allDeps2 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step25Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps2, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-recognition / real-input modules at step 25',
+    step25Forbidden.length === 0,
+    step25Forbidden.length ? step25Forbidden.join(', ') : ''
+  );
+}
+
+// 71. Source files don't import OCR / OpenCV / image-recognition / sharp.
+var step25SourceFiles = [
+  'main.js', 'preload.js',
+  'src/screen-capture-client.js',
+  'src/screen-capture-ui.js'
+];
+var step25Imports = ['tesseract.js', 'tesseract', 'opencv4nodejs', '@u4/opencv4nodejs', 'sharp', 'jimp'];
+var foundStep25Imports = [];
+step25SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step25Imports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep25Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-recognition modules required in step 25 source files',
+  foundStep25Imports.length === 0,
+  foundStep25Imports.length ? foundStep25Imports.join(', ') : ''
+);
+
+// 72. main.js still does not flip the simulation-only safety flags.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 25)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 25)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+
+// 73. CSP not relaxed at step 25.
+record(
+  'src/index.html CSP unchanged at step 25 (no unsafe-inline / unsafe-eval)',
+  htmlTxt3.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt3.indexOf('unsafe-inline') === -1 &&
+  htmlTxt3.indexOf('unsafe-eval') === -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {
