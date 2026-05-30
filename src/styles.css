@@ -1632,3 +1632,170 @@ body {
     flex: 0 0 auto;
   }
 }
+
+
+
+/* ---------------------------------------------------------------------
+   17. Screen Capture (Step 25 — preview only, simulation-only)
+   --------------------------------------------------------------------- */
+.screen-capture-safety-notice {
+  /* Re-uses .adv-warning palette for consistency with other warnings. */
+  margin-top: 0;
+}
+
+.screen-capture-actions {
+  margin-top: 0;
+}
+
+.screen-capture-status-card,
+.screen-capture-selected-card,
+.screen-capture-sources-card,
+.screen-capture-preview-card {
+  /* Uses .adv-card spacing; nothing extra needed. */
+}
+
+/* Sources grid */
+.screen-capture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.screen-capture-source-card {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: border-color var(--t-base), box-shadow var(--t-base);
+  min-width: 0;
+}
+
+.screen-capture-source-card:hover {
+  border-color: var(--accent);
+}
+
+.screen-capture-source-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(79, 142, 247, 0.18);
+  background: var(--accent-soft);
+}
+
+.screen-capture-thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.screen-capture-thumb-empty {
+  height: 110px;
+}
+
+.screen-capture-source-name {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text);
+  word-break: break-word;
+  /* Clamp very long window titles so the grid stays tidy. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.screen-capture-source-type {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.screen-capture-select-btn {
+  margin-top: 0;
+  align-self: stretch;
+}
+
+/* Preview card */
+.screen-capture-preview-image {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin: var(--space-2) 0;
+}
+
+.screen-capture-preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-2);
+}
+
+.screen-capture-preview-note {
+  margin-top: var(--space-2);
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Empty / loading / error states */
+.screen-capture-empty,
+.screen-capture-loading {
+  /* Inherits .adv-log-empty look */
+}
+
+.screen-capture-error {
+  /* Inherits .adv-warning look */
+  margin-top: 0;
+  margin-bottom: var(--space-2);
+}
+
+/* Dark theme tweaks */
+[data-theme="dark"] .screen-capture-source-card {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .screen-capture-source-card.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .screen-capture-source-type {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+[data-theme="dark"] .screen-capture-thumb,
+[data-theme="dark"] .screen-capture-preview-image {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+@media (max-width: 760px) {
+  .screen-capture-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .screen-capture-thumb,
+  .screen-capture-thumb-empty {
+    max-height: 90px;
+  }
+}

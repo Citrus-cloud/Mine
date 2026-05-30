@@ -7,9 +7,44 @@
 
 ## Текущий шаг
 
-**Шаг 24 завершён.** Final beta release preparation. Проект
-остаётся в стадии `0.1.0-beta pre-release preparation`
-(simulation-only). На шаге 24 добавлены
+**Шаг 25 завершён.** Screen Capture Foundation. Проект остаётся
+в стадии `0.1.0-beta` (simulation-only) и параллельно открывает
+**новую линию умных визуальных функций** (поиск картинки/иконки,
+поиск текста, выбор области экрана, template matching, OCR,
+визуальный конструктор) — **сами функции на этом шаге не
+реализованы**, только foundation. На шаге 25 добавлены:
+три IPC-обработчика через Electron `desktopCapturer` в `main.js`
+(`screen-capture:list-sources`, `screen-capture:capture-preview`,
+`screen-capture:get-status`); безопасный `window.clickflow.screenCapture`
+API в `preload.js`; `src/screen-capture-client.js` с валидацией и
+in-memory cache; `src/screen-capture-ui.js` с новой вкладкой
+**Screen Capture** в Advanced dashboard (safety notice, Refresh
+sources / Capture preview / Clear preview, sources grid с
+thumbnails, preview-карточка с metadata); state slice
+`appState.screenCapture` (`sources`, `selectedSourceId`, `preview`,
+`isLoading`, `lastError`, `lastCapturedAt`) с 7 мутаторами в
+`src/app-state.js`; шесть новых allowlisted audit-типов
+(`screen.capture.sources.requested`,
+`screen.capture.sources.loaded`,
+`screen.capture.preview.requested`,
+`screen.capture.preview.created`,
+`screen.capture.preview.cleared`,
+`screen.capture.error`); компактный диагностический блок Screen
+capture status в Advanced → Safety; новая строка `Screen capture: ...`
+в `Copy diagnostics`; 24 новых i18n-ключа RU + EN;
+[`docs/SCREEN_CAPTURE.md`](./docs/SCREEN_CAPTURE.md). Скриншот
+**никогда не сохраняется на диск**, рендерится только через
+`img.src` (textContent для всего остального), preview хранится
+только в памяти renderer. **Реальные клики / OCR / image
+recognition / template matching / OpenCV / robotjs / nut.js /
+iohook по-прежнему не реализованы.** `realDesktopActions=false`,
+`simulationOnly=true`, `contextIsolation: true`,
+`nodeIntegration: false` — без изменений. Smoke-check расширен
+Step-25-инвариантами.
+
+## Прошлый шаг
+
+**Шаг 24.** Final beta release preparation.
 [`docs/FINAL_RELEASE_SUMMARY.md`](./docs/FINAL_RELEASE_SUMMARY.md)
 (single-page snapshot релиза),
 [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md)
@@ -559,6 +594,99 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
     `RELEASE_BLOCKERS.md`. **Tag и публикация GitHub Release
     остаются ручными действиями.**
 
+- **Screen Capture Foundation (шаг 25 — новая линия умных
+  визуальных функций):**
+  - **`main.js`** — добавлен импорт `desktopCapturer` и три IPC
+    handler'а (`screen-capture:list-sources`,
+    `screen-capture:capture-preview`,
+    `screen-capture:get-status`). Sources нормализуются к
+    безопасной форме `{id, name, type, thumbnailDataUrl,
+    display_id, [width, height]}`; sourceId валидируется по
+    префиксу `screen:` / `window:` и длине ≤ 200; ошибки
+    маппятся в безопасные generic-строки; никогда не
+    бросает; никогда не пишет на диск; никогда не вызывает
+    OCR / image recognition.
+  - **`preload.js`** — `window.clickflow.screenCapture` API
+    (`listSources`, `capturePreview`, `getStatus`). Сырой
+    `ipcRenderer` по-прежнему не выходит за пределы preload.
+  - **`src/screen-capture-client.js`** — wrapper для
+    renderer'а: `listScreenSources`, `captureScreenPreview`,
+    `getScreenCaptureStatus`, `validateScreenSource`,
+    in-memory cache (`getLastScreenCapturePreview`,
+    `setLastScreenCapturePreview`, `clearScreenCapturePreview`).
+  - **`src/screen-capture-ui.js`** — новая вкладка **Screen
+    Capture** в Advanced dashboard: header, safety notice,
+    кнопки **Refresh sources / Capture preview / Clear preview**,
+    sources grid с thumbnails (`img.src` = `thumbnailDataUrl`,
+    name через `textContent`), selected source card, preview
+    card с metadata (name / type / id / size / capturedAt /
+    "Preview only" reminder). Все пользовательские строки
+    через `textContent`; `innerHTML` использован только для
+    `= ''` (очистка контейнера).
+  - **`src/app-state.js`** — добавлен slice
+    `appState.screenCapture` (`sources`, `selectedSourceId`,
+    `preview`, `isLoading`, `lastError`, `lastCapturedAt`),
+    7 мутаторов (`setScreenCaptureSources`,
+    `setSelectedScreenSource`, `setScreenCapturePreview`,
+    `setScreenCaptureLoading`, `setScreenCaptureError`,
+    `clearScreenCapturePreview`, `resetScreenCaptureState`);
+    `getState()` возвращает копию.
+  - **`src/audit-events.js`** — 6 новых allowlisted типов
+    (`screen.capture.sources.requested`,
+    `screen.capture.sources.loaded`,
+    `screen.capture.preview.requested`,
+    `screen.capture.preview.created`,
+    `screen.capture.preview.cleared`,
+    `screen.capture.error`). Payload-ы содержат только
+    counts/ids/source-types — никогда не `imageDataUrl`.
+  - **Renderer:** `renderAdvancedDashboard` диспатчит
+    `screenCapture` в `renderScreenCapture()`; в Advanced →
+    Safety добавлена компактная карточка **Screen capture
+    status** (available / sourcesCount / selectedSource /
+    previewAvailable / capturedAt / lastError); `Copy
+    diagnostics` дополнен строкой `Screen capture: ...`.
+  - **`src/index.html`** — добавлена 8-я вкладка
+    `screenCapture`, секция `#advanced-tab-screenCapture`,
+    подключены `screen-capture-client.js` и
+    `screen-capture-ui.js` (после `i18n.js`, до
+    `renderer.js`).
+  - **`src/styles.css`** — секция 17 со стилями
+    `.screen-capture-*` (sources grid auto-fill 180px,
+    selected highlight, thumb max-height 110px, preview image
+    `max-width: 100%; max-height: 360px`, light/dark theme,
+    responsive 760px).
+  - **i18n:** 24 новых ключа RU + EN (`screenCapture`,
+    `refreshSources`, `capturePreview`, `clearPreview`,
+    `screenSources`, `noScreenSources`, `selectedSource`,
+    `noSelectedSource`, `screenPreview`, `noPreview`,
+    `previewOnly`, `sourceType`, `sourceScreen`,
+    `sourceWindow`, `capturedAt`, `captureFailed`,
+    `sourcesLoadFailed`, `screenCaptureSafetyNotice`,
+    `previewNotSaved`, `permissionMayBeRequired`,
+    `screenCaptureStatus`, `previewAvailable`,
+    `selectedScreenSource`, `sourcesCount`). Парность
+    406/406, без дубликатов.
+  - **Документация:** новый
+    [`docs/SCREEN_CAPTURE.md`](./docs/SCREEN_CAPTURE.md);
+    `docs/SECURITY_CHECKLIST.md`,
+    `docs/KNOWN_LIMITATIONS.md`, `docs/SMOKE_TESTS.md`
+    дополнены секциями Step 25.
+  - **Smoke-check** расширен Step-25-инвариантами (наличие
+    `src/screen-capture-client.js`, `src/screen-capture-ui.js`,
+    `docs/SCREEN_CAPTURE.md`; `preload.js` содержит
+    `screenCapture`; `main.js` содержит
+    `screen-capture:list-sources`; README/PROJECT_CONTEXT
+    упоминает screen capture / захват экрана; `package.json`
+    не содержит OCR / OpenCV / robotjs / nut.js).
+  - **Безопасность:** скриншот **никогда не сохраняется на
+    диск**; preview хранится только в памяти renderer и
+    сбрасывается на Clear preview / `resetScreenCaptureState()`;
+    нет автозахвата при старте; renderer не получает сырой
+    `ipcRenderer`; `contextIsolation: true`,
+    `nodeIntegration: false`, CSP не ослаблены; реальные
+    клики / OCR / image recognition / template matching
+    по-прежнему отсутствуют.
+
 ### НЕ реализовано (намеренно)
 - **Реальные системные клики.** Нет `robotjs`, `nut.js`, `iohook`,
   `node-key-sender`, нет нативных модулей ввода.
@@ -628,6 +756,7 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
 | 22 | GitHub beta release finalization: `RELEASE_FINAL_CHECK.md`, `TAG_AND_RELEASE_GUIDE.md`, finalized RELEASE_NOTES / GITHUB_RELEASE_DRAFT, expanded Release status card (12 rows + manual-release badge), smoke-check 137 checks. Tag and publication remain manual. |
 | 23 | Post-pack QA and release blocker pass: `RELEASE_BLOCKERS.md`, `PACKAGED_APP_QA.md`, expanded Release status card (14 rows + ready-after-manual-QA badge), smoke-check 168 checks. Manual packaged-app QA remains the last gate. |
 | 24 | Final beta release preparation: `FINAL_RELEASE_SUMMARY.md`, `PRE_RELEASE_CHECKLIST.md`, `RELEASE_TAG_PLAN.md`, `RELEASE_COMMIT_MESSAGE.md`, expanded Release status card (18 rows + ready-for-pre-release-after-manual-QA badge), smoke-check 193 checks. Tag and publication remain manual; explicit list of forbidden commit body lines. |
+| 25 | Screen Capture Foundation (new line of smart visual features — features themselves not implemented yet): three IPC handlers via `desktopCapturer`, safe `window.clickflow.screenCapture` preload API, `screen-capture-client.js` (validation + memory cache), `screen-capture-ui.js` (new Advanced → Screen Capture tab with safety notice, sources grid with thumbnails, preview card), `appState.screenCapture` slice, six new audit-event types, compact Screen capture status diagnostics card, 24 RU + EN i18n keys, `docs/SCREEN_CAPTURE.md`. Screenshots never written to disk. **Real clicks / OCR / image recognition / template matching / OpenCV / robotjs / nut.js / iohook still absent.** |
 
 ## Что логично делать после шага 24
 

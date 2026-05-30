@@ -194,3 +194,60 @@ They will be revisited (or closed) in subsequent `0.1.x` patches.
 ### 8.7 No automated CI yet
 - `npm run smoke` is run locally for `v0.1.0-beta`. GitHub Actions
   wiring is planned for the next step.
+
+
+
+---
+
+## 9. Screen capture (Step 25)
+
+Step 25 introduces a **screen-capture foundation** built on Electron
+`desktopCapturer`. The foundation is preview-only; the smart visual
+features (find image, find icon, find text, region selection,
+template matching, OCR, visual scenario builder) are **not** part
+of `0.1.x`.
+
+### 9.1 Preview only
+- The user can list available `screen` and `window` sources, select
+  one, and request a single thumbnail-sized preview.
+- The preview is **never** saved to disk, **never** sent over the
+  network, and **never** processed by any image / text recognition
+  library.
+
+### 9.2 No image matching, no OCR, no auto-clicks yet
+- "Click on a found image / icon / text" is **not** implemented.
+- Template matching is **not** implemented.
+- OCR is **not** implemented.
+- Auto-clicks based on a screenshot are **not** implemented.
+- Any future step that adds one of those goes through the existing
+  safety review process (`docs/REAL_ACTIONS_GO_NO_GO.md`).
+
+### 9.3 OS permissions may vary
+- **Windows.** Works on Win10/Win11 desktop sessions without
+  prompts in most setups. Remote desktop sessions may return
+  empty thumbnails for windows that the session does not own.
+- **macOS.** macOS 10.15+ prompts for the **Screen Recording**
+  privacy permission on first call. Without the grant,
+  `desktopCapturer.getSources` may return an empty list or
+  empty thumbnails. ClickFlow surfaces this in the
+  **Screen capture status** card and inline notice.
+- **Linux (X11).** Works in most desktop environments.
+- **Linux (Wayland).** Strict Wayland compositors may return an
+  empty list. Some compositors require per-application Pipewire
+  portal grants.
+- **Headless / CI.** `desktopCapturer` may be unavailable; the
+  IPC returns `{ success: false, error: "Screen capture is not
+  available on this system" }` and the diagnostics line shows
+  `available=false`.
+
+### 9.4 Renderer-only memory
+- The preview lives only in the renderer's process memory
+  (`appState.screenCapture.preview` and the in-memory cache in
+  `screen-capture-client.js`).
+- Closing the window or clearing the preview drops it
+  immediately.
+
+### 9.5 No background or auto capture
+- Screen capture is invoked only on `Refresh sources` or
+  `Capture preview` clicks. There is no timer, no auto-refresh,
+  and no capture at app launch.

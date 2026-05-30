@@ -447,7 +447,33 @@ const translations = {
     readyForPreRelease: "Готов к pre-release",
     manualQaRequired: "Требуется ручная QA",
     releaseCommitMessage: "Release commit message",
-    readyForPreReleaseAfterManualQa: "Готов к pre-release после ручной QA"
+    readyForPreReleaseAfterManualQa: "Готов к pre-release после ручной QA",
+
+    // Step 25: screen capture foundation
+    screenCapture: "Захват экрана",
+    refreshSources: "Обновить источники",
+    capturePreview: "Получить preview",
+    clearPreview: "Очистить preview",
+    screenSources: "Источники экрана",
+    noScreenSources: "Источники не найдены. Нажмите «Обновить источники».",
+    selectedSource: "Выбранный источник",
+    noSelectedSource: "Источник не выбран",
+    screenPreview: "Preview скриншота",
+    noPreview: "Preview ещё не получен",
+    previewOnly: "Только preview",
+    sourceType: "Тип",
+    sourceScreen: "экран",
+    sourceWindow: "окно",
+    capturedAt: "Снят",
+    captureFailed: "Не удалось получить preview",
+    sourcesLoadFailed: "Не удалось получить список источников",
+    screenCaptureSafetyNotice: "Скриншот используется только для preview. ClickFlow не выполняет реальных кликов и не сохраняет изображения без вашего действия.",
+    previewNotSaved: "Не сохраняется на диск",
+    permissionMayBeRequired: "Возможно, требуются разрешения ОС на захват экрана.",
+    screenCaptureStatus: "Статус захвата экрана",
+    previewAvailable: "Preview доступен",
+    selectedScreenSource: "Выбранный источник",
+    sourcesCount: "Количество источников"
   },
   en: {
     // Main screen
@@ -895,7 +921,33 @@ const translations = {
     readyForPreRelease: "Ready for pre-release",
     manualQaRequired: "Manual QA required",
     releaseCommitMessage: "Release commit message",
-    readyForPreReleaseAfterManualQa: "Ready for pre-release after manual QA"
+    readyForPreReleaseAfterManualQa: "Ready for pre-release after manual QA",
+
+    // Step 25: screen capture foundation
+    screenCapture: "Screen Capture",
+    refreshSources: "Refresh sources",
+    capturePreview: "Capture preview",
+    clearPreview: "Clear preview",
+    screenSources: "Screen sources",
+    noScreenSources: "No sources found. Click \"Refresh sources\".",
+    selectedSource: "Selected source",
+    noSelectedSource: "No source selected",
+    screenPreview: "Screenshot preview",
+    noPreview: "No preview yet",
+    previewOnly: "Preview only",
+    sourceType: "Type",
+    sourceScreen: "screen",
+    sourceWindow: "window",
+    capturedAt: "Captured at",
+    captureFailed: "Failed to capture screen preview",
+    sourcesLoadFailed: "Failed to list screen sources",
+    screenCaptureSafetyNotice: "Screenshots are used for preview only. ClickFlow does not perform real clicks or save images without your action.",
+    previewNotSaved: "Not saved to disk",
+    permissionMayBeRequired: "OS permissions for screen capture may be required.",
+    screenCaptureStatus: "Screen capture status",
+    previewAvailable: "Preview available",
+    selectedScreenSource: "Selected source",
+    sourcesCount: "Sources count"
   }
 };
 

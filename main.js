@@ -1,6 +1,21 @@
-const { app, BrowserWindow, ipcMain, dialog, globalShortcut, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, globalShortcut, Menu, Tray, nativeImage, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
+
+// ---------------------------------------------------------------------
+// Step 25 — Screen Capture Foundation
+// ---------------------------------------------------------------------
+// In-memory bookkeeping for the screen-capture subsystem. The whole
+// subsystem is preview-only:
+//   - it never writes a screenshot to disk;
+//   - it never moves a real cursor or generates real input events;
+//   - it never runs OCR or image recognition;
+//   - it only runs when the renderer (i.e. the user) explicitly asks.
+const SCREEN_CAPTURE_THUMB_W = 320;
+const SCREEN_CAPTURE_THUMB_H = 180;
+const SCREEN_CAPTURE_PREVIEW_W = 1280;
+const SCREEN_CAPTURE_PREVIEW_H = 720;
+let screenCaptureLastError = null;
 
 let mainWindow = null;
 let tray = null;
@@ -469,6 +484,146 @@ ipcMain.handle('profiles:save', async (event, data) => {
 ipcMain.handle('profiles:reset', async () => {
   try { const fp = getProfilesPath(); if (fs.existsSync(fp)) fs.unlinkSync(fp); return { success: true }; }
   catch (err) { return { success: false, error: 'Failed to reset profiles' }; }
+});
+
+// --- IPC: Screen Capture (Step 25) ---
+// All three handlers below are preview-only:
+//   - we expose only safe fields (id, name, type, thumbnailDataUrl,
+//     display_id, sizes, capturedAt). No window owners, no PIDs,
+//     no filesystem paths, no full Display objects;
+//   - we never persist to disk;
+//   - we never invoke OCR / image recognition / real input;
+//   - errors are mapped to safe, generic strings (no stack traces,
+//     no native messages).
+// If desktopCapturer is not available (older Electron, headless OS),
+// the handlers return { success: false, error: '...' } instead of
+// crashing the renderer.
+
+function _screenCaptureAvailable() {
+  try {
+    return !!(desktopCapturer && typeof desktopCapturer.getSources === 'function');
+  } catch (err) {
+    return false;
+  }
+}
+
+function _normalizeScreenSource(source, includeFullThumbnail) {
+  if (!source || typeof source !== 'object') return null;
+  const safe = {
+    id: typeof source.id === 'string' ? source.id : '',
+    name: typeof source.name === 'string' ? source.name : '',
+    type: (typeof source.id === 'string' && source.id.indexOf('window:') === 0) ? 'window' : 'screen',
+    display_id: (typeof source.display_id === 'string') ? source.display_id : '',
+    thumbnailDataUrl: ''
+  };
+  // toDataURL() can throw on weird thumbnails; guard it.
+  try {
+    if (source.thumbnail && typeof source.thumbnail.toDataURL === 'function') {
+      safe.thumbnailDataUrl = source.thumbnail.toDataURL();
+    }
+  } catch (err) {
+    safe.thumbnailDataUrl = '';
+  }
+  // The full preview path also asks for a width/height pair so the
+  // renderer can honour aspect ratio without inspecting the image.
+  if (includeFullThumbnail && source.thumbnail && typeof source.thumbnail.getSize === 'function') {
+    try {
+      const sz = source.thumbnail.getSize();
+      safe.width = (sz && typeof sz.width === 'number') ? sz.width : 0;
+      safe.height = (sz && typeof sz.height === 'number') ? sz.height : 0;
+    } catch (err) {
+      safe.width = 0;
+      safe.height = 0;
+    }
+  }
+  return safe;
+}
+
+ipcMain.handle('screen-capture:list-sources', async () => {
+  if (!_screenCaptureAvailable()) {
+    screenCaptureLastError = 'desktopCapturer unavailable';
+    return { success: false, error: 'Screen capture is not available on this system' };
+  }
+  try {
+    const raw = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: SCREEN_CAPTURE_THUMB_W, height: SCREEN_CAPTURE_THUMB_H },
+      fetchWindowIcons: false
+    });
+    const sources = Array.isArray(raw) ? raw.map(s => _normalizeScreenSource(s, false)).filter(Boolean) : [];
+    screenCaptureLastError = null;
+    return { success: true, data: { sources, capturedAt: new Date().toISOString() } };
+  } catch (err) {
+    screenCaptureLastError = 'Failed to list screen sources';
+    return { success: false, error: 'Failed to list screen sources' };
+  }
+});
+
+ipcMain.handle('screen-capture:capture-preview', async (event, sourceId) => {
+  if (!_screenCaptureAvailable()) {
+    screenCaptureLastError = 'desktopCapturer unavailable';
+    return { success: false, error: 'Screen capture is not available on this system' };
+  }
+  if (typeof sourceId !== 'string' || sourceId.length === 0 || sourceId.length > 200) {
+    return { success: false, error: 'Invalid source id' };
+  }
+  // Whitelist the id prefixes Electron actually emits; this also
+  // makes it harder for a buggy renderer to forward arbitrary text.
+  if (sourceId.indexOf('screen:') !== 0 && sourceId.indexOf('window:') !== 0) {
+    return { success: false, error: 'Invalid source id' };
+  }
+  try {
+    const raw = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: SCREEN_CAPTURE_PREVIEW_W, height: SCREEN_CAPTURE_PREVIEW_H },
+      fetchWindowIcons: false
+    });
+    const match = Array.isArray(raw) ? raw.find(s => s && s.id === sourceId) : null;
+    if (!match) {
+      screenCaptureLastError = 'Source not found';
+      return { success: false, error: 'Screen source not found' };
+    }
+    const safe = _normalizeScreenSource(match, true);
+    if (!safe) {
+      screenCaptureLastError = 'Failed to normalize screen source';
+      return { success: false, error: 'Failed to capture screen preview' };
+    }
+    if (!safe.thumbnailDataUrl) {
+      screenCaptureLastError = 'Empty thumbnail';
+      return { success: false, error: 'Failed to capture screen preview' };
+    }
+    screenCaptureLastError = null;
+    return {
+      success: true,
+      data: {
+        sourceId: safe.id,
+        name: safe.name,
+        type: safe.type,
+        display_id: safe.display_id,
+        imageDataUrl: safe.thumbnailDataUrl,
+        width: safe.width || 0,
+        height: safe.height || 0,
+        capturedAt: new Date().toISOString()
+      }
+    };
+  } catch (err) {
+    screenCaptureLastError = 'Failed to capture screen preview';
+    return { success: false, error: 'Failed to capture screen preview' };
+  }
+});
+
+ipcMain.handle('screen-capture:get-status', async () => {
+  const available = _screenCaptureAvailable();
+  return {
+    available,
+    supported: available,
+    lastError: screenCaptureLastError,
+    simulationOnly: true,
+    realClicksImplemented: false,
+    ocrImplemented: false,
+    imageRecognitionImplemented: false,
+    savesScreenshotsToDisk: false
+  };
 });
 
 // --- Lifecycle ---

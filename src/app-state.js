@@ -19,6 +19,17 @@ const appState = {
     startedAt: null,
     finishedAt: null
   },
+  // Step 25 — Screen Capture Foundation. Renderer-side memory only.
+  // imageDataUrl is held only for the active preview; nothing here
+  // is persisted to disk, settings, scenarios, or profiles.
+  screenCapture: {
+    sources: [],
+    selectedSourceId: null,
+    preview: null,
+    isLoading: false,
+    lastError: null,
+    lastCapturedAt: null
+  },
   settings: {
     language: "ru",
     theme: "system",
@@ -41,6 +52,14 @@ function getState() {
     ...appState,
     logs: [...appState.logs],
     execution: { ...appState.execution },
+    screenCapture: {
+      sources: appState.screenCapture.sources.slice(),
+      selectedSourceId: appState.screenCapture.selectedSourceId,
+      preview: appState.screenCapture.preview ? { ...appState.screenCapture.preview } : null,
+      isLoading: appState.screenCapture.isLoading,
+      lastError: appState.screenCapture.lastError,
+      lastCapturedAt: appState.screenCapture.lastCapturedAt
+    },
     settings: {
       ...appState.settings,
       hotkeys: { ...appState.settings.hotkeys },
@@ -111,4 +130,40 @@ function getSettings() {
     hotkeys: { ...appState.settings.hotkeys },
     safety: { ...appState.settings.safety }
   };
+}
+
+
+// --- Step 25: Screen capture state (renderer memory only) ---
+function setScreenCaptureSources(sources) {
+  appState.screenCapture.sources = Array.isArray(sources) ? sources.slice() : [];
+}
+function setSelectedScreenSource(sourceId) {
+  appState.screenCapture.selectedSourceId = (typeof sourceId === 'string' && sourceId.length > 0) ? sourceId : null;
+}
+function setScreenCapturePreview(preview) {
+  if (preview && typeof preview === 'object') {
+    appState.screenCapture.preview = { ...preview };
+    if (typeof preview.capturedAt === 'string') {
+      appState.screenCapture.lastCapturedAt = preview.capturedAt;
+    }
+  } else {
+    appState.screenCapture.preview = null;
+  }
+}
+function setScreenCaptureLoading(isLoading) {
+  appState.screenCapture.isLoading = !!isLoading;
+}
+function setScreenCaptureError(error) {
+  appState.screenCapture.lastError = (typeof error === 'string' && error.length > 0) ? error : null;
+}
+function clearScreenCapturePreview() {
+  appState.screenCapture.preview = null;
+}
+function resetScreenCaptureState() {
+  appState.screenCapture.sources = [];
+  appState.screenCapture.selectedSourceId = null;
+  appState.screenCapture.preview = null;
+  appState.screenCapture.isLoading = false;
+  appState.screenCapture.lastError = null;
+  appState.screenCapture.lastCapturedAt = null;
 }
