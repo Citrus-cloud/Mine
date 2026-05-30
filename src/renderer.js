@@ -59,20 +59,29 @@ let currentDryRunPlan = null;        // Step 19: in-memory dry-run plan
 // --- Views ---
 function showView(viewName) {
   setCurrentView(viewName);
-  viewMain.style.display = 'none';
-  viewScenarios.style.display = 'none';
-  viewScenarioForm.style.display = 'none';
-  viewSettings.style.display = 'none';
-  viewAdvanced.style.display = 'none';
+  // Bug fix: `.view-hidden` in styles.css uses `display: none !important`,
+  // which beats any inline `style.display = 'flex'`. To switch views
+  // reliably we toggle the class itself and clear any leftover inline
+  // display from earlier showView() calls.
+  const views = [
+    ['main',         viewMain],
+    ['scenarios',    viewScenarios],
+    ['scenarioForm', viewScenarioForm],
+    ['settings',     viewSettings],
+    ['advanced',     viewAdvanced]
+  ];
+  views.forEach(function (pair) {
+    var name = pair[0]; var el = pair[1];
+    if (!el) return;
+    el.style.display = '';
+    if (name === viewName) {
+      el.classList.remove('view-hidden');
+    } else {
+      el.classList.add('view-hidden');
+    }
+  });
   const container = document.querySelector('.container');
   container.style.maxWidth = (viewName === 'advanced') ? '720px' : '520px';
-  switch (viewName) {
-    case 'main': viewMain.style.display = 'flex'; break;
-    case 'scenarios': viewScenarios.style.display = 'flex'; break;
-    case 'scenarioForm': viewScenarioForm.style.display = 'flex'; break;
-    case 'settings': viewSettings.style.display = 'flex'; break;
-    case 'advanced': viewAdvanced.style.display = 'flex'; break;
-  }
 }
 
 // --- Render State ---
