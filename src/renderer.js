@@ -283,6 +283,7 @@ function renderAdvancedDashboard() {
     case 'safety': renderAdvancedSafety(); break;
     case 'screenCapture': if (typeof renderScreenCapture === 'function') renderScreenCapture(); break;
     case 'templates': if (typeof renderTemplatesTab === 'function') renderTemplatesTab(); break;
+    case 'templateMatching': if (typeof renderTemplateMatchingTab === 'function') renderTemplateMatchingTab(); break;
     case 'future': renderAdvancedFuture(); break;
   }
 }
@@ -765,6 +766,34 @@ function renderAdvancedSafety() {
   addCardRow(tplCard, t('templateMatchingPlanned'),      t('planned'));
   c.appendChild(tplCard);
 
+  // --- Step 28: Template matching mock / dry-run status ---
+  // The card sits next to the Step 27 templates card so the user
+  // sees the whole "asset → mock match" pipeline in one column.
+  const tmCard = document.createElement('div'); tmCard.className = 'adv-card';
+  const tmTitle = document.createElement('div'); tmTitle.className = 'adv-card-title';
+  tmTitle.textContent = t('templateMatchingDiagnostics');
+  tmCard.appendChild(tmTitle);
+  const tmState = state.templateMatching || { lastInput: null, lastResult: null, lastError: null, lastRunAt: null };
+  const tmResult = tmState.lastResult || null;
+  const tmActiveTplId = state.templates ? state.templates.activeTemplateId : null;
+  const tmPreviewAvailable = !!(state.screenCapture && state.screenCapture.preview);
+  const tmRegionAvailable  = !!(state.regionSelector && state.regionSelector.normalizedRegion);
+  addCardRow(tmCard, t('lastRunAt'),                tmState.lastRunAt || t('none2'));
+  addCardRow(tmCard, t('lastResult'),               tmResult ? t('yes') : t('no'));
+  addCardRow(tmCard, t('matchConfidence'),          tmResult ? ((Math.round(tmResult.confidence * 1000) / 10).toFixed(1) + '%') : t('none2'));
+  addCardRow(tmCard, t('targetPoint'),              tmResult && tmResult.targetPoint ? ((tmResult.targetPoint.x | 0) + ', ' + (tmResult.targetPoint.y | 0)) : t('none2'));
+  addCardRow(tmCard, 'activeTemplateId',            tmActiveTplId || t('none2'));
+  addCardRow(tmCard, t('previewAvailable'),         tmPreviewAvailable ? t('yes') : t('no'));
+  addCardRow(tmCard, 'regionAvailable',             tmRegionAvailable ? t('yes') : t('no'));
+  addCardRow(tmCard, t('realMatchingDisabled'),     t('flagEnabled'));
+  addCardRow(tmCard, t('realClickDisabled'),        t('flagEnabled'));
+  addCardRow(tmCard, t('realImageRecognitionNotImplemented'), t('flagDisabled'));
+  addCardRow(tmCard, t('imageClickScenarioPlanned'),          t('planned'));
+  if (tmState.lastError) {
+    addCardRow(tmCard, 'lastError', tmState.lastError);
+  }
+  c.appendChild(tmCard);
+
   // --- Step 18: Desktop adapter status ---
   const adCard = document.createElement('div'); adCard.className = 'adv-card';
   const adTitle = document.createElement('div'); adTitle.className = 'adv-card-title'; adTitle.textContent = t('desktopAdapterStatus'); adCard.appendChild(adTitle);
@@ -989,7 +1018,18 @@ async function copyDiagnostics() {
     if (_foundForDiag && _foundForDiag.name) tplActiveName = _foundForDiag.name;
   }
   const tplLine = `Templates: count=${tplItemsForDiag.length}, storageCount=${templatesStats.count|0}, storageReady=${!!templatesStats.storageReady}, activeTemplateId=${tpl.activeTemplateId || 'none'}, activeTemplateName=${tplActiveName}, lastError=${tpl.lastError || 'none'}, screenMatchingImplemented=false, ocrImplemented=false, realClicksImplemented=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  // Step 28: Template Matching Mock / Dry-run line. Numbers and ids
+  // only — never base64, never imageDataUrl, never pixel data.
+  const tm = state.templateMatching || { lastResult: null, lastError: null, lastRunAt: null };
+  const tmResultForDiag = tm.lastResult || null;
+  const tmConfidence = tmResultForDiag && typeof tmResultForDiag.confidence === 'number' ? tmResultForDiag.confidence : 'none';
+  const tmTargetX = tmResultForDiag && tmResultForDiag.targetPoint ? (tmResultForDiag.targetPoint.x | 0) : 'none';
+  const tmTargetY = tmResultForDiag && tmResultForDiag.targetPoint ? (tmResultForDiag.targetPoint.y | 0) : 'none';
+  const tmActiveTplDiag = state.templates ? (state.templates.activeTemplateId || 'none') : 'none';
+  const tmPreviewAvailDiag = !!(state.screenCapture && state.screenCapture.preview);
+  const tmRegionAvailDiag = !!(state.regionSelector && state.regionSelector.normalizedRegion);
+  const tmLine = `Template matching mock: lastRunAt=${tm.lastRunAt || 'none'}, lastResult=${!!tmResultForDiag}, lastConfidence=${tmConfidence}, lastTargetPoint=${tmTargetX},${tmTargetY}, activeTemplateId=${tmActiveTplDiag}, screenPreviewAvailable=${tmPreviewAvailDiag}, regionAvailable=${tmRegionAvailDiag}, lastError=${tm.lastError || 'none'}, realMatching=false, realClick=false, matcherImplemented=false, imageClickScenarioImplemented=false`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();

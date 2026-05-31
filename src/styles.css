@@ -2172,3 +2172,268 @@ body {
     max-height: 120px;
   }
 }
+
+
+
+/* =====================================================================
+   Step 28 — Template Matching Mock / Dry-run
+   --------------------------------------------------------------------- */
+
+.template-matching-mock-notice {
+  margin-bottom: var(--space-3);
+}
+
+.template-matching-actions {
+  margin-bottom: var(--space-3);
+}
+
+/* Requirements checklist — visually similar to .adv-card-row but with
+   a coloured marker so the user gets a green/amber/red snapshot. */
+.template-matching-requirements .template-matching-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.template-matching-checklist-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.template-matching-check-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--card-muted, var(--card));
+  color: var(--muted);
+}
+
+.template-matching-check-ok {
+  background: rgba(46, 160, 67, 0.18);
+  border-color: rgba(46, 160, 67, 0.4);
+  color: #1a7f37;
+}
+
+.template-matching-check-todo {
+  background: rgba(207, 34, 46, 0.12);
+  border-color: rgba(207, 34, 46, 0.35);
+  color: #cf222e;
+}
+
+.template-matching-check-optional {
+  background: var(--card-muted, var(--card));
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.template-matching-check-label {
+  flex: 1;
+  word-break: break-word;
+}
+
+.template-matching-check-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Input summary card / result card */
+
+.template-matching-input-card,
+.template-matching-result-card,
+.template-matching-action-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.template-matching-mock-badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(120, 100, 200, 0.18);
+  color: #5b3aa9;
+  border: 1px solid rgba(120, 100, 200, 0.35);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.template-matching-error {
+  margin-bottom: var(--space-2);
+}
+
+.template-matching-empty {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* Visual overlay — preview backdrop, bounding box, target point */
+
+.template-matching-overlay-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.template-matching-overlay-wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--card-muted, var(--card));
+  /* Reserve some space even before the image loads. */
+  min-height: 160px;
+}
+
+.template-matching-overlay-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Disable native drag-image. */
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+/* The used region rectangle (Step 26 region projected back into
+   percent-of-preview). Dashed so it never visually competes with
+   the actual match. */
+.template-matching-overlay-region {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed rgba(79, 142, 247, 0.85);
+  background: rgba(79, 142, 247, 0.08);
+  box-sizing: border-box;
+}
+
+/* The mock match bounding box. Solid + faint fill. */
+.template-matching-overlay-bbox {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid rgba(207, 34, 46, 0.85);
+  background: rgba(207, 34, 46, 0.1);
+  box-sizing: border-box;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+}
+
+.template-matching-overlay-confidence {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.92);
+  color: #cf222e;
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* The target-point dot. Centered on (left, top). */
+.template-matching-overlay-target {
+  position: absolute;
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  margin-top: -7px;
+  border: 2px solid #fff;
+  background: rgba(207, 34, 46, 0.95);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+.template-matching-overlay-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Action preview JSON block */
+
+.template-matching-action-preview-json {
+  margin: 0;
+  background: var(--card-muted, var(--card));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-2);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--text);
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 280px;
+}
+
+.template-matching-action-preview-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Dark theme tweaks */
+
+[data-theme="dark"] .template-matching-check-ok {
+  background: rgba(63, 185, 80, 0.16);
+  border-color: rgba(63, 185, 80, 0.45);
+  color: #4ac26b;
+}
+
+[data-theme="dark"] .template-matching-check-todo {
+  background: rgba(248, 81, 73, 0.16);
+  border-color: rgba(248, 81, 73, 0.45);
+  color: #ff7b72;
+}
+
+[data-theme="dark"] .template-matching-overlay-bbox {
+  border-color: rgba(248, 81, 73, 0.92);
+  background: rgba(248, 81, 73, 0.18);
+}
+
+[data-theme="dark"] .template-matching-overlay-confidence {
+  background: rgba(20, 24, 33, 0.92);
+  color: #ff7b72;
+}
+
+[data-theme="dark"] .template-matching-overlay-target {
+  background: rgba(248, 81, 73, 0.95);
+  border-color: var(--card);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+[data-theme="dark"] .template-matching-overlay-region {
+  border-color: rgba(120, 173, 255, 0.85);
+  background: rgba(120, 173, 255, 0.12);
+}
+
+[data-theme="dark"] .template-matching-mock-badge {
+  background: rgba(140, 120, 220, 0.22);
+  color: #c4a8ff;
+  border-color: rgba(140, 120, 220, 0.5);
+}
+
+@media (max-width: 760px) {
+  .template-matching-overlay-wrapper {
+    max-width: 100%;
+  }
+  .template-matching-action-preview-json {
+    font-size: 0.74rem;
+  }
+}

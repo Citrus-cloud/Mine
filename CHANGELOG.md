@@ -8,7 +8,7 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
-## [Unreleased] — Steps 15-27
+## [Unreleased] — Steps 15-28
 
 Final stabilization of the simulation-only beta, design-only handoff
 to the future real-input release line, the Step 17 architectural
@@ -18,10 +18,171 @@ Step 20 final beta QA pass, the Step 21 beta release packaging
 pass, the Step 22 GitHub beta release finalization, the Step 23
 post-pack QA and release blocker pass, the Step 24 final beta
 release preparation, the Step 25 Screen Capture Foundation, the
-Step 26 Region Selector Foundation, and the **Step 27 Template
-Asset Manager** (storage layer for the future smart-visual line —
-the matcher itself is still not implemented). **Still
-simulation-only.**
+Step 26 Region Selector Foundation, the Step 27 Template Asset
+Manager, and the **Step 28 Template Matching Mock / Dry-run**
+(mock-only pipeline that wires the previous three foundations
+into a deterministic bounding-box / target-point preview without
+ever decoding a pixel — the matcher itself is still not
+implemented). **Still simulation-only.**
+
+### Added (Step 28 — Template Matching Mock / Dry-run)
+
+- `src/template-matching-mock.js` — new pure-logic module:
+  `createTemplateMatchInput(screenPreview, template, region)`
+  (sanitises plain-data inputs and explicitly drops any
+  `imageDataUrl` / `previewDataUrl`),
+  `validateTemplateMatchInput(input)` (preview width/height > 0,
+  template id + width/height > 0, optional region delegated to
+  `validateRegion` with bounds inside the preview),
+  `runMockTemplateMatch(input, options)`,
+  `createMockMatchResult(input, options)` (deterministic
+  geometry: bounding box centred on region or preview, capped to
+  half the search-bound dimensions; target point = bbox center;
+  confidence picked from a frozen `[0.87, 0.82, 0.91, 0.78,
+  0.85, 0.89]` set by hashing the input metadata),
+  `getMockTargetPoint(match)`,
+  `createImageClickActionPreview(match)` (returns the planned
+  `image_click` shape — `mode: "preview"`, `realClick: false`,
+  `realMatching: false`),
+  `clearMockMatchResult()`,
+  `getLastMockMatchResult()`,
+  `getTemplateMatchingMockStatus()`. The matcher is pure logic
+  — it never decodes a pixel, never imports `electron` or
+  `ipcRenderer`, never persists anything outside the
+  module-local `_lastMockResult`.
+- `src/template-matching-ui.js` — new renderer UI module driving
+  the Template Matching tab:
+  `openTemplateMatchingTab`, `renderTemplateMatchingTab`,
+  `buildTemplateMatchInputFromState`, `runTemplateMatchingMock`,
+  `clearTemplateMatchingMockResult`,
+  `renderTemplateMatchingRequirements` (five-row checklist:
+  screen preview / active template / region [optional] / real
+  matching disabled / real click disabled; coloured markers),
+  `renderTemplateMatchingInputSummary`,
+  `renderTemplateMatchingResult` (mock badge + matched / confidence /
+  bounding box / target point / used region / template name /
+  createdAt / real-matching-disabled / real-click-disabled rows),
+  `renderTemplateMatchingOverlay` (preview backdrop with the
+  dashed used-region rectangle + the solid match rectangle +
+  confidence badge inside the rectangle + target-point dot),
+  `renderActionPreview` (planned `image_click` JSON block
+  rendered via `<pre>.textContent`, never executed). All
+  user-visible text via `textContent`; `innerHTML` only as
+  `= ''` (container clear).
+- `src/app-state.js` — new `appState.templateMatching` slice
+  (`lastInput`, `lastResult`, `isRunning`, `lastError`,
+  `lastRunAt`) + six mutators (`setTemplateMatchingInput`,
+  `setTemplateMatchingResult`, `setTemplateMatchingRunning`,
+  `setTemplateMatchingError`, `clearTemplateMatchingResult`,
+  `resetTemplateMatchingState`). `getState()` deep-copies via
+  `_cloneTemplateMatchInput` / `_cloneTemplateMatchResult`,
+  which strip any unexpected pixel-bearing fields (defence in
+  depth — the matching mock already drops them, but the slice
+  enforces the invariant a second time).
+- `src/audit-events.js` — five new allowlisted event types:
+  `template.match.mock.requested`,
+  `template.match.mock.completed`,
+  `template.match.mock.failed`,
+  `template.match.mock.cleared`,
+  `image.click.preview.created`. Payloads carry only ids and
+  numeric metadata (confidence, target X/Y, bounding-box
+  width/height, `usedRegion: bool`) — never an `imageDataUrl`,
+  never a thumbnail.
+- `src/index.html` — adds the Template Matching tab button and
+  section, and loads `template-matching-mock.js` then
+  `template-matching-ui.js` before `renderer.js`. Tab list is
+  now ten entries.
+- `src/renderer.js` —
+  - `setAdvancedTab` switch gains `case 'templateMatching'`;
+  - `renderAdvancedSafety()` gains a compact
+    **Template matching (mock)** diagnostics card
+    (`Last run at`, `Last result`, `Confidence`, `Target point`,
+    `activeTemplateId`, `Preview available`, `regionAvailable`,
+    `Real matching disabled`, `Real click disabled`,
+    `Real image recognition is not implemented`,
+    `image_click scenario action is planned`, `lastError`);
+  - `copyDiagnostics()` gains a new `Template matching mock: …`
+    line (numeric / metadata only — never base64).
+- `src/styles.css` — new section "Step 28 — Template Matching
+  Mock / Dry-run" at the bottom: `.template-matching-mock-notice`,
+  `.template-matching-actions`, `.template-matching-checklist`,
+  `.template-matching-check-marker` (ok / todo / optional
+  variants), `.template-matching-mock-badge`,
+  `.template-matching-overlay-wrapper`,
+  `.template-matching-overlay-image` (no native drag),
+  `.template-matching-overlay-region` (dashed),
+  `.template-matching-overlay-bbox` (solid + faint fill),
+  `.template-matching-overlay-confidence` (small badge inside
+  the box), `.template-matching-overlay-target` (centered dot),
+  `.template-matching-action-preview-json` (monospace, max-height
+  280 px), dark-theme tweaks via `[data-theme="dark"]`, mobile
+  fallback at `max-width: 760px`.
+- `src/i18n.js` — 27 new keys per language (RU + EN):
+  `templateMatching`, `mockTemplateMatching`, `runMockMatch`,
+  `clearMatchResult`, `matchResult`, `matchConfidence`,
+  `boundingBox`, `targetPoint`, `usedRegion`, `actionPreview`,
+  `imageClickPreview`, `realMatchingDisabled`,
+  `realClickDisabled`, `mockMatchNotice`, `screenPreviewRequired`,
+  `activeTemplateRequired`, `regionOptional`, `matchInputSummary`,
+  `noMatchResult`, `mockMatchCompleted`, `mockMatchFailed`,
+  `mockMatchCleared`, `visualMatchOverlay`,
+  `realImageRecognitionNotImplemented`,
+  `imageClickScenarioPlanned`, `templateMatchingDiagnostics`,
+  `lastRunAt`, `lastResult`.
+- `docs/TEMPLATE_MATCHING_MOCK.md` — new doc covering purpose,
+  current status, why mock first, input data, mock result format,
+  action preview format, what is **not** implemented, future real
+  template matching, and safety notes.
+- `docs/SECURITY_CHECKLIST.md` — adds **Template matching mock
+  (Step 28)** section.
+- `docs/KNOWN_LIMITATIONS.md` — adds section 12 **Template
+  matching is mock only (Step 28)**.
+- `docs/SMOKE_TESTS.md` — adds **Step 28 — Template Matching
+  Mock / Dry-run** smoke checks (#222–#239).
+- `docs/ACTION_SCHEMA.md` — adds the `image_click` action
+  preview shape (still **not** executed).
+- `docs/SCREEN_CAPTURE.md` / `docs/REGION_SELECTOR.md` /
+  `docs/TEMPLATE_ASSETS.md` — cross-link to the Step 28 mock
+  pipeline.
+- `scripts/smoke-check.js` — adds Step-28 invariants:
+  `src/template-matching-mock.js` exists,
+  `src/template-matching-ui.js` exists,
+  `docs/TEMPLATE_MATCHING_MOCK.md` exists, all documented
+  function names declared by both modules, neither module
+  imports `electron` or `ipcRenderer`, no `localStorage` use,
+  no `innerHTML` on user data, `appState.templateMatching`
+  slice + six mutators, audit allowlist contains the five
+  new types, `index.html` wires the tab, the renderer's
+  switch statement, the diagnostics card, the Copy diagnostics
+  line, and `package.json` STILL declares zero of `tesseract`,
+  `tesseract.js`, `opencv4nodejs`, `@u4/opencv4nodejs`,
+  `opencv.js`, `sharp`, `jimp`, `pixelmatch`, `looks-same`,
+  `robotjs`, `nut-js`, `nutjs`, `@nut-tree/nut-js`, `iohook`,
+  `uiohook-napi`, `node-key-sender`.
+
+### Safety invariants kept (Step 28)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `ocrImplemented: false`, `imageRecognitionImplemented: false`,
+  `realMatching: false`, `realClick: false`,
+  `matcherImplemented: false`,
+  `imageClickScenarioImplemented: false` in every status
+  response, audit event, and diagnostics line.
+- The mock matcher is pure metadata math. It never decodes a
+  pixel, never reads an image file, never compares pixels.
+- The mock match result lives only in
+  `appState.templateMatching.lastResult` (renderer memory). It
+  is never written to `templates.json`, `settings.json`,
+  `scenarios.json`, `profiles.json`, or `localStorage`.
+- The action preview is rendered via `<pre>.textContent`. No
+  HTML interpolation. The click engine, the action pipeline,
+  the mock adapter, and the dry-run sandbox do not recognise
+  the `image_click` action type.
+- No new IPC channel is registered for matching at Step 28.
+  The renderer does not gain any new privilege over the OS.
+- Audit payloads carry only ids and numeric metadata.
 
 ### Added (Step 27 — Template Asset Manager)
 

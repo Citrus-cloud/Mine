@@ -2087,6 +2087,344 @@ record(
   htmlTxt3.indexOf('unsafe-eval') === -1
 );
 
+// --- Step 28: Template Matching Mock / Dry-run ---
+
+// 110. New source / doc files exist.
+[
+  'src/template-matching-mock.js',
+  'src/template-matching-ui.js'
+].forEach(function (rel) {
+  record('Step 28 file exists: ' + rel, fileExists(rel));
+});
+record('Step 28 doc exists: docs/TEMPLATE_MATCHING_MOCK.md', fileExists('docs/TEMPLATE_MATCHING_MOCK.md'));
+
+// 111. template-matching-mock.js declares the documented surface
+//     and stays renderer-pure (no electron, no ipcRenderer, no fs).
+var tmMock = readText('src/template-matching-mock.js');
+[
+  'function createTemplateMatchInput',
+  'function validateTemplateMatchInput',
+  'function runMockTemplateMatch',
+  'function createMockMatchResult',
+  'function getMockTargetPoint',
+  'function createImageClickActionPreview',
+  'function clearMockMatchResult',
+  'function getTemplateMatchingMockStatus'
+].forEach(function (needle) {
+  record(
+    'template-matching-mock.js declares ' + needle,
+    tmMock.indexOf(needle) !== -1
+  );
+});
+record(
+  'template-matching-mock.js does not require electron or ipcRenderer',
+  tmMock.indexOf("require('electron')") === -1 &&
+  tmMock.indexOf("require('ipcRenderer')") === -1 &&
+  tmMock.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'template-matching-mock.js never persists results via localStorage',
+  (function () {
+    var stripped = tmMock
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map(function (ln) { return ln.replace(/\/\/.*$/, ''); })
+      .join('\n');
+    return stripped.indexOf('localStorage') === -1;
+  })()
+);
+record(
+  'template-matching-mock.js stamps realMatching=false / realClick=false on results',
+  /realMatching\s*:\s*false/.test(tmMock) && /realClick\s*:\s*false/.test(tmMock)
+);
+
+// 112. template-matching-ui.js declares the documented surface,
+//     stays DOM-safe, and never speaks to ipcRenderer.
+var tmUi = readText('src/template-matching-ui.js');
+[
+  'function renderTemplateMatchingTab',
+  'function buildTemplateMatchInputFromState',
+  'function runTemplateMatchingMock',
+  'function clearTemplateMatchingMockResult',
+  'function renderTemplateMatchingRequirements',
+  'function renderTemplateMatchingInputSummary',
+  'function renderTemplateMatchingResult',
+  'function renderTemplateMatchingOverlay',
+  'function renderActionPreview'
+].forEach(function (needle) {
+  record(
+    'template-matching-ui.js declares ' + needle,
+    tmUi.indexOf(needle) !== -1
+  );
+});
+record(
+  'template-matching-ui.js does not require electron or ipcRenderer',
+  tmUi.indexOf("require('electron')") === -1 &&
+  tmUi.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'template-matching-ui.js never persists results via localStorage',
+  (function () {
+    var stripped = tmUi
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map(function (ln) { return ln.replace(/\/\/.*$/, ''); })
+      .join('\n');
+    return stripped.indexOf('localStorage') === -1;
+  })()
+);
+record(
+  'template-matching-ui.js never assigns innerHTML to user data',
+  (function () {
+    var lines = tmUi.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var code = lines[i].replace(/\/\/.*$/, '').trim();
+      if (code.indexOf('innerHTML') === -1) continue;
+      if (!/innerHTML\s*=\s*(['"])\s*\1\s*;?\s*$/.test(code)) return false;
+    }
+    return true;
+  })()
+);
+
+// 113. app-state.js declares the templateMatching slice and 6 mutators.
+record(
+  'app-state.js declares appState.templateMatching slice',
+  /templateMatching\s*:\s*\{[\s\S]{0,400}lastResult/.test(appStateTxt)
+);
+[
+  'function setTemplateMatchingInput',
+  'function setTemplateMatchingResult',
+  'function setTemplateMatchingRunning',
+  'function setTemplateMatchingError',
+  'function clearTemplateMatchingResult',
+  'function resetTemplateMatchingState'
+].forEach(function (needle) {
+  record(
+    'app-state.js declares ' + needle,
+    appStateTxt.indexOf(needle) !== -1
+  );
+});
+
+// 114. audit-events.js allowlist contains the five new template.match.* /
+//     image.click.preview.* types.
+[
+  "'template.match.mock.requested'",
+  "'template.match.mock.completed'",
+  "'template.match.mock.failed'",
+  "'template.match.mock.cleared'",
+  "'image.click.preview.created'"
+].forEach(function (needle) {
+  record(
+    'audit allowlist includes ' + needle.replace(/'/g, ''),
+    auditTxt.indexOf(needle) !== -1
+  );
+});
+
+// 115. index.html wires the new tab + scripts in the right order.
+record(
+  'index.html has Template Matching tab button',
+  /data-advanced-tab=['"]templateMatching['"]/.test(htmlTxt3)
+);
+record(
+  'index.html has Template Matching section',
+  /id=['"]advanced-tab-templateMatching['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads template-matching-mock.js',
+  /src=['"]template-matching-mock\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads template-matching-ui.js',
+  /src=['"]template-matching-ui\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads template-matching-mock.js BEFORE template-matching-ui.js',
+  htmlTxt3.indexOf('template-matching-mock.js') !== -1 &&
+  htmlTxt3.indexOf('template-matching-ui.js') !== -1 &&
+  htmlTxt3.indexOf('template-matching-mock.js') < htmlTxt3.indexOf('template-matching-ui.js')
+);
+record(
+  'index.html loads template-matching-ui.js BEFORE renderer.js',
+  htmlTxt3.indexOf('template-matching-ui.js') !== -1 &&
+  htmlTxt3.indexOf('renderer.js') !== -1 &&
+  htmlTxt3.indexOf('template-matching-ui.js') < htmlTxt3.indexOf('renderer.js')
+);
+
+// 116. renderer.js diagnostics card + Copy diagnostics line.
+record(
+  'renderer.js wires Template Matching tab into setAdvancedTab switch',
+  /case 'templateMatching'[\s\S]{0,80}renderTemplateMatchingTab/.test(rendTxt)
+);
+record(
+  'renderer.js has Template matching (mock) diagnostics card',
+  rendTxt.indexOf("t('templateMatchingDiagnostics')") !== -1
+);
+record(
+  'renderer.js Copy diagnostics has Template matching mock line',
+  /Template matching mock: lastRunAt=[\s\S]{0,500}matcherImplemented=false/.test(rendTxt)
+);
+
+// 117. README / PROJECT_CONTEXT mention step 28 / template matching mock.
+record(
+  'README or PROJECT_CONTEXT mentions step 28',
+  /step\s*28|шаг\s*28|Step 28|Шаг 28/.test(readText('README.md')) ||
+  /step\s*28|шаг\s*28|Step 28|Шаг 28/.test(readText('PROJECT_CONTEXT.md'))
+);
+record(
+  'README or PROJECT_CONTEXT mentions template matching mock / mock matching / Поиск шаблона',
+  /template[\s-]matching\s*mock|mock\s*matching|Template Matching|Поиск\s*шаблона/i.test(readText('README.md')) ||
+  /template[\s-]matching\s*mock|mock\s*matching|Template Matching|Поиск\s*шаблона/i.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 118. docs/TEMPLATE_MATCHING_MOCK.md asserts simulation-only / mock-only.
+var tmDoc = readText('docs/TEMPLATE_MATCHING_MOCK.md');
+record(
+  'docs/TEMPLATE_MATCHING_MOCK.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(tmDoc)
+);
+record(
+  'docs/TEMPLATE_MATCHING_MOCK.md asserts mock / dry-run only',
+  /mock\s*\/\s*dry-?run|mock-only|mock\s+only|dry-?run\s+only/i.test(tmDoc)
+);
+record(
+  'docs/TEMPLATE_MATCHING_MOCK.md asserts no real clicks / OCR / image matching at step 28',
+  /(no real clicks|never\s+executes\s+a\s+real\s+click|no real cursor)/i.test(tmDoc) &&
+  /(no ocr|no\s+OCR|never runs ocr)/i.test(tmDoc) &&
+  /(no real image matching|no\s+real\s+image\s+matching|matcher.+(?:still\s+)?not\s+implemented)/i.test(tmDoc)
+);
+record(
+  'docs/TEMPLATE_MATCHING_MOCK.md describes the mock result format',
+  /boundingBox/i.test(tmDoc) && /targetPoint/i.test(tmDoc) && /confidence/i.test(tmDoc) && /usedRegion/i.test(tmDoc)
+);
+record(
+  'docs/TEMPLATE_MATCHING_MOCK.md describes the image_click action preview',
+  /image_click/i.test(tmDoc) && /preview/i.test(tmDoc)
+);
+
+// 119. SECURITY_CHECKLIST has a Template matching mock (Step 28) section.
+var tmSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has Template matching mock (Step 28) section',
+  /template\s+matching\s+mock\s*\(?step\s*28/i.test(tmSec) ||
+  /## Template matching mock/i.test(tmSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts mock matching only / no OpenCV / no real clicks at step 28',
+  /no real clicks/i.test(tmSec) &&
+  /no\s+OpenCV/i.test(tmSec) &&
+  (/mock matching only|mock\s*\/\s*dry-?run|mock-only/i.test(tmSec))
+);
+
+// 120. KNOWN_LIMITATIONS / SMOKE_TESTS / ACTION_SCHEMA reference step 28.
+var klTxt28 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has a Template matching is mock only (Step 28) section',
+  /template\s+matching\s+is\s+mock\s+only/i.test(klTxt28) ||
+  /##\s*12\.\s*Template matching/i.test(klTxt28)
+);
+var stTxt28 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 28 template matching mock block',
+  /Step\s*28\s*[—-]\s*Template Matching Mock/i.test(stTxt28) ||
+  /Step 28.*Template Matching Mock/i.test(stTxt28)
+);
+var asDoc28 = readText('docs/ACTION_SCHEMA.md');
+record(
+  'docs/ACTION_SCHEMA.md describes the image_click action preview (Step 28)',
+  /image_click/i.test(asDoc28) && /preview/i.test(asDoc28) && /templateId/i.test(asDoc28)
+);
+
+// 121. CHANGELOG mentions Step 28 / Template Matching Mock.
+var chTxt28 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 28 — Template Matching Mock',
+  /Step\s*28.*Template Matching Mock/i.test(chTxt28) ||
+  /Шаг\s*28.*Template Matching Mock/i.test(chTxt28) ||
+  /Template Matching Mock/i.test(chTxt28)
+);
+
+// 122. package.json must STILL NOT pull in OCR / OpenCV / robotjs / nut.js
+//     / image recognition / template matching / sharp / jimp / pixelmatch
+//     / looks-same / opencv.js at step 28.
+if (pkg) {
+  var allDeps28 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step28Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps28, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 28',
+    step28Forbidden.length === 0,
+    step28Forbidden.length ? step28Forbidden.join(', ') : ''
+  );
+}
+
+// 123. Source files don't import OCR / OpenCV / image-recognition / sharp at step 28.
+var step28SourceFiles = [
+  'main.js', 'preload.js',
+  'src/template-matching-mock.js',
+  'src/template-matching-ui.js'
+];
+var step28Imports = [
+  'tesseract.js', 'tesseract', 'opencv4nodejs', '@u4/opencv4nodejs',
+  'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep28Imports = [];
+step28SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step28Imports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep28Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 28 source files',
+  foundStep28Imports.length === 0,
+  foundStep28Imports.length ? foundStep28Imports.join(', ') : ''
+);
+
+// 124. main.js still does not flip the simulation-only safety flags at step 28.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 28)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 28)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 28 (no unsafe-inline / unsafe-eval)',
+  htmlTxt3.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt3.indexOf('unsafe-inline') === -1 &&
+  htmlTxt3.indexOf('unsafe-eval') === -1
+);
+
+// 125. Step 28 introduces no new IPC channel (renderer-only).
+record(
+  'main.js does not register any template.match.* IPC handler at step 28',
+  !/ipcMain\.handle\(['"]template\.match/.test(mainTxt)
+);
+record(
+  'preload.js does not expose any template.match.* API at step 28',
+  preloadTxt.indexOf("'template.match.") === -1 &&
+  preloadTxt.indexOf('"template.match.') === -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

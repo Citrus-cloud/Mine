@@ -260,3 +260,28 @@ mock adapter has no handler for `image_click`.
 - [`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md) — the
   contract that gates the matcher and any "click on template"
   action.
+
+
+
+---
+
+## Step 28 — Templates can now feed the mock matcher
+
+Step 28 introduces a [Template Matching Mock / Dry-run](./TEMPLATE_MATCHING_MOCK.md)
+pipeline that consumes templates as **read-only input metadata**
+(`{ id, name, width, height }`). The bytes themselves are never
+accessed by the matcher in `0.1.x`:
+
+- the matcher is mock — it never decodes a single pixel;
+- it never reads `userData/templates/images/<fileName>`;
+- it never persists a match result back to `templates.json`;
+- it never modifies, renames, or deletes any template asset.
+
+Templates remain stored ASSETS only. The mock matcher just lets
+the renderer wire the asset metadata into a future-shaped
+bounding-box / target-point pipeline so a real matcher can drop
+in later behind the
+[real-actions go/no-go](./REAL_ACTIONS_GO_NO_GO.md) gate without
+re-shaping the storage layer.
+
+See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md).

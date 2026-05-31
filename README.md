@@ -29,9 +29,9 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлены read-only **Screen Capture Foundation** (Step 25 — preview only), **Region Selector Foundation** (Step 26 — rectangular selection on the preview) и **Template Asset Manager** (Step 27 — image assets storage only). Поиск шаблонов на скриншоте, OCR, image matching и реальные клики **по-прежнему не реализованы**.
+- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлены read-only **Screen Capture Foundation** (Step 25 — preview only), **Region Selector Foundation** (Step 26 — rectangular selection on the preview), **Template Asset Manager** (Step 27 — image assets storage only) и **Template Matching Mock / Dry-run** (Step 28 — mock-only pipeline that combines all three foundations into a bounding-box / target-point preview without ever decoding a pixel). Поиск шаблонов на скриншоте, OCR, image matching и реальные клики **по-прежнему не реализованы**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
@@ -321,9 +321,11 @@ safety review).
 - Импорт / экспорт / сброс настроек.
 
 ### Расширенный режим
-Девять вкладок: Overview, Scenarios, Execution, Logs, Settings,
+Десять вкладок: Overview, Scenarios, Execution, Logs, Settings,
 Safety, **Screen Capture** (Step 25 — preview only),
-**Templates / Шаблоны** (Step 27 — assets only), Future.
+**Templates / Шаблоны** (Step 27 — assets only),
+**Template Matching / Поиск шаблона** (Step 28 — mock / dry-run only),
+Future.
 Diagnostics, история ошибок, профили, импорт /
 экспорт, readiness-чеклист desktop-адаптера, **Beta health card**
 (Step 15), **Feature flags card** (Step 16), **Next safety milestone**
@@ -354,6 +356,16 @@ PNG/JPG/JPEG/WebP через `dialog.showOpenDialog`, preview, именем,
 (`templatesCount`, `activeTemplateId`, `activeTemplateName`,
 `templatesStorageReady`, `lastError`). **Поиск шаблонов на
 скриншоте, OCR и клики по найденному не выполняются.**
+**Step 28:** новая вкладка **Template Matching / Поиск шаблона**
+с requirements checklist, input summary, кнопками Run mock
+match / Clear result, визуальным overlay (bounding box + target
+point + dashed used region) поверх preview и JSON-предпросмотром
+будущего `image_click` action + компактная карточка
+**Template matching (mock)** в Advanced → Safety (`Last run at`,
+`Last result`, `Confidence`, `Target point`, `activeTemplateId`,
+`Preview available`, `regionAvailable`, `Real matching disabled`,
+`Real click disabled`). **Это mock/dry-run — настоящего image
+matching, OCR и кликов нет.**
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -575,6 +587,7 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/RELEASE_TAG_PLAN.md`](./docs/RELEASE_TAG_PLAN.md) — manual git/GitHub command sequence для tag/push/publish (Step 24).
 - [`docs/RELEASE_COMMIT_MESSAGE.md`](./docs/RELEASE_COMMIT_MESSAGE.md) — recommended commit message для release-prep commit (Step 24).
 - [`docs/TEMPLATE_ASSETS.md`](./docs/TEMPLATE_ASSETS.md) — описание Template Asset Manager: модель хранения, формат метаданных, privacy/safety-инварианты, что **не** реализовано, planned `image_click` (Step 27).
+- [`docs/TEMPLATE_MATCHING_MOCK.md`](./docs/TEMPLATE_MATCHING_MOCK.md) — описание Template Matching Mock / Dry-run: входной формат, mock result, action preview, safety-инварианты, что **не** реализовано (Step 28).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
@@ -638,6 +651,7 @@ npm run dist     # релизные артефакты в dist/
 | 25 | Screen Capture Foundation | Three IPC handlers via `desktopCapturer`, safe `window.clickflow.screenCapture` preload API, `screen-capture-client.js`, `screen-capture-ui.js` (new Advanced → Screen Capture tab with safety notice, sources grid with thumbnails, preview card), `appState.screenCapture` slice, six new audit-event types, compact Screen capture status diagnostics card, 24 RU + EN i18n keys, `docs/SCREEN_CAPTURE.md`. Screenshots never written to disk. **Real clicks / OCR / image recognition / template matching / OpenCV / robotjs / nut.js / iohook still absent.** |
 | 26 | Region Selector Foundation | Pure-logic `region-selector.js` (`createRegion`, `validateRegion`, `scaleRegionToImage` / `scaleRegionToPreview`, `getRegionArea`, `formatRegion`, `createEmptyRegionState`), `region-selector-ui.js` (drag overlay; mousemove/mouseup bound only during drag), `appState.regionSelector` slice + 8 mutators, optional `scenario.settings.region` via new scenario-manager helpers (`validateRegionSettings`, `updateScenarioRegion`, `clearScenarioRegion`; old scenarios untouched), six new audit-event types, compact Region selector status diagnostics card + new `Region selector: …` line in Copy diagnostics, 22 RU + EN i18n keys, `docs/REGION_SELECTOR.md`. **Real clicks / OCR / image matching still absent.** |
 | 27 | Template Asset Manager | New `main/template-assets.js` with five `templates:*` IPC handlers (`load` / `import-image` / `save-metadata` / `delete` / `reset`) + `templates:get-stats`; png/jpg/jpeg/webp allow-list with magic-bytes verification, ≤16 MiB cap, header-only width/height parsing; `userData/templates/templates.json` + `userData/templates/images/` storage. `preload.js` `window.clickflow.templates`. New `src/template-manager.js` and `src/template-ui.js`. `appState.templates` slice + 5 mutators. Eight new `template.*` audit-event types. New 9th Advanced tab **Templates / Шаблоны** + compact **Image templates** diagnostics card + new `Templates: …` line in Copy diagnostics. 27 new RU + EN i18n keys. `docs/TEMPLATE_ASSETS.md`. **Image matching / OCR / template matching / real clicks / OpenCV / robotjs / nut.js / iohook / sharp / jimp / pixelmatch still absent. Templates are stored ASSETS only.** |
+| 28 | Template Matching Mock / Dry-run | New `src/template-matching-mock.js` (pure-logic: `createTemplateMatchInput`, `validateTemplateMatchInput`, `runMockTemplateMatch`, `createMockMatchResult`, `getMockTargetPoint`, `createImageClickActionPreview`, `clearMockMatchResult`, `getTemplateMatchingMockStatus`) and `src/template-matching-ui.js` (`renderTemplateMatchingTab`, `buildTemplateMatchInputFromState`, `runTemplateMatchingMock`, `clearTemplateMatchingMockResult`, `renderTemplateMatchingRequirements`, `renderTemplateMatchingInputSummary`, `renderTemplateMatchingResult`, `renderTemplateMatchingOverlay`, `renderActionPreview`). `appState.templateMatching` slice + 6 mutators. Five new `template.match.mock.*` / `image.click.preview.created` audit-event types. New 10th Advanced tab **Template Matching / Поиск шаблона** with mock notice, requirements checklist, input summary, Run / Clear buttons, visual overlay (bounding box + target point + dashed region) on top of the screen-capture preview, result card, and an `image_click` action-preview JSON block (rendered via `<pre>.textContent`, never executed). New compact **Template matching (mock)** diagnostics card + new `Template matching mock: …` line in Copy diagnostics. 27 new RU + EN i18n keys. `docs/TEMPLATE_MATCHING_MOCK.md`. **No real image matching, no OCR, no real clicks, no OpenCV, no `image_click` scenario execution. The matcher is pure metadata math — it never decodes a single pixel.** |
 
 ---
 
