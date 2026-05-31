@@ -729,3 +729,102 @@ that are **not** implemented at Step 31.
 See [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md) for the full
 description, the data shapes, the troubleshooting list, and the
 list of features that are **not** implemented at Step 32.
+
+
+
+## text_click scenario (Step 33)
+
+> Step 33 ships the `text_click` scenario type as
+> simulation-only ([`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md)).
+> The execution path runs the Step-32 mock OCR engine over the
+> captured preview every iteration and dispatches a simulated
+> `text_click` action through the existing action-pipeline.
+> NEVER moves the cursor. NEVER clicks. NEVER recognises real
+> text. NEVER opens a new IPC channel.
+
+### Behavioural invariants
+- [x] **text_click simulation only.** The cursor never moves.
+      No key is pressed. No window is focused.
+      `runTextClickScenario` calls `executeAction(action, ctx)`
+      with `executionMode: "simulation"` (forced by
+      `createActionContext`). Real execution is rejected.
+- [x] **OCR mock only.** `runTextClickScenario` calls the
+      Step-32 `runMockOcr()` engine. The mock fabricates
+      recognised-text blocks from preview metadata. No
+      Tesseract, no `tesseract.js`, no native OCR, no real text
+      recognition.
+- [x] **realClick: true is rejected.** `validateAction` (in
+      `action-pipeline.js`) and `validateActionSafety` (in
+      `safety-gates.js`) refuse any `text_click` action that
+      carries `realClick: true`. The pipeline records
+      `action.textClick.realBlocked` with
+      `reason: "...realClick=true rejected"`.
+- [x] **realOcr: true is rejected.** Both validators ALSO
+      refuse any `text_click` action that carries
+      `realOcr: true`. The pipeline records
+      `action.textClick.realBlocked` with
+      `reason: "...realOcr=true rejected"`. Even a fake
+      real-OCR flag never translates into a click.
+- [x] **No real click escape hatch.** `executionMode: "real"`
+      is rejected by the action-pipeline. The mock desktop
+      adapter is bypassed for `text_click` (it only knows
+      `click`). The dry-run sandbox does NOT consume
+      `text_click` either. There is no path from
+      `runTextClickScenario` to the OS.
+
+### Storage-level invariants
+- [x] **No `imageDataUrl` in scenario data.** `text_click`
+      scenarios carry only `targetText`, `language`,
+      `matchMode`, `caseSensitive`, optional `region` (numbers
+      only), `timeoutMs`, `intervalMs`, `repeatCount`. The
+      exporter / importer are untouched — they only ever see
+      metadata.
+- [x] **No screenshot persisted.** `text_click` scenarios never
+      write the screen-capture preview, the recognised blocks,
+      or the OCR result on disk. The preview lives in renderer
+      memory exactly as it did at Step 25; only the user's
+      explicit Capture preview action brings new pixel bytes
+      into memory.
+
+### Pipeline-level invariants
+- [x] **The mock desktop adapter does not consume `text_click`.**
+      Only `click` actions go through the adapter; `text_click`
+      flows through the legacy simulate branch which emits
+      `action.textClick.simulated`.
+- [x] **The dry-run sandbox does not consume `text_click`.**
+      Only `simple_click` actions are accepted by the dry-run
+      preview flow.
+- [x] **No prohibited dependencies.** `package.json` declares
+      zero of `tesseract`, `tesseract.js`, `tesseract-ocr`,
+      `node-tesseract-ocr`, `opencv4nodejs`, `@u4/opencv4nodejs`,
+      `opencv.js`, `opencv-js`, `sharp`, `jimp`, `pixelmatch`,
+      `looks-same`, `robotjs`, `nut-js`, `nutjs`,
+      `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`. Verified by `npm run smoke`.
+
+### Audit invariants
+- [x] All nine new audit-event types
+      (`scenario.textClick.started`,
+      `scenario.textClick.ocr.started`,
+      `scenario.textClick.ocr.completed`,
+      `scenario.textClick.textFound`,
+      `scenario.textClick.noTextFound`,
+      `scenario.textClick.simulated`,
+      `scenario.textClick.failed`,
+      `action.textClick.simulated`,
+      `action.textClick.realBlocked`) are part of the frozen
+      `AUDIT_EVENT_TYPES` allowlist. Payloads carry only ids
+      and numeric metadata. Payloads NEVER carry the full
+      target text (only `textLen`), an `imageDataUrl`, or PII.
+
+### Electron-security invariants (re-checked at Step 33)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no
+      `unsafe-eval`, no remote sources.
+
+See [`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md)
+for the full description, the data shape, the execution flow,
+and the list of features that are **not** implemented at
+Step 33.

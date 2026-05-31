@@ -195,5 +195,32 @@ function validateActionSafety(action /*, settings */) {
     }
     return _ok();
   }
+  if (action.type === 'text_click') {
+    // Step 33: text_click is simulation-only. Both realClick AND
+    // realOcr must be falsy. Real text recognition is not
+    // connected at Step 33 — mock OCR fabricates the target
+    // point — so any caller that asks for real OCR is rejected
+    // alongside any caller that asks for a real click.
+    if (action.realClick === true) {
+      return _fail(['text_click never carries realClick=true at this step']);
+    }
+    if (action.realOcr === true) {
+      return _fail(['text_click never carries realOcr=true at this step']);
+    }
+    if (typeof action.text !== 'string' || action.text.length === 0) {
+      return _fail(['text_click requires text']);
+    }
+    var ttp = action.targetPoint;
+    if (!ttp || typeof ttp !== 'object') {
+      return _fail(['text_click requires targetPoint']);
+    }
+    if (typeof ttp.x !== 'number' || ttp.x < 0) {
+      return _fail(['Invalid text_click target x']);
+    }
+    if (typeof ttp.y !== 'number' || ttp.y < 0) {
+      return _fail(['Invalid text_click target y']);
+    }
+    return _ok();
+  }
   return _fail(['Unsupported action type: ' + action.type]);
 }

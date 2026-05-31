@@ -71,6 +71,34 @@ function validateAction(action) {
     }
     return { ok: true };
   }
+  if (action.type === 'text_click') {
+    // Step 33: text_click is simulation-only. Both realClick and
+    // realOcr must be falsy. Any caller that asks for either is
+    // rejected outright. The action-pipeline will record an
+    // `action.textClick.realBlocked` audit event with the exact
+    // reason via blockRealAction() when this validator returns
+    // ok: false.
+    if (action.realClick === true) {
+      return { ok: false, error: 'text_click realClick=true is blocked' };
+    }
+    if (action.realOcr === true) {
+      return { ok: false, error: 'text_click realOcr=true is blocked' };
+    }
+    if (typeof action.text !== 'string' || action.text.length === 0) {
+      return { ok: false, error: 'text_click requires text' };
+    }
+    var ttp = action.targetPoint;
+    if (!ttp || typeof ttp !== 'object') {
+      return { ok: false, error: 'text_click requires targetPoint' };
+    }
+    if (typeof ttp.x !== 'number' || ttp.x < 0) {
+      return { ok: false, error: 'Invalid text_click target x' };
+    }
+    if (typeof ttp.y !== 'number' || ttp.y < 0) {
+      return { ok: false, error: 'Invalid text_click target y' };
+    }
+    return { ok: true };
+  }
   return { ok: false, error: 'Unsupported action type: ' + action.type };
 }
 
@@ -131,6 +159,21 @@ function executeSimulatedAction(action, context) {
         confidence: typeof action.confidence === 'number' ? action.confidence : null,
         realClick: false
       });
+    } else if (action.type === 'text_click') {
+      // Step 33: text_click simulation. Payload carries only ids
+      // and numeric metadata — never the full target text, never
+      // an imageDataUrl. We surface `textLen` so the timeline
+      // shows a usable diagnostic without exposing PII.
+      recordAuditEvent('action.textClick.simulated', {
+        scenarioId: context && context.scenarioId,
+        actionType: action.type,
+        textLen:    typeof action.text === 'string' ? action.text.length : 0,
+        targetX:    action.targetPoint ? action.targetPoint.x : null,
+        targetY:    action.targetPoint ? action.targetPoint.y : null,
+        confidence: typeof action.confidence === 'number' ? action.confidence : null,
+        realClick:  false,
+        realOcr:    false
+      });
     } else {
       recordAuditEvent('action.simulated', {
         scenarioId: context && context.scenarioId,
@@ -165,6 +208,21 @@ function blockRealAction(action, context) {
         actionType: action.type,
         templateId: action.templateId,
         reason: 'realDesktopActions=false; simulationOnly=true'
+      });
+    } else if (action && action.type === 'text_click') {
+      // Step 33: any caller that asks for real text_click
+      // execution OR for real OCR is rejected. Payload carries
+      // only ids and short reasons — never the target text.
+      var reason = 'realDesktopActions=false; simulationOnly=true; ocrEngineImplemented=false';
+      if (action.realClick === true) reason += '; realClick=true rejected';
+      if (action.realOcr === true)   reason += '; realOcr=true rejected';
+      recordAuditEvent('action.textClick.realBlocked', {
+        scenarioId: context && context.scenarioId,
+        actionType: action.type,
+        textLen:    typeof action.text === 'string' ? action.text.length : 0,
+        realClick:  action.realClick === true,
+        realOcr:    action.realOcr === true,
+        reason:     reason
       });
     } else {
       recordAuditEvent('action.real.blocked', {
@@ -260,6 +318,20 @@ function executeAction(action, context) {
       // throw on any other type. We emit `action.imageClick.simulated`
       // through the legacy simulate path (executeSimulatedAction).
       if (action.type === 'image_click') {
+        return executeSimulatedAction(action, context);
+      }
+      // Step 33: text_click also bypasses the mock adapter for the
+      // same reason — the adapter only knows `click`. The legacy
+      // simulate path emits `action.textClick.simulated` and the
+      // pipeline never reaches any real-input code path.
+      if (action.type === 'text_click') {
+        // Defensive double-check: refuse text_click if either
+        // realClick or realOcr is set, even though validateAction
+        // already returned ok above. This guards against a buggy
+        // future caller that bypasses validateAction.
+        if (action.realClick === true || action.realOcr === true) {
+          return blockRealAction(action, context);
+        }
         return executeSimulatedAction(action, context);
       }
       // Route through the mock adapter when registered.

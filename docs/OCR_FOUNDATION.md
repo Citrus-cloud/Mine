@@ -314,3 +314,25 @@ See also:
 - [`docs/SECURITY_CHECKLIST.md`](./SECURITY_CHECKLIST.md)
 - [`docs/SMOKE_TESTS.md`](./SMOKE_TESTS.md)
 - [`docs/REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md)
+
+
+
+---
+
+## Step 33 — OCR mock is now used by the `text_click` scenario
+
+[Step 33](./TEXT_CLICK_SCENARIO.md) introduces a new scenario
+type `text_click` that runs this mock OCR engine on every
+iteration. The engine itself is unchanged: it still fabricates
+plausible recognised-text blocks from the captured preview
+metadata and the user's target text — never from real pixel
+analysis. The new scenario type just orchestrates the engine +
+the action-pipeline so the user can run a full
+"capture → mock OCR → simulated click" loop end-to-end.
+
+`runTextClickScenario` calls `createOcrInput()`,
+`runMockOcr()`, and reads `result.match` to build the
+`text_click` action. No real OCR. No real click. The mock
+engine continues to NOT recognise real text.
+
+See [`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md).

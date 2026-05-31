@@ -88,6 +88,7 @@
           <select class="form-select" id="input-scenario-type">
             <option value="simple_click" data-i18n="coordinateClick">Клик по координатам</option>
             <option value="image_click" data-i18n="imageClick">Клик по изображению</option>
+            <option value="text_click" data-i18n="textClick">Клик по тексту</option>
           </select>
         </div>
         <div id="form-section-simple-click" class="form-section">
@@ -170,6 +171,69 @@
           <div class="form-group">
             <label class="form-label" data-i18n="repeatCount">Повторы</label>
             <input class="form-input" type="number" id="input-image-repeat" min="1" max="1000" value="1">
+          </div>
+        </div>
+        <div id="form-section-text-click" class="form-section view-hidden">
+          <div class="form-warning text-click-mock-ocr-notice" id="text-click-mock-ocr-notice" data-i18n="mockOcrOnlyNotice">
+            На этом этапе используется mock OCR. Настоящее распознавание текста пока не подключено.
+          </div>
+          <div class="form-warning text-click-no-preview view-hidden" id="text-click-no-preview" data-i18n="textClickMissingPreview">
+            Сначала получите screenshot preview.
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="targetText">Целевой текст</label>
+            <input class="form-input" type="text" id="input-text-target" maxlength="200" data-i18n-attr-placeholder="targetTextPlaceholder" placeholder="Продолжить / Continue">
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="ocrLanguage">Язык OCR</label>
+              <select class="form-select" id="input-text-language">
+                <option value="ru" data-i18n="languageRu">Русский</option>
+                <option value="en" data-i18n="languageEn">English</option>
+                <option value="ru+en" selected data-i18n="languageRuEn">Русский + English</option>
+              </select>
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="matchMode">Режим поиска</label>
+              <select class="form-select" id="input-text-match-mode">
+                <option value="contains" selected data-i18n="matchModeContains">contains</option>
+                <option value="exact" data-i18n="matchModeExact">exact</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row form-row-checkboxes">
+            <label class="form-checkbox-label">
+              <input type="checkbox" id="input-text-case-sensitive">
+              <span data-i18n="caseSensitive">Учитывать регистр</span>
+            </label>
+          </div>
+          <div class="form-group form-group-region">
+            <label class="form-label" data-i18n="usedRegion">Использованная область</label>
+            <div class="text-click-region-summary" id="text-click-region-summary" data-i18n="noRegionSelected">
+              Область не выбрана
+            </div>
+            <div class="form-row">
+              <button type="button" class="btn btn-secondary" id="btn-text-click-use-region" data-i18n="useSelectedRegion">
+                Использовать выбранную область
+              </button>
+              <button type="button" class="btn btn-back" id="btn-text-click-clear-region" data-i18n="clearScenarioRegion">
+                Очистить область
+              </button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="timeoutMs">Таймаут, мс</label>
+              <input class="form-input" type="number" id="input-text-timeout" min="1000" value="10000">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="intervalMs">Интервал, мс</label>
+              <input class="form-input" type="number" id="input-text-interval" min="100" value="1000">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="repeatCount">Повторы</label>
+            <input class="form-input" type="number" id="input-text-repeat" min="1" max="1000" value="1">
           </div>
         </div>
       </div>

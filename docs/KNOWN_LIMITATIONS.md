@@ -592,3 +592,48 @@ feature.
 See [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md) for the
 full description, the data shapes, the troubleshooting list,
 and the safety contract.
+
+
+
+## 16. text_click uses mock OCR only (Step 33)
+
+Step 33 promotes `text_click` from a preview-only JSON shape
+(Step 32) to a real scenario type, but the underlying OCR engine
+is still the **Step-32 mock**.
+
+### 16.1 No real text recognition
+- `runTextClickScenario` calls `runMockOcr()`. The mock engine
+  fabricates the recognised-text blocks from preview metadata —
+  width / height / region / target text. It NEVER decodes pixel
+  data and NEVER recognises real text.
+- `package.json` declares zero of `tesseract`, `tesseract.js`,
+  `tesseract-ocr`, `node-tesseract-ocr`, `opencv4nodejs`,
+  `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`. The new
+  `text_click` execution path never `require()`s any of those.
+
+### 16.2 No real click from text_click
+- `validateAction` and `validateActionSafety` reject any
+  `text_click` action with `realClick: true`. The
+  action-pipeline's `executeAction` rejects it with
+  `blocked: true` and emits `action.textClick.realBlocked`.
+- `validateAction` and `validateActionSafety` ALSO reject any
+  `text_click` action with `realOcr: true` — even with a fake
+  real-OCR-flag, no real click happens.
+- The cursor never moves. No key is pressed. No window is
+  focused.
+
+### 16.3 No `text_click` Test Match panel yet
+- The form has no "Run Test Match" button for `text_click` yet.
+  The user has to save and run the scenario to see the OCR
+  flow. Step 34 is the natural place for a Test Match panel by
+  analogy with the Step 31 image_click panel.
+
+### 16.4 No live-screen OCR
+- The mock only sees the preview the user explicitly captured
+  in Step 25. It never opens a new screenshot session, never
+  reads the live screen, never streams.
+
+See [`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md)
+and [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md) for the full
+description, the data shapes, the troubleshooting list, and the
+safety contract.

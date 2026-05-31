@@ -526,3 +526,70 @@ click engine continues to know only `simple_click` and
 | Action Type | Status                                                                                       |
 |-------------|----------------------------------------------------------------------------------------------|
 | `text_click` | Planned — preview-only at Step 32, blocked from execution. Future scenario type gated behind a separate OCR go/no-go review. |
+
+
+
+---
+
+## Step 33 — `text_click` action (simulation-only)
+
+[Step 33](./TEXT_CLICK_SCENARIO.md) promotes `text_click` from
+"preview-only JSON" to a real action type accepted by
+`validateAction` and `executeAction`. Despite the promotion the
+action remains **simulation-only**: the action-pipeline routes
+it through the legacy simulate path (the mock desktop adapter
+only knows `click`) and the new audit event
+`action.textClick.simulated` records each cycle.
+
+### Accepted `text_click` action shape (simulation-only)
+
+```json
+{
+  "type":          "text_click",
+  "text":          "Continue",
+  "targetPoint":   { "x": 440, "y": 266 },
+  "boundingBox":   { "x": 380, "y": 252, "width": 120, "height": 28 },
+  "confidence":    0.91,
+  "language":      "ru+en",
+  "matchMode":     "contains",
+  "caseSensitive": false,
+  "realClick":     false,
+  "realOcr":       false,
+  "simulated":     true
+}
+```
+
+### Validation
+
+- `text` must be a non-empty string.
+- `targetPoint.x` / `targetPoint.y` must be finite numbers ≥ 0.
+- `realClick === true` is rejected outright (the action-pipeline
+  emits `action.textClick.realBlocked`).
+- `realOcr === true` is rejected outright (the action-pipeline
+  emits `action.textClick.realBlocked` with the same audit event
+  type but a different `reason` field).
+- `boundingBox`, `language`, `matchMode`, `caseSensitive`,
+  `confidence` are accepted as metadata but the action-pipeline
+  does not enforce their internal consistency at Step 33.
+
+### Routing
+
+- The action-pipeline routes `text_click` through the legacy
+  simulate path. The mock desktop adapter is bypassed because it
+  only knows `click` actions.
+- The dry-run sandbox does NOT consume `text_click` actions —
+  only `simple_click` actions are accepted by the dry-run
+  preview flow.
+- `executionMode === "real"` is rejected with
+  `action.textClick.realBlocked`.
+
+### Audit
+
+| Event                              | When                                                                |
+|------------------------------------|---------------------------------------------------------------------|
+| `action.textClick.simulated`       | Every successful simulate-path execution.                           |
+| `action.textClick.realBlocked`     | Any caller that asks for real execution / real OCR / real click.    |
+
+| Action Type    | Status                                                                                          |
+|----------------|-------------------------------------------------------------------------------------------------|
+| `text_click`   | Simulation-only (Step 33). Real execution / real OCR gated behind `REAL_ACTIONS_GO_NO_GO.md`.   |
