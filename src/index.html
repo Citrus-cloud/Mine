@@ -83,33 +83,94 @@
           <label class="form-label" data-i18n="scenarioDescription">Описание</label>
           <textarea class="form-textarea" id="input-description" rows="2"></textarea>
         </div>
-        <div class="form-row">
-          <div class="form-group form-group-half">
-            <label class="form-label" data-i18n="scenarioX">X</label>
-            <input class="form-input" type="number" id="input-x" min="0" value="500">
-          </div>
-          <div class="form-group form-group-half">
-            <label class="form-label" data-i18n="scenarioY">Y</label>
-            <input class="form-input" type="number" id="input-y" min="0" value="400">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group form-group-half">
-            <label class="form-label" data-i18n="intervalMs">Интервал, мс</label>
-            <input class="form-input" type="number" id="input-interval" min="50" value="500">
-          </div>
-          <div class="form-group form-group-half">
-            <label class="form-label" data-i18n="repeatCount">Повторы</label>
-            <input class="form-input" type="number" id="input-repeat" min="1" max="100000" value="100">
-          </div>
-        </div>
         <div class="form-group">
-          <label class="form-label" data-i18n="mouseButton">Кнопка мыши</label>
-          <select class="form-select" id="input-button">
-            <option value="left" data-i18n="mouseLeft">Левая</option>
-            <option value="right" data-i18n="mouseRight">Правая</option>
-            <option value="middle" data-i18n="mouseMiddle">Средняя</option>
+          <label class="form-label" data-i18n="scenarioType">Тип сценария</label>
+          <select class="form-select" id="input-scenario-type">
+            <option value="simple_click" data-i18n="coordinateClick">Клик по координатам</option>
+            <option value="image_click" data-i18n="imageClick">Клик по изображению</option>
           </select>
+        </div>
+        <div id="form-section-simple-click" class="form-section">
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="scenarioX">X</label>
+              <input class="form-input" type="number" id="input-x" min="0" value="500">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="scenarioY">Y</label>
+              <input class="form-input" type="number" id="input-y" min="0" value="400">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="intervalMs">Интервал, мс</label>
+              <input class="form-input" type="number" id="input-interval" min="50" value="500">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="repeatCount">Повторы</label>
+              <input class="form-input" type="number" id="input-repeat" min="1" max="100000" value="100">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="mouseButton">Кнопка мыши</label>
+            <select class="form-select" id="input-button">
+              <option value="left" data-i18n="mouseLeft">Левая</option>
+              <option value="right" data-i18n="mouseRight">Правая</option>
+              <option value="middle" data-i18n="mouseMiddle">Средняя</option>
+            </select>
+          </div>
+        </div>
+        <div id="form-section-image-click" class="form-section view-hidden">
+          <div class="form-warning image-click-no-templates view-hidden" id="image-click-no-templates" data-i18n="noTemplatesImportFirst">
+            Шаблонов пока нет. Сначала импортируйте шаблон.
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="selectTemplate">Шаблон</label>
+            <select class="form-select" id="input-template-id"></select>
+          </div>
+          <div class="form-group form-group-region">
+            <label class="form-label" data-i18n="usedRegion">Использованная область</label>
+            <div class="image-click-region-summary" id="image-click-region-summary" data-i18n="noRegionSelected">
+              Область не выбрана
+            </div>
+            <div class="form-row">
+              <button type="button" class="btn btn-secondary" id="btn-image-click-use-region" data-i18n="useSelectedRegion">
+                Использовать выбранную область
+              </button>
+              <button type="button" class="btn btn-back" id="btn-image-click-clear-region" data-i18n="clearRegion">
+                Очистить область
+              </button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="threshold">Порог достоверности</label>
+              <input class="form-input" type="number" id="input-image-threshold" min="0" max="1" step="0.05" value="0.75">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="step">Шаг</label>
+              <select class="form-select" id="input-image-step">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="4" selected>4</option>
+                <option value="8">8</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="timeoutMs">Таймаут, мс</label>
+              <input class="form-input" type="number" id="input-image-timeout" min="1000" value="10000">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" data-i18n="intervalMs">Интервал, мс</label>
+              <input class="form-input" type="number" id="input-image-interval" min="100" value="1000">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="repeatCount">Повторы</label>
+            <input class="form-input" type="number" id="input-image-repeat" min="1" max="1000" value="1">
+          </div>
         </div>
       </div>
       <div class="form-actions">

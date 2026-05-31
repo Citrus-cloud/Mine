@@ -31,24 +31,47 @@ function getActionPipelineStatus() {
 // --- Action validation (single source of truth). ---
 // The Action schema for 0.1.x is:
 //   { type: "click", x: number >= 0, y: number >= 0, button: "left"|"right"|"middle" }
+// Step 30 adds:
+//   { type: "image_click", templateId: string, targetPoint: {x>=0,y>=0},
+//     boundingBox?: {...}, confidence?: number, realClick: false }
+// `realClick: true` on image_click is always rejected at this step.
 function validateAction(action) {
   if (!action || typeof action !== 'object') {
     return { ok: false, error: 'Action is missing' };
   }
-  if (action.type !== 'click') {
-    return { ok: false, error: 'Unsupported action type: ' + action.type };
+  if (action.type === 'click') {
+    if (typeof action.x !== 'number' || action.x < 0) {
+      return { ok: false, error: 'Invalid x coordinate' };
+    }
+    if (typeof action.y !== 'number' || action.y < 0) {
+      return { ok: false, error: 'Invalid y coordinate' };
+    }
+    var validButtons = ['left', 'right', 'middle'];
+    if (validButtons.indexOf(action.button) === -1) {
+      return { ok: false, error: 'Invalid mouse button: ' + action.button };
+    }
+    return { ok: true };
   }
-  if (typeof action.x !== 'number' || action.x < 0) {
-    return { ok: false, error: 'Invalid x coordinate' };
+  if (action.type === 'image_click') {
+    if (action.realClick === true) {
+      return { ok: false, error: 'image_click realClick=true is blocked' };
+    }
+    if (typeof action.templateId !== 'string' || action.templateId.length === 0) {
+      return { ok: false, error: 'image_click requires templateId' };
+    }
+    var tp = action.targetPoint;
+    if (!tp || typeof tp !== 'object') {
+      return { ok: false, error: 'image_click requires targetPoint' };
+    }
+    if (typeof tp.x !== 'number' || tp.x < 0) {
+      return { ok: false, error: 'Invalid image_click target x' };
+    }
+    if (typeof tp.y !== 'number' || tp.y < 0) {
+      return { ok: false, error: 'Invalid image_click target y' };
+    }
+    return { ok: true };
   }
-  if (typeof action.y !== 'number' || action.y < 0) {
-    return { ok: false, error: 'Invalid y coordinate' };
-  }
-  var validButtons = ['left', 'right', 'middle'];
-  if (validButtons.indexOf(action.button) === -1) {
-    return { ok: false, error: 'Invalid mouse button: ' + action.button };
-  }
-  return { ok: true };
+  return { ok: false, error: 'Unsupported action type: ' + action.type };
 }
 
 // --- Build a context for an execution run. ---
@@ -91,16 +114,32 @@ function canExecuteRealAction(/* context */) {
 // This is what a normal scenario step calls. No OS input. The result
 // shape is intentionally close to what a future real-action adapter
 // would return so callers do not need to branch on mode.
+//
+// Step 30: `image_click` actions go through the same simulate path
+// but emit `action.imageClick.simulated` and the result echoes the
+// templateId / targetPoint instead of x / y / button.
 function executeSimulatedAction(action, context) {
   // Audit (best-effort, non-fatal if module missing).
   if (typeof recordAuditEvent === 'function') {
-    recordAuditEvent('action.simulated', {
-      scenarioId: context && context.scenarioId,
-      actionType: action.type,
-      x: action.x,
-      y: action.y,
-      button: action.button
-    });
+    if (action.type === 'image_click') {
+      recordAuditEvent('action.imageClick.simulated', {
+        scenarioId: context && context.scenarioId,
+        actionType: action.type,
+        templateId: action.templateId,
+        targetX: action.targetPoint ? action.targetPoint.x : null,
+        targetY: action.targetPoint ? action.targetPoint.y : null,
+        confidence: typeof action.confidence === 'number' ? action.confidence : null,
+        realClick: false
+      });
+    } else {
+      recordAuditEvent('action.simulated', {
+        scenarioId: context && context.scenarioId,
+        actionType: action.type,
+        x: action.x,
+        y: action.y,
+        button: action.button
+      });
+    }
   }
   return {
     ok: true,
@@ -113,13 +152,27 @@ function executeSimulatedAction(action, context) {
 }
 
 // --- Block path. Used when a caller asks for executionMode === "real". ---
+//
+// Step 30: emits a different audit type for image_click so the
+// timeline shows the exact reason the request was rejected. The
+// payload still carries only ids / numeric metadata — never an
+// imageDataUrl.
 function blockRealAction(action, context) {
   if (typeof recordAuditEvent === 'function') {
-    recordAuditEvent('action.real.blocked', {
-      scenarioId: context && context.scenarioId,
-      actionType: action && action.type,
-      reason: 'realDesktopActions=false; simulationOnly=true'
-    });
+    if (action && action.type === 'image_click') {
+      recordAuditEvent('action.imageClick.realBlocked', {
+        scenarioId: context && context.scenarioId,
+        actionType: action.type,
+        templateId: action.templateId,
+        reason: 'realDesktopActions=false; simulationOnly=true'
+      });
+    } else {
+      recordAuditEvent('action.real.blocked', {
+        scenarioId: context && context.scenarioId,
+        actionType: action && action.type,
+        reason: 'realDesktopActions=false; simulationOnly=true'
+      });
+    }
   }
   return {
     ok: false,
@@ -201,6 +254,13 @@ function executeAction(action, context) {
       var active = getActiveAdapter();
       if (active && (active.realActions === true || active.type === 'real')) {
         return blockRealAction(action, context);
+      }
+      // Step 30: image_click does NOT go through the mock adapter.
+      // The mock adapter only knows about `click` actions and would
+      // throw on any other type. We emit `action.imageClick.simulated`
+      // through the legacy simulate path (executeSimulatedAction).
+      if (action.type === 'image_click') {
+        return executeSimulatedAction(action, context);
       }
       // Route through the mock adapter when registered.
       if (active && active.id === 'mock' && typeof executeMockAction === 'function') {

@@ -89,7 +89,22 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   TemplateMatchRealPreviewCompleted: 'template.match.realPreview.completed',
   TemplateMatchRealPreviewFailed:    'template.match.realPreview.failed',
   TemplateMatchLowConfidence:        'template.match.lowConfidence',
-  TemplateMatchEngineWarning:        'template.match.engine.warning'
+  TemplateMatchEngineWarning:        'template.match.engine.warning',
+  // Step 30: image_click scenario type. Payloads carry only ids,
+  // numeric metadata (confidence, target X / Y, durationMs,
+  // threshold, step), and short reasons — never an imageDataUrl,
+  // never a thumbnail, never a screenshot. The "simulated" /
+  // "realBlocked" pair mirrors the Step 17 `action.simulated` /
+  // `action.real.blocked` events.
+  ScenarioImageClickStarted:        'scenario.imageClick.started',
+  ScenarioImageClickStopped:        'scenario.imageClick.stopped',
+  ScenarioImageClickMatchStarted:   'scenario.imageClick.match.started',
+  ScenarioImageClickMatchCompleted: 'scenario.imageClick.match.completed',
+  ScenarioImageClickNoMatch:        'scenario.imageClick.noMatch',
+  ScenarioImageClickSimulated:      'scenario.imageClick.simulated',
+  ScenarioImageClickFailed:         'scenario.imageClick.failed',
+  ActionImageClickSimulated:        'action.imageClick.simulated',
+  ActionImageClickRealBlocked:      'action.imageClick.realBlocked'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

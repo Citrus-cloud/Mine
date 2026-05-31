@@ -2544,3 +2544,90 @@ body {
   .template-matching-step-select,
   .template-matching-threshold-input { min-width: 0; width: 100%; }
 }
+
+
+
+/* =====================================================================
+   Step 30 — Image Click Scenario Type
+   --------------------------------------------------------------------- */
+
+/* Sectioning inside the scenario form. The form-section wrapper
+   visually separates simple_click vs image_click fields. */
+.form-section {
+  display: block;
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+  border-top: 1px dashed var(--border);
+}
+
+.form-section:first-child,
+.form-section.view-hidden + .form-section {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.form-warning {
+  background: rgba(207, 134, 0, 0.12);
+  color: #9a6700;
+  border: 1px solid rgba(207, 134, 0, 0.4);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  margin-bottom: var(--space-2);
+}
+
+[data-theme="dark"] .form-warning {
+  background: rgba(247, 174, 0, 0.18);
+  color: #f1c46c;
+  border-color: rgba(247, 174, 0, 0.4);
+}
+
+/* image_click form helpers */
+.image-click-region-summary {
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--card-muted, var(--card));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: var(--space-2);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.image-click-region-summary-active {
+  color: var(--text);
+  border-color: var(--accent, rgba(46, 160, 67, 0.5));
+}
+
+.form-group-region {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-group-region .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Scenario list — small badge for image_click scenarios so the
+   user can spot them at a glance. */
+.scenario-card-badge-image-click {
+  background: rgba(46, 160, 67, 0.16);
+  color: #1a7f37;
+  border: 1px solid rgba(46, 160, 67, 0.4);
+  margin-left: 6px;
+}
+
+[data-theme="dark"] .scenario-card-badge-image-click {
+  background: rgba(63, 185, 80, 0.18);
+  color: #4ac26b;
+  border-color: rgba(63, 185, 80, 0.45);
+}
+
+@media (max-width: 760px) {
+  .form-group-region .form-row { gap: var(--space-1); }
+  .form-group-region .form-row .btn { width: 100%; }
+}

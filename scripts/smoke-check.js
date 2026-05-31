@@ -2731,6 +2731,292 @@ record(
   preloadTxt.indexOf('"template.match.engine.') === -1
 );
 
+// --- Step 30: Image Click Scenario Type Foundation ---
+
+// 142. New doc file exists.
+record(
+  'Step 30 doc exists: docs/IMAGE_CLICK_SCENARIO.md',
+  fileExists('docs/IMAGE_CLICK_SCENARIO.md')
+);
+
+// 143. scenario-manager.js declares the Step 30 surface.
+var smTxt30 = readText('src/scenario-manager.js');
+[
+  'function validateImageClickScenario',
+  'function createImageClickScenario',
+  'function updateImageClickScenario',
+  'function getScenariosByType'
+].forEach(function (needle) {
+  record(
+    'scenario-manager.js declares ' + needle,
+    smTxt30.indexOf(needle) !== -1
+  );
+});
+record(
+  'scenario-manager.js createScenario dispatches on image_click',
+  /createScenario[\s\S]{0,400}createImageClickScenario\(input\)/.test(smTxt30)
+);
+record(
+  'scenario-manager.js updateScenario dispatches on image_click',
+  /updateScenario[\s\S]{0,800}updateImageClickScenario\(id, updates\)/.test(smTxt30)
+);
+
+// 144. action-pipeline.js validates and routes image_click.
+var apTxt30 = readText('src/action-pipeline.js');
+record(
+  'action-pipeline.js validateAction accepts image_click',
+  /action\.type\s*===\s*['"]image_click['"]/.test(apTxt30) &&
+  /image_click requires templateId/.test(apTxt30)
+);
+record(
+  'action-pipeline.js executeAction routes image_click through the simulate path',
+  /action\.type\s*===\s*['"]image_click['"][\s\S]{0,400}executeSimulatedAction/.test(apTxt30)
+);
+record(
+  'action-pipeline.js blocks realClick=true on image_click via validateAction',
+  /image_click realClick=true is blocked/.test(apTxt30)
+);
+record(
+  'action-pipeline.js emits action.imageClick.simulated and action.imageClick.realBlocked',
+  apTxt30.indexOf("'action.imageClick.simulated'") !== -1 &&
+  apTxt30.indexOf("'action.imageClick.realBlocked'") !== -1
+);
+
+// 145. safety-gates.js mirrors the image_click validation.
+var sgTxt30 = readText('src/safety-gates.js');
+record(
+  'safety-gates.js validateActionSafety accepts image_click and refuses realClick=true',
+  /action\.type\s*===\s*['"]image_click['"]/.test(sgTxt30) &&
+  /image_click never carries realClick=true/.test(sgTxt30)
+);
+
+// 146. click-engine.js gains the image_click branch.
+var ceTxt30 = readText('src/click-engine.js');
+record(
+  'click-engine.js declares runImageClickScenario',
+  ceTxt30.indexOf('function runImageClickScenario') !== -1
+);
+record(
+  'click-engine.js runScenario dispatches on scenario.type === \'image_click\'',
+  /scenario\.type\s*===\s*['"]image_click['"][\s\S]{0,200}runImageClickScenario/.test(ceTxt30)
+);
+record(
+  'click-engine.js validateRunnableScenario delegates image_click validation',
+  /image_click[\s\S]{0,800}validateImageClickScenario/.test(ceTxt30)
+);
+
+// 147. audit-events.js allowlist contains the nine new types.
+[
+  "'scenario.imageClick.started'",
+  "'scenario.imageClick.stopped'",
+  "'scenario.imageClick.match.started'",
+  "'scenario.imageClick.match.completed'",
+  "'scenario.imageClick.noMatch'",
+  "'scenario.imageClick.simulated'",
+  "'scenario.imageClick.failed'",
+  "'action.imageClick.simulated'",
+  "'action.imageClick.realBlocked'"
+].forEach(function (needle) {
+  record(
+    'audit allowlist includes ' + needle.replace(/'/g, ''),
+    auditTxt.indexOf(needle) !== -1
+  );
+});
+
+// 148. index.html exposes the new form fields.
+record(
+  'index.html has Scenario type selector',
+  /id=['"]input-scenario-type['"]/.test(htmlTxt3)
+);
+record(
+  'index.html has image_click form section',
+  /id=['"]form-section-image-click['"]/.test(htmlTxt3)
+);
+[
+  'input-template-id',
+  'input-image-threshold',
+  'input-image-step',
+  'input-image-timeout',
+  'input-image-interval',
+  'input-image-repeat',
+  'btn-image-click-use-region',
+  'btn-image-click-clear-region'
+].forEach(function (idValue) {
+  record(
+    'index.html has ' + idValue,
+    new RegExp("id=['\"]" + idValue + "['\"]").test(htmlTxt3)
+  );
+});
+
+// 149. renderer.js diagnostics card + Copy diagnostics line +
+//     formatLastAction for image_click.
+record(
+  'renderer.js has image_click scenario diagnostics card',
+  rendTxt.indexOf("t('imageClickScenario')") !== -1
+);
+record(
+  'renderer.js Copy diagnostics has Image click scenario line',
+  /Image click scenario:[\s\S]{0,800}imageClickSimulationOnly=true/.test(rendTxt) &&
+  /realImageClickEnabled=false/.test(rendTxt)
+);
+record(
+  'renderer.js declares formatLastAction handling image_click',
+  rendTxt.indexOf('function formatLastAction') !== -1 &&
+  /formatLastAction[\s\S]{0,400}image_click/.test(rendTxt)
+);
+
+// 150. README / PROJECT_CONTEXT mention step 30 / image_click.
+record(
+  'README or PROJECT_CONTEXT mentions step 30',
+  /step\s*30|шаг\s*30|Step 30|Шаг 30/.test(readText('README.md')) ||
+  /step\s*30|шаг\s*30|Step 30|Шаг 30/.test(readText('PROJECT_CONTEXT.md'))
+);
+record(
+  'README or PROJECT_CONTEXT mentions image_click / image click / Клик по изображению',
+  /image[\s_-]?click|image\s+click|Клик по изображению|Image Click/i.test(readText('README.md')) ||
+  /image[\s_-]?click|image\s+click|Клик по изображению|Image Click/i.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 151. docs/IMAGE_CLICK_SCENARIO.md asserts simulation-only and
+//     no real click / no OCR / no OpenCV at step 30.
+var icDoc = readText('docs/IMAGE_CLICK_SCENARIO.md');
+record(
+  'docs/IMAGE_CLICK_SCENARIO.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(icDoc)
+);
+record(
+  'docs/IMAGE_CLICK_SCENARIO.md asserts no real clicks at step 30',
+  /(does\s+not\s+click|never\s+performs\s+a\s+real\s+click|never\s+executes\s+a\s+real\s+click|no real clicks?|never\s+moves\s+the\s+cursor|never performs a real click)/i.test(icDoc)
+);
+record(
+  'docs/IMAGE_CLICK_SCENARIO.md asserts no OCR at step 30',
+  /no\s+OCR|No OCR/.test(icDoc)
+);
+record(
+  'docs/IMAGE_CLICK_SCENARIO.md describes the scenario format',
+  /image_click/i.test(icDoc) && /templateId/.test(icDoc) && /threshold/.test(icDoc) && /step/i.test(icDoc)
+);
+
+// 152. SECURITY_CHECKLIST has an image_click scenario (Step 30) section.
+var icSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has image_click scenario (Step 30) section',
+  /image_click\s+scenario\s*\(?step\s*30/i.test(icSec) ||
+  /## image_click scenario/i.test(icSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts image_click simulation only / no real click',
+  /no real clicks?/i.test(icSec) &&
+  /(simulation\s+only|simulation-only)/i.test(icSec) &&
+  /realClick:\s*false/i.test(icSec)
+);
+
+// 153. KNOWN_LIMITATIONS / SMOKE_TESTS reference step 30.
+var klTxt30 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has an image_click section (Step 30)',
+  /##\s*14\.\s*image_click does not perform a real click/i.test(klTxt30) ||
+  /image_click does not perform a real click/i.test(klTxt30)
+);
+var stTxt30 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 30 image_click block',
+  /Step\s*30\s*[—-]\s*Image Click Scenario/i.test(stTxt30) ||
+  /Step 30.*Image Click Scenario/i.test(stTxt30)
+);
+
+// 154. CHANGELOG mentions Step 30.
+var chTxt30 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 30 — Image Click Scenario Type Foundation',
+  /Step\s*30.*Image Click Scenario Type Foundation/i.test(chTxt30) ||
+  /Шаг\s*30.*Image Click Scenario/i.test(chTxt30) ||
+  /Image Click Scenario Type Foundation/i.test(chTxt30)
+);
+
+// 155. package.json STILL declares no OCR / OpenCV / image-matching
+//     / real-input modules at step 30.
+if (pkg) {
+  var allDeps30 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step30Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps30, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 30',
+    step30Forbidden.length === 0,
+    step30Forbidden.length ? step30Forbidden.join(', ') : ''
+  );
+}
+
+// 156. Source files don't import OCR / OpenCV / image-recognition at step 30.
+var step30SourceFiles = [
+  'main.js', 'preload.js',
+  'src/scenario-manager.js',
+  'src/action-pipeline.js',
+  'src/click-engine.js',
+  'src/safety-gates.js'
+];
+var step30Imports = [
+  'tesseract.js', 'tesseract', 'opencv4nodejs', '@u4/opencv4nodejs',
+  'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep30Imports = [];
+step30SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step30Imports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep30Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 30 source files',
+  foundStep30Imports.length === 0,
+  foundStep30Imports.length ? foundStep30Imports.join(', ') : ''
+);
+
+// 157. Step 30 introduces no new IPC channel (renderer-only).
+record(
+  'main.js does not register any scenario.imageClick.* IPC handler at step 30',
+  !/ipcMain\.handle\(['"]scenario\.imageClick/.test(mainTxt)
+);
+record(
+  'preload.js does not expose any scenario.imageClick.* API at step 30',
+  preloadTxt.indexOf("'scenario.imageClick.") === -1 &&
+  preloadTxt.indexOf('"scenario.imageClick.') === -1
+);
+
+// 158. main.js still sets the simulation-only safety flags at step 30.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 30)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 30)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 30 (no unsafe-inline / unsafe-eval)',
+  htmlTxt3.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt3.indexOf('unsafe-inline') === -1 &&
+  htmlTxt3.indexOf('unsafe-eval') === -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {
