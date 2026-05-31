@@ -367,3 +367,51 @@ Test OCR adds its own audit lifecycle on top of the engine:
 `textClick.test.cleared`, `textClick.test.actionPreview.created`.
 
 See [`docs/TEXT_CLICK_TEST_TOOLS.md`](./TEXT_CLICK_TEST_TOOLS.md).
+
+
+
+## Provider architecture (Step 38)
+
+The Step-32 mock engine documented above is now wrapped in an
+explicit OCR-provider contract introduced at Step 38. The mock
+remains the single active provider and the only runtime that
+analyses anything; the new layer simply formalises the shape
+every backend has to satisfy so a future Tesseract provider can
+be wired up without rewriting consumers.
+
+- [`src/ocr-provider-interface.js`](../src/ocr-provider-interface.js)
+  — pure-renderer contract: `createOcrProviderResult`,
+  `validateOcrProviderInput`, `normalizeOcrProviderOptions`,
+  `getOcrProviderContract`, `getSupportedOcrLanguages`,
+  `isRealOcrAllowed` (always `false` at Step 38),
+  `createOcrProviderStatus`.
+- [`src/ocr-provider-registry.js`](../src/ocr-provider-registry.js)
+  — pure-renderer registry: `getOcrProviders`,
+  `getOcrProviderById`, `getActiveOcrProvider`,
+  `setActiveOcrProvider` (BLOCKS real providers),
+  `getOcrProviderRegistryStatus`,
+  `isRealOcrProviderRegistered`, `runOcrProviderSelfTest`,
+  `runActiveOcrProvider`.
+
+The Advanced → OCR tab now renders an **OCR readiness** card
+above the existing settings: provider list (mock = active,
+tesseract = planned/unavailable), real-OCR flags
+(`realOcrEnabled: no`, `realOcrAllowed: no`), supported
+languages, image-storage stance (`OCR images are not saved to
+disk: yes`), and a **Run provider self-test** button. The
+self-test runs the mock engine against a synthetic `1280×720`
+preview and reports the result inline.
+
+The diagnostics line `OCR provider: ...` joins the existing
+`OCR: ...` line; both still report `realOcr=false` and
+`realClick=false`. Six new allowlisted audit events
+(`ocr.provider.selftest.started/.completed/.failed`,
+`ocr.provider.selection.blocked`, `ocr.provider.mock.active`,
+`ocr.provider.real.unavailable`) carry counts / durations /
+stable error IDs only — never pixel data, never the full
+target text.
+
+For the full integration roadmap see
+[`REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md).
+For the contract reference see
+[`OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md).

@@ -23,7 +23,27 @@ const FEATURE_FLAGS = Object.freeze({
   // Capabilities that ARE shipped in 0.1.x.
   globalHotkeys: true,
   profiles: true,
-  importExport: true
+  importExport: true,
+
+  // Step 38 — Real OCR Research + Safe Integration Plan.
+  // The OCR provider registry ships as architecture only. The mock
+  // provider is the single active provider. Tesseract / tesseract.js
+  // is intentionally NOT wired up at runtime.
+  //
+  // - `realOcr` is the umbrella safety flag for "is real OCR allowed
+  //   to run". Hard-coded false until Step 39+ ships the Tesseract
+  //   provider behind a separate signed-off review.
+  // - `ocrProviderRegistry` enables the new readiness UI / diagnostics
+  //   surfaces. It is true at Step 38 so the user can see the
+  //   architecture, but flipping it does not unlock any real OCR.
+  // - `ocrMockProvider` confirms the mock provider is registered and
+  //   available. Hard-coded true.
+  // - `tesseractProvider` confirms the Tesseract provider is wired
+  //   up at runtime. Hard-coded false at Step 38.
+  realOcr: false,
+  ocrProviderRegistry: true,
+  ocrMockProvider: true,
+  tesseractProvider: false
 });
 
 // Returns a defensive copy so callers cannot mutate the frozen object.
@@ -45,12 +65,19 @@ function getFeatureFlagsForDiagnostics() {
       simulationOnly: FEATURE_FLAGS.simulationOnly,
       realDesktopActions: FEATURE_FLAGS.realDesktopActions,
       ocr: FEATURE_FLAGS.ocr,
-      imageRecognition: FEATURE_FLAGS.imageRecognition
+      imageRecognition: FEATURE_FLAGS.imageRecognition,
+      // Step 38 OCR provider safety stance.
+      realOcr: FEATURE_FLAGS.realOcr,
+      tesseractProvider: FEATURE_FLAGS.tesseractProvider
     },
     capabilities: {
       globalHotkeys: FEATURE_FLAGS.globalHotkeys,
       profiles: FEATURE_FLAGS.profiles,
-      importExport: FEATURE_FLAGS.importExport
+      importExport: FEATURE_FLAGS.importExport,
+      // Step 38 architecture-only capability — UI only, no runtime
+      // OCR side-effect.
+      ocrProviderRegistry: FEATURE_FLAGS.ocrProviderRegistry,
+      ocrMockProvider: FEATURE_FLAGS.ocrMockProvider
     }
   };
 }

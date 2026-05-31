@@ -283,3 +283,23 @@ See also:
 - [`docs/SECURITY_CHECKLIST.md`](./SECURITY_CHECKLIST.md)
 - [`docs/SMOKE_TESTS.md`](./SMOKE_TESTS.md)
 - [`docs/REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md)
+
+
+
+## Provider architecture note (Step 38)
+
+`text_click` continues to use the Step-32 mock OCR engine. At
+Step 38 the engine is reachable through the new OCR provider
+registry described in
+[`OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md).
+The active provider is `mock`. The planned `tesseract`
+provider is registered but unavailable; `setActiveOcrProvider
+('tesseract')` is BLOCKED. The full
+`REAL_OCR_INTEGRATION_PLAN.md` describes the path to a real
+backend without any real click work.
+
+`text_click` execution semantics are unchanged: the click
+engine still emits simulated `text_click` actions, the
+diagnostics line still reports `realOcr=false`,
+`realClick=false`, and there is still no `text_click` Test
+Match panel — the Step-34 Test OCR panel covers that surface.

@@ -254,3 +254,22 @@ See also:
 - [`docs/REGION_SELECTOR.md`](./REGION_SELECTOR.md)
 - [`docs/SECURITY_CHECKLIST.md`](./SECURITY_CHECKLIST.md)
 - [`docs/SMOKE_TESTS.md`](./SMOKE_TESTS.md)
+
+
+
+## Provider architecture note (Step 38)
+
+Test OCR uses the active OCR provider, which is `mock` at
+Step 38. The mock engine continues to back the panel through
+the existing `runMockOcr` call. The provider registry is
+described in
+[`OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md);
+the integration plan for the future Tesseract provider lives
+in [`REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md).
+
+The Test OCR panel does not switch providers and does not
+expose any real-OCR toggle. The diagnostics card and the
+`Copy diagnostics` text both surface
+`realOcr=false`, `realClick=false`, `tesseractAvailable=false`.
+The panel still never clicks, never persists screenshots, and
+never runs real OCR.

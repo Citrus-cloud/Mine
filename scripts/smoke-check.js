@@ -5205,6 +5205,376 @@ record(
   !/\brequire\s*\(\s*['"]electron['"]\s*\)/.test(smokeCheckSelfStripped)
 );
 
+// =====================================================================
+// Step 38 — Real OCR Research + Safe Integration Plan
+// =====================================================================
+
+// 276. New Step 38 modules exist on disk.
+[
+  'src/ocr-provider-interface.js',
+  'src/ocr-provider-registry.js'
+].forEach(function (rel) {
+  record('Step 38 file exists: ' + rel, fileExists(rel));
+});
+
+// 277. New Step 38 docs exist on disk.
+[
+  'docs/REAL_OCR_INTEGRATION_PLAN.md',
+  'docs/OCR_PROVIDER_INTERFACE.md'
+].forEach(function (rel) {
+  record('Step 38 doc exists: ' + rel, fileExists(rel));
+});
+
+// 278. index.html loads the two new <script src="…"> tags.
+var htmlTxt38 = readText('src/index.html');
+record(
+  'index.html loads ocr-provider-interface.js',
+  htmlTxt38.indexOf('ocr-provider-interface.js') !== -1
+);
+record(
+  'index.html loads ocr-provider-registry.js',
+  htmlTxt38.indexOf('ocr-provider-registry.js') !== -1
+);
+// And the order matters: interface must load before registry, both
+// before ocr-ui so the readiness card can use them.
+var idxInterface = htmlTxt38.indexOf('ocr-provider-interface.js');
+var idxRegistry  = htmlTxt38.indexOf('ocr-provider-registry.js');
+var idxOcrUi     = htmlTxt38.indexOf('ocr-ui.js');
+record(
+  'index.html loads ocr-provider-interface.js before ocr-provider-registry.js',
+  idxInterface !== -1 && idxRegistry !== -1 && idxInterface < idxRegistry
+);
+record(
+  'index.html loads ocr-provider-registry.js before ocr-ui.js',
+  idxRegistry !== -1 && idxOcrUi !== -1 && idxRegistry < idxOcrUi
+);
+
+// 279. ocr-provider-interface.js declares the public surface.
+var ifaceTxt = readText('src/ocr-provider-interface.js');
+[
+  'createOcrProviderResult',
+  'validateOcrProviderInput',
+  'normalizeOcrProviderOptions',
+  'getOcrProviderContract',
+  'getSupportedOcrLanguages',
+  'isRealOcrAllowed',
+  'createOcrProviderStatus'
+].forEach(function (fn) {
+  record(
+    'ocr-provider-interface.js exports ' + fn,
+    new RegExp('function\\s+' + fn + '\\s*\\(').test(ifaceTxt)
+  );
+});
+// Step 38 hard-stop: isRealOcrAllowed must always return false.
+// We verify the function body has a bare `return false;` and no
+// unconditional `return true`.
+record(
+  'ocr-provider-interface.js isRealOcrAllowed has a final `return false`',
+  /function\s+isRealOcrAllowed[\s\S]*?return\s+false\s*;[\s\S]*?\n\}/.test(ifaceTxt)
+);
+record(
+  'ocr-provider-interface.js isRealOcrAllowed never returns `true`',
+  !/function\s+isRealOcrAllowed[\s\S]*?return\s+true\s*;/.test(ifaceTxt)
+);
+// Contract default must report realOcrAvailable: false and
+// supportedProviders that includes 'mock'.
+record(
+  'ocr-provider-interface.js contract has realOcrAvailable: false',
+  /realOcrAvailable:\s*false/.test(ifaceTxt)
+);
+record(
+  'ocr-provider-interface.js contract has mockOcrAvailable: true',
+  /mockOcrAvailable:\s*true/.test(ifaceTxt)
+);
+record(
+  'ocr-provider-interface.js contract has storesImages: false',
+  /storesImages:\s*false/.test(ifaceTxt)
+);
+
+// 280. ocr-provider-registry.js declares the public surface.
+var regTxt = readText('src/ocr-provider-registry.js');
+[
+  'getOcrProviders',
+  'getOcrProviderById',
+  'getActiveOcrProvider',
+  'setActiveOcrProvider',
+  'getOcrProviderRegistryStatus',
+  'isRealOcrProviderRegistered',
+  'runOcrProviderSelfTest',
+  'runActiveOcrProvider'
+].forEach(function (fn) {
+  record(
+    'ocr-provider-registry.js exports ' + fn,
+    new RegExp('function\\s+' + fn + '\\s*\\(').test(regTxt)
+  );
+});
+// Mock provider entry: id, type, available, realOcr.
+record(
+  "ocr-provider-registry.js declares the 'mock' provider",
+  regTxt.indexOf("id: 'mock'") !== -1
+);
+record(
+  "ocr-provider-registry.js declares the 'tesseract' provider as planned/unavailable",
+  regTxt.indexOf("id: 'tesseract'") !== -1 &&
+  /id:\s*'tesseract'[\s\S]*?available:\s*false[\s\S]*?planned:\s*true/.test(regTxt)
+);
+record(
+  'ocr-provider-registry.js setActiveOcrProvider blocks real providers with realOcrBlocked',
+  regTxt.indexOf("'realOcrBlocked'") !== -1 &&
+  /realOcr\s*\|\|\s*[^.]*\.type\s*===\s*'real'/.test(regTxt)
+);
+record(
+  'ocr-provider-registry.js self-test uses synthetic preview metadata only',
+  regTxt.indexOf("'self-test'") !== -1 &&
+  regTxt.indexOf("width: 1280") !== -1 &&
+  regTxt.indexOf("height: 720") !== -1
+);
+
+// 281. Step 38 modules do not import any forbidden module.
+var step38SourceFiles = [
+  'src/ocr-provider-interface.js',
+  'src/ocr-provider-registry.js'
+];
+var step38ForbiddenModules = [
+  'tesseract', 'tesseract.js', 'tesseract-ocr', 'node-tesseract-ocr',
+  'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi', 'node-key-sender'
+];
+var step38ForbiddenFound = [];
+step38SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step38ForbiddenModules.forEach(function (mod) {
+    var n1 = "require('" + mod + "')";
+    var n2 = 'require("' + mod + '")';
+    if (txt.indexOf(n1) !== -1 || txt.indexOf(n2) !== -1) {
+      step38ForbiddenFound.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 38 source files',
+  step38ForbiddenFound.length === 0,
+  step38ForbiddenFound.join(', ')
+);
+
+// 282. package.json still declares zero of the prohibited modules
+//      (re-checked at step 38 — adding the OCR provider registry
+//      must NOT pull in any new dependency, in particular
+//      tesseract / tesseract.js / opencv*).
+if (pkg) {
+  var allDeps38 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var pkgForbidden38 = step38ForbiddenModules.filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps38, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 38',
+    pkgForbidden38.length === 0,
+    pkgForbidden38.join(', ')
+  );
+}
+
+// 283. main.js / preload.js do not expose any ocr.provider.* IPC
+//      handler / API at step 38.
+var mainTxt38 = readText('main.js');
+record(
+  'main.js does not register any ocr.provider.* IPC handler at step 38',
+  !/'ocr\.provider\./.test(mainTxt38) && !/"ocr\.provider\./.test(mainTxt38)
+);
+var preloadTxt38 = readText('preload.js');
+record(
+  'preload.js does not expose any ocrProvider* API at step 38',
+  !/ocrProvider[A-Z]/.test(preloadTxt38)
+);
+
+// 284. Electron security flags re-checked at step 38.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 38)',
+  /contextIsolation\s*:\s*true/.test(mainTxt38)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 38)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt38)
+);
+record(
+  'src/index.html CSP unchanged at step 38 (no unsafe-inline / unsafe-eval)',
+  htmlTxt38.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt38.indexOf('unsafe-inline') === -1 &&
+  htmlTxt38.indexOf('unsafe-eval') === -1
+);
+
+// 285. Audit allowlist contains the 6 new Step 38 types.
+var auditTxt38 = readText('src/audit-events.js');
+[
+  'ocr.provider.selftest.started',
+  'ocr.provider.selftest.completed',
+  'ocr.provider.selftest.failed',
+  'ocr.provider.selection.blocked',
+  'ocr.provider.mock.active',
+  'ocr.provider.real.unavailable'
+].forEach(function (eventType) {
+  record(
+    'audit allowlist includes ' + eventType,
+    auditTxt38.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 286. feature-flags.js declares the four new Step 38 flags with
+//      safe defaults.
+var ffTxt38 = readText('src/feature-flags.js');
+record(
+  'feature-flags.js declares realOcr: false',
+  /realOcr:\s*false/.test(ffTxt38)
+);
+record(
+  'feature-flags.js declares ocrProviderRegistry: true',
+  /ocrProviderRegistry:\s*true/.test(ffTxt38)
+);
+record(
+  'feature-flags.js declares ocrMockProvider: true',
+  /ocrMockProvider:\s*true/.test(ffTxt38)
+);
+record(
+  'feature-flags.js declares tesseractProvider: false',
+  /tesseractProvider:\s*false/.test(ffTxt38)
+);
+
+// 287. renderer.js wires the OCR provider diagnostics line.
+var rendererTxt38 = readText('src/renderer.js');
+record(
+  'renderer.js Copy diagnostics has an `OCR provider:` line',
+  rendererTxt38.indexOf('OCR provider:') !== -1 &&
+  rendererTxt38.indexOf('activeProviderId=') !== -1 &&
+  rendererTxt38.indexOf('mockProviderAvailable=') !== -1 &&
+  rendererTxt38.indexOf('tesseractProviderAvailable=') !== -1 &&
+  rendererTxt38.indexOf('realOcrEnabled=') !== -1
+);
+
+// 288. ocr-ui.js renders the readiness card and exposes the
+//      self-test button handler.
+var ocrUiTxt38 = readText('src/ocr-ui.js');
+record(
+  'ocr-ui.js renders the OCR readiness card',
+  ocrUiTxt38.indexOf('renderOcrProviderReadiness') !== -1 &&
+  ocrUiTxt38.indexOf('ocr-readiness-card') !== -1
+);
+record(
+  'ocr-ui.js wires the self-test button to runOcrProviderSelfTestFromUi',
+  ocrUiTxt38.indexOf('runOcrProviderSelfTestFromUi') !== -1 &&
+  ocrUiTxt38.indexOf('runOcrProviderSelfTest') !== -1
+);
+
+// 289. i18n parity is preserved AND the new Step 38 keys exist.
+var i18nTxt38 = readText('src/i18n.js');
+[
+  'ocrProvider',
+  'ocrProviders',
+  'activeOcrProvider',
+  'mockOcrProvider',
+  'tesseractOcrProvider',
+  'realOcrProvider',
+  'realOcrUnavailable',
+  'realOcrPlanned',
+  'ocrReadiness',
+  'providerSelfTest',
+  'runProviderSelfTest',
+  'providerSelfTestPassed',
+  'providerSelfTestFailed',
+  'ocrProviderRegistry',
+  'mockProviderAvailable',
+  'tesseractProviderAvailable',
+  'realOcrEnabled',
+  'realOcrAllowed',
+  'supportedOcrLanguages',
+  'realOcrNotConnectedYet',
+  'mockProviderCurrentlyUsed',
+  'ocrImagesNotStored',
+  'ocrRequiresUserAction'
+].forEach(function (key) {
+  record(
+    'i18n declares Step 38 key ' + key,
+    new RegExp('\\b' + key + ':\\s*"').test(i18nTxt38)
+  );
+});
+
+// 290. README / PROJECT_CONTEXT mention Step 38, OCR provider, and
+//      that Real OCR is not connected.
+var readme38 = readText('README.md');
+var ctx38 = readText('PROJECT_CONTEXT.md');
+record(
+  'README or PROJECT_CONTEXT mentions step 38',
+  /step\s*38|шаг\s*38|Step 38|Шаг 38/.test(readme38) ||
+  /step\s*38|шаг\s*38|Step 38|Шаг 38/.test(ctx38)
+);
+record(
+  'README or PROJECT_CONTEXT mentions OCR provider',
+  /OCR provider|OCR-провайдер|OCR provider registry|OCR provider architecture/i.test(readme38) ||
+  /OCR provider|OCR-провайдер|OCR provider registry|OCR provider architecture/i.test(ctx38)
+);
+record(
+  'README or PROJECT_CONTEXT asserts real OCR is not connected at step 38',
+  /real OCR.*not connected|real OCR.*not implemented|real OCR.*disabled|настоящий OCR.*не подключ|реальный OCR.*не подключ|Real OCR is not connected/i.test(readme38) ||
+  /real OCR.*not connected|real OCR.*not implemented|real OCR.*disabled|настоящий OCR.*не подключ|реальный OCR.*не подключ|Real OCR is not connected/i.test(ctx38)
+);
+
+// 291. Step 38 docs sanity.
+var planTxt = readText('docs/REAL_OCR_INTEGRATION_PLAN.md');
+record(
+  'docs/REAL_OCR_INTEGRATION_PLAN.md asserts real OCR not connected at step 38',
+  /not connected|not done|not run|architecture only/i.test(planTxt)
+);
+record(
+  'docs/REAL_OCR_INTEGRATION_PLAN.md describes the planned Tesseract provider',
+  /Tesseract|tesseract\.js/.test(planTxt)
+);
+record(
+  'docs/REAL_OCR_INTEGRATION_PLAN.md preserves no-real-click invariant',
+  /no real click|no real cursor|simulation-only/i.test(planTxt)
+);
+var ifaceDoc = readText('docs/OCR_PROVIDER_INTERFACE.md');
+record(
+  'docs/OCR_PROVIDER_INTERFACE.md describes the provider contract',
+  /Provider contract|provider contract/.test(ifaceDoc) &&
+  /supportedProviders/.test(ifaceDoc) &&
+  /storesImages/.test(ifaceDoc)
+);
+record(
+  'docs/OCR_PROVIDER_INTERFACE.md lists the stable error IDs',
+  /pixelDataNotAllowed|targetTextMissing|languageInvalid/.test(ifaceDoc)
+);
+
+// 292. SECURITY_CHECKLIST + KNOWN_LIMITATIONS reference Step 38.
+var secTxt38 = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has an OCR Provider Registry section (Step 38)',
+  /OCR Provider Registry|Step 38/.test(secTxt38) &&
+  /realOcrBlocked|setActiveOcrProvider|tesseract/i.test(secTxt38)
+);
+var klTxt38 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md adds Step 38 — Real OCR planned, not connected',
+  /Real OCR is planned, not connected|Step 38/i.test(klTxt38)
+);
+
+// 293. CHANGELOG mentions Step 38.
+record(
+  'CHANGELOG.md mentions Step 38 — Real OCR Research + Safe Integration Plan',
+  readText('CHANGELOG.md').indexOf('Step 38 — Real OCR Research + Safe Integration Plan') !== -1
+);
+
+// 294. NEXT_BRANCH_PLAN.md mentions the Step-38 progress note.
+var nbpTxt38 = readText('docs/NEXT_BRANCH_PLAN.md');
+record(
+  'docs/NEXT_BRANCH_PLAN.md notes Branch A progress at Step 38',
+  /Step 38|Branch A.*progress/i.test(nbpTxt38)
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {
