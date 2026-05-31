@@ -440,6 +440,13 @@ function getScenariosByType(type) {
 // ocr-mock-engine.js.
 var TEXT_CLICK_ALLOWED_LANGUAGES   = ['ru', 'en', 'ru+en'];
 var TEXT_CLICK_ALLOWED_MATCH_MODES = ['contains', 'exact'];
+// Step 41 — text_click scenarios remember which OCR provider the
+// user wants to use when the scenario runs. The default stays
+// `mock` so existing scenarios keep working unchanged. Asking for
+// `tesseract` does NOT auto-enable real OCR — at runtime the
+// click-engine still re-checks `getOcrFeatureStatus()` and refuses
+// to switch backends without a session-scoped runtime opt-in.
+var TEXT_CLICK_ALLOWED_OCR_PROVIDERS = ['mock', 'tesseract'];
 
 // Pure validation. Returns { valid: bool, error: string|null }.
 // Mirrors `validateScenario`'s contract so the form can render the
@@ -461,6 +468,13 @@ function validateTextClickScenario(input) {
   var matchMode = (typeof input.matchMode === 'string') ? input.matchMode.toLowerCase() : '';
   if (TEXT_CLICK_ALLOWED_MATCH_MODES.indexOf(matchMode) === -1) {
     return { valid: false, error: 'Режим поиска должен быть contains или exact' };
+  }
+  // Step 41 — optional ocrProvider field. Absence means "mock".
+  if (input.ocrProvider !== undefined && input.ocrProvider !== null) {
+    if (typeof input.ocrProvider !== 'string' ||
+        TEXT_CLICK_ALLOWED_OCR_PROVIDERS.indexOf(input.ocrProvider) === -1) {
+      return { valid: false, error: 'OCR provider must be mock or tesseract' };
+    }
   }
   if (typeof input.caseSensitive !== 'boolean' && input.caseSensitive !== undefined && input.caseSensitive !== null) {
     // Accept truthy/falsy too, but the form always passes booleans.
@@ -511,6 +525,12 @@ function _buildTextClickScenarioFromInput(input, baseId) {
       language:      String(input.language).toLowerCase(),
       matchMode:     String(input.matchMode).toLowerCase(),
       caseSensitive: !!input.caseSensitive,
+      // Step 41 — persist ocrProvider per-scenario. Default mock.
+      // Even when persisted as `tesseract`, the click-engine still
+      // requires a runtime opt-in before real OCR runs.
+      ocrProvider:   (typeof input.ocrProvider === 'string' && TEXT_CLICK_ALLOWED_OCR_PROVIDERS.indexOf(input.ocrProvider) !== -1)
+                       ? input.ocrProvider
+                       : 'mock',
       region:        region,
       timeoutMs:     Number(input.timeoutMs)   | 0,
       intervalMs:    Number(input.intervalMs)  | 0,

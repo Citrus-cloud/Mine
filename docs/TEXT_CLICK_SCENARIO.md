@@ -323,3 +323,31 @@ diagnostics line still reports `realOcr=false` /
 `realClick=false` / `realOcrAutoRun=false`. Step 40+ will
 land the call-site swap behind a fresh
 `docs/REAL_OCR_GO_NO_GO.md` review.
+
+
+
+## ocrProvider setting (Steps 40-41)
+
+text_click scenarios now carry a per-scenario
+`settings.ocrProvider` field with two allowed values:
+`'mock'` (default) and `'tesseract'`. The form select
+**OCR provider** lets the user pick one when authoring the
+scenario.
+
+`validateTextClickScenario` rejects unknown values:
+`OCR provider must be mock or tesseract`. Legacy scenarios
+without the field default to `mock` so they keep running
+unchanged.
+
+Choosing `tesseract` does NOT auto-enable real OCR. The
+click-engine re-checks the runtime overlay
+(`getOcrFeatureStatus().realOcrEnabledForSession`) on every
+run. Without the session opt-in the engine fails with the
+localised message
+`Tesseract OCR is disabled. Enable it for this session or
+use mock OCR.` Action-pipeline still rejects every
+`realClick: true` outright; the simulated `text_click`
+action stamps `realClick: false, realOcr: <source>`.
+
+For the runtime user manual see
+[`REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md).

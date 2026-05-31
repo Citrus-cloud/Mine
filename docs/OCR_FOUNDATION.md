@@ -451,3 +451,32 @@ For the full reference see
 [`TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md). For the
 step-by-step path to a real backend see
 [`REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md).
+
+
+
+## Mock and real OCR modes (Steps 40-41)
+
+The OCR tab now ships two explicit run modes:
+
+- **Run Mock OCR** — backed by the Step-32 mock engine. Always
+  enabled. Deterministic block-fabrication from preview metadata.
+- **Run Real OCR** — backed by Tesseract.js. Disabled until the
+  user explicitly enables Tesseract for the current session
+  (`Enable Tesseract for this session` button → confirm dialog
+  → runtime overlay sets `realOcr=true`, `tesseractProvider=true`)
+  AND switches the active provider to `tesseract`
+  (`Use Tesseract OCR` button) AND a screen preview exists.
+
+Both paths render the same OCR result panels (blocks list,
+overlay, `text_click` action preview). The result envelope from
+the real path stamps `mode: 'real-ocr'`, `provider: 'tesseract'`,
+`realOcr: true`, `realClick: false`. The `actionPreview` for a
+match is `{ type: 'text_click', mode: 'preview',
+realClick: false, realOcr: true }` — never executed.
+
+Real OCR runs only against the captured screen preview held in
+the renderer's screen-capture slice. No live-screen capture
+loop. No real cursor work.
+
+For the user manual see
+[`REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md).

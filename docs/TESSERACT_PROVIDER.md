@@ -293,3 +293,38 @@ for the full provider contract,
 for the step-by-step roadmap, and
 [`docs/SECURITY_CHECKLIST.md`](./SECURITY_CHECKLIST.md) for
 the consolidated safety checklist.
+
+
+
+## 12. Phase 2 — session-scoped activation (Steps 40-41)
+
+Steps 40-41 turn the Phase-1 shell into a working real-OCR
+provider that runs **only after an explicit user action**:
+
+- `src/feature-flags.js` exposes a runtime overlay
+  (`setRuntimeFeatureFlag` / `getRuntimeFeatureFlags` /
+  `resetRuntimeFeatureFlags`). Only `realOcr` and
+  `tesseractProvider` can be flipped; everything else, including
+  `realDesktopActions` and `simulationOnly`, is rejected. The
+  overlay is renderer-memory-only and wipes on reload.
+- `recognizeTextWithTesseract(input, options?)` is now `async`
+  and dispatches to `Tesseract.recognize` only when
+  `getOcrFeatureStatus().realOcrEnabledForSession === true`.
+  Without the runtime overlay it returns the same blocked
+  envelope as Phase 1.
+- The OCR tab gains four explicit provider-control buttons
+  (Use Mock OCR / Enable Tesseract for this session / Use
+  Tesseract OCR / Disable Real OCR) plus a **Run Real OCR**
+  button next to Run Mock OCR. The Run button is disabled
+  until every condition is met. Recognition NEVER auto-runs.
+- text_click scenarios persist `settings.ocrProvider`
+  (`mock | tesseract`, default `mock`). The click-engine
+  branches on the field; the Tesseract path requires the
+  runtime overlay. Visual Builder copies the active provider
+  into the draft.
+- The action pipeline still rejects every `realClick: true`.
+  `realOcr: true` is now a source marker; the action stays
+  simulation-only.
+
+See [`REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md) for the user-facing
+manual.

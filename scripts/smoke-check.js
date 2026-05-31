@@ -487,6 +487,14 @@ while ((sm = scriptRe.exec(htmlTxt2)) !== null) {
     missingScripts.push('REMOTE: ' + srcAttr);
     continue;
   }
+  // Step 40: optional `<script src="../node_modules/...">` tags
+  // are best-effort. They resolve only after `npm install`. The
+  // sandbox / CI may not have the dependency unpacked. We skip
+  // those entries here because the renderer's defensive engine
+  // resolver handles a missing file gracefully.
+  if (srcAttr.indexOf('../node_modules/') === 0 || srcAttr.indexOf('node_modules/') === 0) {
+    continue;
+  }
   var rel = path.posix.join('src', srcAttr);
   if (!fileExists(rel)) missingScripts.push(rel);
 }
@@ -3856,13 +3864,17 @@ record(
 //      action type — but ONLY through the simulate path. The
 //      Step 32 invariant ("never accepted") evolves into the
 //      stronger Step 33 invariant: "accepted and simulation-only
-//      AND realClick: true / realOcr: true is rejected".
+//      AND realClick: true is rejected".
+//      Step 41 update: `realOcr: true` is no longer rejected on
+//      text_click — it is a SOURCE marker (the match came from
+//      a real OCR engine). The simulate path still emits
+//      `realClick: false`. The hard-stop on `realClick: true`
+//      stays unchanged.
 var apTxt32 = readText('src/action-pipeline.js');
 record(
   'action-pipeline.js accepts "text_click" as a simulation-only action type at step 33',
   /action\.type\s*===\s*['"]text_click['"]/.test(apTxt32) &&
-  /text_click\s+realClick=true\s+is\s+blocked/.test(apTxt32) &&
-  /text_click\s+realOcr=true\s+is\s+blocked/.test(apTxt32)
+  /text_click\s+realClick=true\s+is\s+blocked/.test(apTxt32)
 );
 var smTxt32 = readText('src/scenario-manager.js');
 record(
@@ -4000,9 +4012,12 @@ record(
   'action-pipeline.js rejects text_click realClick=true',
   /text_click\s+realClick=true\s+is\s+blocked/.test(apTxt33)
 );
+// Step 41 — `realOcr: true` is now ALLOWED on text_click as a
+// source marker. The Step-33 rejection invariant has been
+// retired. The hard-stop on `realClick: true` remains.
 record(
-  'action-pipeline.js rejects text_click realOcr=true',
-  /text_click\s+realOcr=true\s+is\s+blocked/.test(apTxt33)
+  'action-pipeline.js comments document Step-41 realOcr source marker',
+  /Step 41[\s\S]*?realOcr:\s*true|source marker/i.test(apTxt33)
 );
 record(
   'action-pipeline.js requires non-empty text on text_click actions',
@@ -4457,11 +4472,17 @@ record(
 );
 
 // 238. text-click-test-tools.js does NOT reach for any real OCR
-//      backend; it must only delegate to the Step-32 mock engine.
+//      backend via `require()`. It MAY reference `tesseract` only
+//      indirectly through the renderer global
+//      `recognizeTextWithTesseract` (Step 41 dispatcher). The
+//      strict invariant is therefore: no `require('tesseract*')`
+//      and no `require('opencv*')`.
 record(
   'text-click-test-tools.js never imports tesseract / opencv',
-  !/tesseract/i.test(tctToolsClean) &&
-  !/opencv/i.test(tctToolsClean)
+  !/require\(['"]tesseract/i.test(tctToolsClean) &&
+  !/require\(['"]opencv/i.test(tctToolsClean) &&
+  !/import\s+.*['"]tesseract/i.test(tctToolsClean) &&
+  !/import\s+.*['"]opencv/i.test(tctToolsClean)
 );
 record(
   'text-click-test-tools.js delegates to the Step-32 mock engine',
@@ -5903,6 +5924,337 @@ var planTxt39 = readText('docs/REAL_OCR_INTEGRATION_PLAN.md');
 record(
   'docs/REAL_OCR_INTEGRATION_PLAN.md mentions Step 39 phase 1',
   /Step 39|Phase 1|phase 1/.test(planTxt39)
+);
+
+// =====================================================================
+// Steps 40-41 — Real OCR UI Activation + text_click / Visual Builder
+// =====================================================================
+
+// 314. tesseract.js stays declared in package.json (Step 39
+//      invariant carried forward to Step 41).
+if (pkg) {
+  var allDeps41 = Object.assign({},
+    pkg.dependencies || {}, pkg.devDependencies || {}, pkg.optionalDependencies || {});
+  record(
+    'package.json declares tesseract.js as a dependency at Step 41',
+    Object.prototype.hasOwnProperty.call(allDeps41, 'tesseract.js')
+  );
+  // Step 41 forbidden modules — same shape as Step 39, plus we
+  // explicitly forbid every native/real-input package.
+  var step41Forbidden = [
+    'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender'
+  ];
+  var pkgForbidden41 = step41Forbidden.filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps41, m);
+  });
+  record(
+    'package.json declares no OCR-engine / OpenCV / image-matching / real-input modules at step 41',
+    pkgForbidden41.length === 0,
+    pkgForbidden41.join(', ')
+  );
+}
+
+// 315. feature-flags.js exposes the runtime overlay surface.
+var ffTxt41 = readText('src/feature-flags.js');
+[
+  'setRuntimeFeatureFlag',
+  'getRuntimeFeatureFlags',
+  'resetRuntimeFeatureFlags'
+].forEach(function (fn) {
+  record(
+    'feature-flags.js exports ' + fn,
+    new RegExp('function\\s+' + fn + '\\s*\\(').test(ffTxt41)
+  );
+});
+// Safe defaults must remain false in the frozen base map.
+record(
+  'feature-flags.js base defaults still pin realOcr: false at Step 41',
+  /FEATURE_FLAGS\s*=\s*Object\.freeze\(\{[\s\S]*?realOcr:\s*false/.test(ffTxt41)
+);
+record(
+  'feature-flags.js base defaults still pin tesseractProvider: false at Step 41',
+  /FEATURE_FLAGS\s*=\s*Object\.freeze\(\{[\s\S]*?tesseractProvider:\s*false/.test(ffTxt41)
+);
+record(
+  'feature-flags.js base defaults still pin simulationOnly: true at Step 41',
+  /FEATURE_FLAGS\s*=\s*Object\.freeze\(\{[\s\S]*?simulationOnly:\s*true/.test(ffTxt41)
+);
+record(
+  'feature-flags.js runtime overlay can only flip realOcr / tesseractProvider',
+  /_RUNTIME_TOGGLABLE_FLAGS\s*=\s*\[\s*['"]realOcr['"],\s*['"]tesseractProvider['"]\s*\]/.test(ffTxt41)
+);
+record(
+  'feature-flags.js getOcrFeatureStatus exposes realOcrEnabledForSession',
+  /realOcrEnabledForSession/.test(ffTxt41)
+);
+
+// 316. Tesseract provider implements an async recognise call.
+var tessTxt41 = readText('src/tesseract-ocr-provider.js');
+record(
+  'tesseract-ocr-provider.js declares recognizeTextWithTesseract as async',
+  /async\s+function\s+recognizeTextWithTesseract\s*\(/.test(tessTxt41)
+);
+record(
+  'tesseract-ocr-provider.js still refuses recognise when realOcr/tesseractProvider are off',
+  /Real OCR provider is disabled by feature flag/.test(tessTxt41) &&
+  /blocked:\s*true/.test(tessTxt41)
+);
+record(
+  'tesseract-ocr-provider.js dispatches to engine.recognize',
+  /engine\.recognize\s*\(/.test(tessTxt41)
+);
+var tessTxt41Code = tessTxt41
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/\/\/[^\n]*$/gm, '');
+record(
+  'tesseract-ocr-provider.js never sets realClick to true',
+  !/realClick:\s*true/.test(tessTxt41Code)
+);
+record(
+  'tesseract-ocr-provider.js exports cancelCurrentTesseractRecognition',
+  /function\s+cancelCurrentTesseractRecognition\s*\(/.test(tessTxt41)
+);
+record(
+  'tesseract-ocr-provider.js result envelope carries mode: real-ocr',
+  /mode:\s*['"]real-ocr['"]/.test(tessTxt41)
+);
+record(
+  'tesseract-ocr-provider.js never imports any forbidden module via require',
+  !/require\(['"]tesseract-ocr['"]\)/.test(tessTxt41) &&
+  !/require\(['"]opencv/i.test(tessTxt41) &&
+  !/require\(['"]robotjs['"]\)/.test(tessTxt41) &&
+  !/require\(['"]iohook['"]\)/.test(tessTxt41)
+);
+
+// 317. action-pipeline accepts text_click with realOcr: true as a
+//      source marker (Step 41) but still rejects realClick: true.
+var apTxt41 = readText('src/action-pipeline.js');
+record(
+  'action-pipeline.js accepts text_click realOcr=true as a source marker (Step 41)',
+  !/text_click\s+realOcr=true\s+is\s+blocked/.test(apTxt41) &&
+  /text_click\s+realClick=true\s+is\s+blocked/.test(apTxt41)
+);
+record(
+  'action-pipeline.js audit payload propagates realOcr / ocrProvider',
+  /realOcr:\s*action\.realOcr === true/.test(apTxt41) &&
+  /ocrProvider:\s*typeof action\.ocrProvider/.test(apTxt41)
+);
+
+// 318. scenario-manager validates ocrProvider on text_click scenarios.
+var smTxt41 = readText('src/scenario-manager.js');
+record(
+  'scenario-manager.js validates ocrProvider for text_click scenarios',
+  /TEXT_CLICK_ALLOWED_OCR_PROVIDERS\s*=\s*\[\s*['"]mock['"],\s*['"]tesseract['"]\s*\]/.test(smTxt41) &&
+  /OCR provider must be mock or tesseract/.test(smTxt41)
+);
+record(
+  'scenario-manager.js persists ocrProvider in text_click settings',
+  /ocrProvider:\s*\(typeof input\.ocrProvider === 'string'/.test(smTxt41)
+);
+
+// 319. click-engine branches on settings.ocrProvider for text_click.
+var ceTxt41 = readText('src/click-engine.js');
+record(
+  'click-engine.js branches text_click on desiredOcrProvider',
+  /desiredOcrProvider/.test(ceTxt41) &&
+  /sSettings\.ocrProvider === 'tesseract'/.test(ceTxt41)
+);
+record(
+  'click-engine.js refuses tesseract path without runtime opt-in',
+  /tesseract-disabled-by-flag/.test(ceTxt41) &&
+  /Tesseract OCR is disabled/.test(ceTxt41)
+);
+record(
+  'click-engine.js text_click action stays simulation-only (realClick: false)',
+  /realClick:\s*false[\s\S]*?type:\s*'text_click'/.test(ceTxt41) ||
+  /type:\s*'text_click'[\s\S]*?realClick:\s*false/.test(ceTxt41)
+);
+
+// 320. text-click-test-tools.js becomes async + provider-aware.
+var tctToolsTxt = readText('src/text-click-test-tools.js');
+record(
+  'text-click-test-tools.js declares runTextClickTest as async',
+  /async\s+function\s+runTextClickTest\s*\(/.test(tctToolsTxt)
+);
+record(
+  'text-click-test-tools.js dispatches to recognizeTextWithTesseract for the tesseract path',
+  /recognizeTextWithTesseract/.test(tctToolsTxt) &&
+  /desiredProvider === 'tesseract'/.test(tctToolsTxt)
+);
+record(
+  'text-click-test-tools.js refuses tesseract test without session opt-in',
+  /tesseractDisabledByFeatureFlag/.test(tctToolsTxt)
+);
+
+// 321. text-click-test-ui.js awaits the async run helper.
+var tctUiTxt41 = readText('src/text-click-test-ui.js');
+record(
+  'text-click-test-ui.js awaits runTextClickTest',
+  /await\s+runTextClickTest\s*\(/.test(tctUiTxt41)
+);
+
+// 322. ocr-ui.js renders the four provider control buttons + the
+//      Run-Real-OCR button + the progress card.
+var ocrUiTxt41 = readText('src/ocr-ui.js');
+[
+  'ocr-provider-controls',
+  'ocr-provider-use-mock-btn',
+  'ocr-provider-enable-tesseract-btn',
+  'ocr-provider-use-tesseract-btn',
+  'ocr-provider-disable-btn',
+  'ocr-run-real-button',
+  'ocr-progress-card'
+].forEach(function (cls) {
+  record(
+    'ocr-ui.js declares ' + cls,
+    ocrUiTxt41.indexOf(cls) !== -1
+  );
+});
+record(
+  'ocr-ui.js wires the Enable-Tesseract button to setRuntimeFeatureFlag',
+  /_ocrEnableTesseractForSessionFromUi/.test(ocrUiTxt41) &&
+  /setRuntimeFeatureFlag\s*\(\s*['"]realOcr['"]\s*,\s*true\s*\)/.test(ocrUiTxt41) &&
+  /setRuntimeFeatureFlag\s*\(\s*['"]tesseractProvider['"]\s*,\s*true\s*\)/.test(ocrUiTxt41)
+);
+record(
+  'ocr-ui.js wires the Disable-Real-OCR button to resetRuntimeFeatureFlags',
+  /resetRuntimeFeatureFlags\s*\(/.test(ocrUiTxt41)
+);
+record(
+  'ocr-ui.js renders the OCR progress card',
+  /renderOcrProgressCard/.test(ocrUiTxt41) &&
+  /ocr-progress-bar/.test(ocrUiTxt41)
+);
+record(
+  'ocr-ui.js Run-Real-OCR button stays disabled without session opt-in',
+  /realOcrEnabledForSession/.test(ocrUiTxt41) &&
+  /realBtn\.disabled\s*=\s*true/.test(ocrUiTxt41)
+);
+
+// 323. Audit allowlist contains the 8 new Step-40 types.
+var auditTxt41 = readText('src/audit-events.js');
+[
+  'ocr.real.enabledForSession',
+  'ocr.real.disabled',
+  'ocr.real.started',
+  'ocr.real.progress',
+  'ocr.real.completed',
+  'ocr.real.failed',
+  'ocr.real.blocked',
+  'ocr.provider.switched'
+].forEach(function (eventType) {
+  record(
+    'audit allowlist includes ' + eventType,
+    auditTxt41.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 324. text_click form has the OCR provider select.
+var htmlTxt41 = readText('src/index.html');
+record(
+  'index.html text_click form has the OCR provider select',
+  htmlTxt41.indexOf('input-text-ocr-provider') !== -1 &&
+  htmlTxt41.indexOf('text-click-ocr-provider-hint') !== -1
+);
+record(
+  'index.html best-effort loads tesseract.min.js from node_modules',
+  htmlTxt41.indexOf('node_modules/tesseract.js/dist/tesseract.min.js') !== -1
+);
+
+// 325. Visual Builder draft includes ocrProvider and exposes it.
+var vbTxt41 = readText('src/visual-builder.js');
+record(
+  'visual-builder.js text_click draft persists ocrProvider',
+  /ocrProvider:\s+draftProvider/.test(vbTxt41) &&
+  /getActiveOcrProvider/.test(vbTxt41)
+);
+var vbUiTxt41 = readText('src/visual-builder-ui.js');
+record(
+  'visual-builder-ui.js draft preview surfaces ocrProviderUsed',
+  /ocrProviderUsed/.test(vbUiTxt41)
+);
+record(
+  'visual-builder-ui.js draft fill propagates input-text-ocr-provider',
+  /input-text-ocr-provider/.test(vbUiTxt41)
+);
+
+// 326. i18n parity is preserved AND the new Step 40-41 keys exist.
+var i18nTxt41 = readText('src/i18n.js');
+[
+  'enableTesseractForSession',
+  'disableRealOcr',
+  'useMockOcr',
+  'useTesseractOcr',
+  'runRealOcr',
+  'realOcrProgress',
+  'ocrStage',
+  'loadingOcrLanguage',
+  'recognizingText',
+  'realOcrCompleted',
+  'realOcrFailed',
+  'realOcrBlocked',
+  'tesseractMustBeEnabled',
+  'ocrProviderSelect',
+  'realOcrMayBeSlower',
+  'noClicksWillBePerformed',
+  'ocrCancellationPlanned',
+  'languageDataFailed',
+  'targetTextNotFound',
+  'ocrProviderUsed'
+].forEach(function (key) {
+  record(
+    'i18n declares Step 40-41 key ' + key,
+    new RegExp('\\b' + key + ':\\s*"').test(i18nTxt41)
+  );
+});
+
+// 327. README / PROJECT_CONTEXT mention Steps 40-41.
+var readme41 = readText('README.md');
+var ctx41 = readText('PROJECT_CONTEXT.md');
+record(
+  'README or PROJECT_CONTEXT mentions step 40',
+  /step\s*40|шаг\s*40|Step 40|Шаг 40/.test(readme41) ||
+  /step\s*40|шаг\s*40|Step 40|Шаг 40/.test(ctx41)
+);
+record(
+  'README or PROJECT_CONTEXT mentions step 41',
+  /step\s*41|шаг\s*41|Step 41|Шаг 41/.test(readme41) ||
+  /step\s*41|шаг\s*41|Step 41|Шаг 41/.test(ctx41)
+);
+record(
+  'README or PROJECT_CONTEXT mentions Tesseract / session',
+  /(Tesseract|tesseract)\s+(provider|OCR)|сессии|session/i.test(readme41) ||
+  /(Tesseract|tesseract)\s+(provider|OCR)|сессии|session/i.test(ctx41)
+);
+
+// 328. Step 40 doc is present.
+record(
+  'docs/REAL_OCR_USAGE.md exists',
+  fileExists('docs/REAL_OCR_USAGE.md')
+);
+var realOcrUsage = readText('docs/REAL_OCR_USAGE.md');
+record(
+  'docs/REAL_OCR_USAGE.md describes Enable Tesseract for session',
+  /Enable Tesseract for this session|Enable Tesseract for the session|Включить Tesseract/i.test(realOcrUsage)
+);
+record(
+  'docs/REAL_OCR_USAGE.md preserves the no-real-click invariant',
+  /no real click|never click|simulation\-only/i.test(realOcrUsage)
+);
+
+// 329. CHANGELOG mentions Steps 40 and 41.
+var clog41 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 40 — Real OCR UI Activation',
+  clog41.indexOf('Step 40 — Real OCR UI Activation') !== -1
+);
+record(
+  'CHANGELOG.md mentions Step 41 — Real OCR for text_click and Visual Builder',
+  clog41.indexOf('Step 41 — Real OCR for text_click and Visual Builder') !== -1
 );
 
 // --- Report ---

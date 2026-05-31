@@ -783,3 +783,57 @@ following limitations are intentional.
 See [`docs/TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md)
 for the full provider reference and the future activation
 plan.
+
+
+
+## 20. Real OCR is opt-in per session (Steps 40-41)
+
+Step 40-41 allow real OCR to run, but only after the user has
+explicitly enabled Tesseract for the current session. The
+following limitations are intentional.
+
+### 20.1 Real OCR may be slow
+- First call: language pack load (200–600 ms) + WebAssembly
+  init (~300 ms) + recognise. Worst case on a `1920×1080`
+  preview is several seconds.
+- Steady state: 600–1200 ms per call on a tight region;
+  whole-screen calls remain slow.
+
+### 20.2 Language data may fail to load
+- Tesseract.js v5 fetches `eng.traineddata` /
+  `rus.traineddata` from its CDN by default. ClickFlow's CSP
+  blocks remote fetches. In environments without preloaded
+  language packs, real OCR fails with
+  `Failed to load OCR language data.` and the user can fall
+  back to the mock provider. Bundling local packs is
+  planned (Step 42+).
+
+### 20.3 Cancellation is best-effort only
+- Tesseract.js v5 has no abort handle for
+  `Tesseract.recognize`. The Cancel button marks the
+  in-flight token so the resolver discards the late result,
+  but the worker keeps running until the call finishes.
+  Worker-based cancellation is planned.
+
+### 20.4 Region cropping is best-effort
+- The provider crops the captured preview via a `<canvas>`
+  before passing the image to Tesseract.js. When the canvas
+  API refuses (CORS, unsupported dataURL) the provider
+  falls back to the full image. The recognised bounding
+  boxes still account for the region offset.
+
+### 20.5 Runtime overlay does not persist
+- The "Enable Tesseract for this session" toggle lives in
+  renderer memory only. It wipes on reload. After
+  restarting the app the user must enable Tesseract again
+  before real OCR can run. This is intentional safety —
+  a stuck-on real-OCR flag would be a regression.
+
+### 20.6 No real click
+- text_click with `ocrProvider: 'tesseract'` still emits a
+  simulated `text_click` action. The action pipeline
+  rejects every `realClick: true` outright. `realOcr: true`
+  on an action only marks the source.
+
+See [`docs/REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md) for the
+user manual and the troubleshooting table.
