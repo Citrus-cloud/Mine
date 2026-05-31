@@ -828,3 +828,102 @@ See [`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md)
 for the full description, the data shape, the execution flow,
 and the list of features that are **not** implemented at
 Step 33.
+
+
+
+## text_click test tools (Step 34)
+
+> Step 34 ships a Test OCR / Test Text Match panel inside the
+> `text_click` scenario form
+> ([`docs/TEXT_CLICK_TEST_TOOLS.md`](./TEXT_CLICK_TEST_TOOLS.md)).
+> The panel never executes the scenario, never clicks, never
+> performs real OCR, never persists the screenshot or the debug
+> result on disk, and never opens a new IPC channel. The whole
+> MVP remains simulation-only.
+
+### Behavioural invariants
+- [x] **Test OCR does not click.** The Test OCR button calls
+      `runTextClickTest`, which validates inputs, invokes the
+      Step-32 mock engine over the captured preview, and
+      returns a debug result. It NEVER calls
+      `click-engine.runScenario`,
+      `click-engine.runTextClickScenario`, the action
+      pipeline's real branch, the mock adapter, or the
+      dry-run sandbox. `realClick: false` in every result.
+- [x] **Test OCR does not use real OCR.** The matcher is the
+      Step-32 mock engine that fabricates blocks from preview
+      metadata. No `tesseract`, no `tesseract.js`, no native
+      OCR. `realOcr: false` in every result.
+- [x] **Test Text Match does not click.** The Test OCR button
+      doubles as Test Text Match — when the mock matches the
+      target text, only an action preview is built. The action
+      preview is rendered via `<pre>.textContent` and is
+      rejected by the click engine, the action pipeline, the
+      mock adapter, and the dry-run sandbox.
+- [x] **Test OCR uses preview only.** The mock engine reads the
+      screen-capture preview the user explicitly captured in
+      Step 25. It never opens a new screenshot session, never
+      reads the live screen, never streams. The
+      `imageDataUrl` is read by the Test OCR overlay
+      (`<img>.src`) only and is never sent to audit, never
+      persisted.
+- [x] **Test OCR never persists the screenshot.** Neither
+      `text-click-test-tools.js` nor `text-click-test-ui.js`
+      writes to disk. The module-local `_lastTextClickTestResult`
+      lives in renderer memory only and is cleared on
+      `clearTextClickTestResult()` and on every scenario form
+      open / close.
+- [x] **Test OCR never persists the debug result.** The
+      result is **not** serialised into `scenarios.json`,
+      `settings.json`, `profiles.json`, `templates.json` or
+      `localStorage`. Saving the scenario only persists the
+      Step-33 fields (`targetText`, `language`, `matchMode`,
+      `caseSensitive`, `region`, `timeoutMs`, `intervalMs`,
+      `repeatCount`).
+- [x] **No full target text in audit / diagnostics.** The six
+      new audit event types
+      (`textClick.test.started`,
+      `textClick.test.completed`,
+      `textClick.test.failed`,
+      `textClick.test.noMatch`,
+      `textClick.test.cleared`,
+      `textClick.test.actionPreview.created`)
+      and the `Text click test:` line in `Copy diagnostics`
+      carry only ids, numbers, language / match mode labels,
+      and `targetTextLen` / `textLen` — never the full target
+      text, never an `imageDataUrl`, never a thumbnail, never
+      PII.
+- [x] **The action preview is never executed.** It is rendered
+      through `<pre>.textContent` (no HTML interpolation) and
+      its `realClick: false` / `realOcr: false` /
+      `mode: 'preview'` markers ensure the click engine, the
+      action pipeline, the mock adapter, and the dry-run
+      sandbox refuse to consume it.
+
+### Pipeline-level invariants
+- [x] **No new IPC channel at Step 34.** `main.js` registers
+      no `textClick.test.*` handler. `preload.js` exposes no
+      `textClick.test.*` API.
+- [x] **No prohibited dependencies.** `package.json` still
+      declares zero of `tesseract`, `tesseract.js`,
+      `tesseract-ocr`, `node-tesseract-ocr`, `opencv4nodejs`,
+      `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`,
+      `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`,
+      `nutjs`, `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`.
+- [x] **No prohibited imports.** `text-click-test-tools.js`
+      and `text-click-test-ui.js` never call `require()`,
+      never import `electron` or `ipcRenderer`, never use
+      `localStorage`, and never use `innerHTML` on user data.
+
+### Electron-security invariants (re-checked at Step 34)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no
+      `unsafe-eval`, no remote sources.
+
+See [`docs/TEXT_CLICK_TEST_TOOLS.md`](./TEXT_CLICK_TEST_TOOLS.md)
+for the full description, the debug-result shape, the error
+IDs, the troubleshooting list, and the list of features that
+are **not** implemented at Step 34.

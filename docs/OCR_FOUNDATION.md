@@ -336,3 +336,34 @@ the action-pipeline so the user can run a full
 engine continues to NOT recognise real text.
 
 See [`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md).
+
+
+
+---
+
+## Step 34 — mock OCR is also used by the text_click test tools
+
+[Step 34](./TEXT_CLICK_TEST_TOOLS.md) ships a **Test OCR / Test
+Text Match** panel inside the `text_click` scenario form. The
+panel calls `createOcrInput()` and `runMockOcr()` directly with
+the form's current target text / language / match mode / case
+sensitivity / region — the same way the Step-33 click engine
+does — and renders the result as a debug overlay, an
+OCR-blocks list, an action preview, and a structured debug
+result.
+
+The mock engine itself is unchanged at Step 34:
+
+- still pure renderer code, no IPC, no native deps;
+- still fabricates blocks from preview metadata only;
+- still NEVER recognises real text;
+- still emits `ocr.mock.requested` / `ocr.mock.completed` /
+  `ocr.mock.failed` audit events with only short metadata
+  (no full target text, no `imageDataUrl`).
+
+Test OCR adds its own audit lifecycle on top of the engine:
+`textClick.test.started`, `textClick.test.completed`,
+`textClick.test.failed`, `textClick.test.noMatch`,
+`textClick.test.cleared`, `textClick.test.actionPreview.created`.
+
+See [`docs/TEXT_CLICK_TEST_TOOLS.md`](./TEXT_CLICK_TEST_TOOLS.md).

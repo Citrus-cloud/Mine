@@ -4303,6 +4303,437 @@ record(
   rendererTxt33.indexOf('clearTextClickFormRegion') !== -1
 );
 
+// =====================================================================
+// Step 34 — Text Click Test Tools + OCR UX Polish
+// =====================================================================
+
+// 229. New source files exist.
+record(
+  'src/text-click-test-tools.js exists',
+  fileExists('src/text-click-test-tools.js')
+);
+record(
+  'src/text-click-test-ui.js exists',
+  fileExists('src/text-click-test-ui.js')
+);
+
+// 230. New documentation exists.
+record(
+  'docs/TEXT_CLICK_TEST_TOOLS.md exists',
+  fileExists('docs/TEXT_CLICK_TEST_TOOLS.md')
+);
+
+// 231. text-click-test-tools.js declares the documented function names.
+var tctTools = readText('src/text-click-test-tools.js');
+[
+  'function buildTextClickTestInput',
+  'function validateTextClickTestInput',
+  'function runTextClickTest',
+  'function createTextClickDebugResult',
+  'function clearTextClickTestResult',
+  'function getTextClickTestStatus'
+].forEach(function (sig) {
+  record(
+    'text-click-test-tools.js declares ' + sig,
+    tctTools.indexOf(sig) !== -1
+  );
+});
+
+// 232. text-click-test-ui.js declares the documented function names.
+var tctUi = readText('src/text-click-test-ui.js');
+[
+  'function initTextClickTestUi',
+  'function renderTextClickScreenPreviewStatus',
+  'function renderTextClickRegionSummary',
+  'function runTextClickTestFromForm',
+  'function clearTextClickTestResultUi',
+  'function renderTextClickTestResult',
+  'function renderTextClickOcrOverlay',
+  'function renderTextClickActionPreview',
+  'function renderTextClickBlocksList'
+].forEach(function (sig) {
+  record(
+    'text-click-test-ui.js declares ' + sig,
+    tctUi.indexOf(sig) !== -1
+  );
+});
+
+// 233. Both Step-34 modules are pure-renderer code: no `require()`,
+//      no electron / ipcRenderer / fs / localStorage usage.
+//      Doc-strings are stripped first via the Step 31 helper.
+[
+  ['src/text-click-test-tools.js', _stripJsComments(tctTools)],
+  ['src/text-click-test-ui.js',    _stripJsComments(tctUi)]
+].forEach(function (pair) {
+  var rel = pair[0]; var txt = pair[1];
+  record(
+    rel + ' does not require() anything',
+    !/\brequire\s*\(/.test(txt)
+  );
+  record(
+    rel + ' does not import electron',
+    txt.indexOf("require('electron')") === -1 &&
+    txt.indexOf('require("electron")') === -1 &&
+    txt.indexOf("from 'electron'") === -1
+  );
+  record(
+    rel + ' does not use ipcRenderer',
+    txt.indexOf('ipcRenderer') === -1
+  );
+  record(
+    rel + ' does not use fs',
+    !/\brequire\s*\(\s*['"]fs['"]\s*\)/.test(txt)
+  );
+  record(
+    rel + ' does not use localStorage',
+    txt.indexOf('localStorage') === -1
+  );
+});
+
+// 234. Both Step-34 modules contain no innerHTML on user data.
+[
+  ['src/text-click-test-tools.js', tctTools],
+  ['src/text-click-test-ui.js',    tctUi]
+].forEach(function (pair) {
+  var rel = pair[0]; var txt = pair[1];
+  var lines = txt.split(/\r?\n/);
+  var bad = [];
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    if (ln.indexOf('innerHTML') === -1) continue;
+    var cleaned = ln.replace(/\/\/.*$/, '');
+    if (cleaned.indexOf('innerHTML') === -1) continue;
+    if (/innerHTML\s*=\s*(''|"")\s*;?\s*$/.test(cleaned)) continue;
+    bad.push((i + 1) + ': ' + ln.trim());
+  }
+  record(
+    rel + ' uses innerHTML only as `= \'\'` (container clear)',
+    bad.length === 0,
+    bad.length ? bad.slice(0, 3).join(' | ') : ''
+  );
+});
+
+// 235. text-click-test-ui.js renders the action preview via
+//      <pre>.textContent (no HTML interpolation on user data).
+record(
+  'text-click-test-ui.js renders text_click action preview via <pre>.textContent',
+  /createElement\(['"]pre['"]\)/.test(tctUi) &&
+  /\.textContent\s*=\s*JSON\.stringify/.test(tctUi)
+);
+
+// 236. The Test OCR flow does NOT call runScenario / runTextClickScenario
+//      / executeAction with executionMode: 'real'.
+var tctToolsClean = _stripJsComments(tctTools);
+var tctUiClean    = _stripJsComments(tctUi);
+record(
+  'text-click-test-tools.js does not call runScenario',
+  tctToolsClean.indexOf('runScenario(') === -1
+);
+record(
+  'text-click-test-tools.js does not call runTextClickScenario',
+  tctToolsClean.indexOf('runTextClickScenario(') === -1
+);
+record(
+  'text-click-test-tools.js does not call executeAction with executionMode: "real"',
+  !/executeAction\s*\([^)]*executionMode:\s*['"]real['"]/.test(tctToolsClean)
+);
+record(
+  'text-click-test-ui.js does not call runScenario',
+  tctUiClean.indexOf('runScenario(') === -1
+);
+record(
+  'text-click-test-ui.js does not call runTextClickScenario',
+  tctUiClean.indexOf('runTextClickScenario(') === -1
+);
+
+// 237. Both modules stamp realClick: false / realOcr: false.
+record(
+  'text-click-test-tools.js stamps realClick: false',
+  /realClick:\s*false/.test(tctTools)
+);
+record(
+  'text-click-test-tools.js stamps realOcr: false',
+  /realOcr:\s*false/.test(tctTools)
+);
+
+// 238. text-click-test-tools.js does NOT reach for any real OCR
+//      backend; it must only delegate to the Step-32 mock engine.
+record(
+  'text-click-test-tools.js never imports tesseract / opencv',
+  !/tesseract/i.test(tctToolsClean) &&
+  !/opencv/i.test(tctToolsClean)
+);
+record(
+  'text-click-test-tools.js delegates to the Step-32 mock engine',
+  tctToolsClean.indexOf('runMockOcr') !== -1 &&
+  tctToolsClean.indexOf('createOcrInput') !== -1
+);
+
+// 239. Audit allowlist contains the 6 new types.
+var auditTxt34 = readText('src/audit-events.js');
+[
+  'textClick.test.started',
+  'textClick.test.completed',
+  'textClick.test.failed',
+  'textClick.test.noMatch',
+  'textClick.test.cleared',
+  'textClick.test.actionPreview.created'
+].forEach(function (eventType) {
+  record(
+    'audit-events.js allowlists ' + eventType,
+    auditTxt34.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 240. i18n.js declares the new keys in BOTH locales.
+var i18nTxt34 = readText('src/i18n.js');
+var step34I18nKeys = [
+  'testOcr',
+  'testTextMatch',
+  'runTextClickTest',
+  'textClickTestTools',
+  'textClickTestResult',
+  'textClickBlocks',
+  'ocrBlocksOverlay',
+  'matchedBlock',
+  'targetTextWasNotFound',
+  'mockOcrEngineUnavailable',
+  'openOcr',
+  'textClickTestStarted',
+  'textClickTestCompleted',
+  'textClickTestFailed',
+  'textClickTestNoMatch',
+  'textClickTestCleared',
+  'ocrMockOnly',
+  'testDoesNotUseRealOcr',
+  'textClickDebugPanel',
+  'matchedTextBlock',
+  'noTextClickTestResult'
+];
+step34I18nKeys.forEach(function (key) {
+  var pattern = new RegExp('\\b' + key + '\\s*:', 'g');
+  var matches = i18nTxt34.match(pattern) || [];
+  record(
+    'i18n.js defines key "' + key + '" in both RU and EN',
+    matches.length >= 2,
+    matches.length === 0 ? 'missing entirely' : 'only ' + matches.length + ' occurrence(s)'
+  );
+});
+
+// 241. index.html loads the new scripts in the correct order:
+//      ocr-mock-engine.js → text-click-test-tools.js →
+//      text-click-test-ui.js → renderer.js
+var htmlTxt34 = readText('src/index.html');
+record(
+  'index.html loads text-click-test-tools.js',
+  /<script\s+src=["']text-click-test-tools\.js["']/.test(htmlTxt34)
+);
+record(
+  'index.html loads text-click-test-ui.js',
+  /<script\s+src=["']text-click-test-ui\.js["']/.test(htmlTxt34)
+);
+(function () {
+  var enginePos   = htmlTxt34.indexOf('ocr-mock-engine.js');
+  var toolsPos    = htmlTxt34.indexOf('text-click-test-tools.js');
+  var uiPos       = htmlTxt34.indexOf('text-click-test-ui.js');
+  var rendererPos = htmlTxt34.indexOf('renderer.js');
+  record(
+    'index.html loads ocr-mock-engine.js before text-click-test-tools.js',
+    enginePos !== -1 && toolsPos !== -1 && enginePos < toolsPos
+  );
+  record(
+    'index.html loads text-click-test-tools.js before text-click-test-ui.js',
+    toolsPos !== -1 && uiPos !== -1 && toolsPos < uiPos
+  );
+  record(
+    'index.html loads text-click-test-ui.js before renderer.js',
+    uiPos !== -1 && rendererPos !== -1 && uiPos < rendererPos
+  );
+})();
+
+// 242. README and PROJECT_CONTEXT mention Text Click Test Tools / Test OCR.
+var readmeTxt34  = readText('README.md');
+var contextTxt34 = readText('PROJECT_CONTEXT.md');
+record(
+  'README.md mentions Text Click Test Tools or Test OCR',
+  /Text Click Test Tools|text click test tools|Test OCR|text_click test/i.test(readmeTxt34)
+);
+record(
+  'PROJECT_CONTEXT.md mentions Text Click Test Tools or Test OCR',
+  /Text Click Test Tools|text click test tools|Test OCR|text_click test/i.test(contextTxt34)
+);
+record(
+  'README or PROJECT_CONTEXT mentions step 34',
+  /шаг\s*34|step\s*34/i.test(readmeTxt34 + '\n' + contextTxt34)
+);
+
+// 243. docs/TEXT_CLICK_TEST_TOOLS.md asserts simulation-only,
+//      mock-only OCR, no real click.
+var tctDoc = readText('docs/TEXT_CLICK_TEST_TOOLS.md');
+record(
+  'docs/TEXT_CLICK_TEST_TOOLS.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(tctDoc)
+);
+record(
+  'docs/TEXT_CLICK_TEST_TOOLS.md asserts Test OCR does not click',
+  /(does\s+not\s+click|never\s+clicks|never moves the cursor|never executes the scenario|test ocr does not click)/i.test(tctDoc)
+);
+record(
+  'docs/TEXT_CLICK_TEST_TOOLS.md asserts mock OCR / no Tesseract',
+  /(mock OCR|no Tesseract|tesseract is not connected|test ocr does not use real ocr|mock-only)/i.test(tctDoc)
+);
+record(
+  'docs/TEXT_CLICK_TEST_TOOLS.md describes Test OCR flow / debug result',
+  /Test OCR flow/i.test(tctDoc) && /(debug result|Required data|OCR blocks overlay)/i.test(tctDoc)
+);
+
+// 244. SECURITY_CHECKLIST has a Step 34 / Test OCR section.
+var tctSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has a Step 34 / Test OCR section',
+  /text_click\s+test\s+tools\s*\(?step\s*34/i.test(tctSec) ||
+  /## text_click test tools/i.test(tctSec) ||
+  /Test OCR does not use real OCR/i.test(tctSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts Test OCR does not click / does not use real OCR',
+  /Test OCR does not click/i.test(tctSec) &&
+  /Test OCR does not use real OCR/i.test(tctSec)
+);
+
+// 245. SMOKE_TESTS doc has a Step 34 Test OCR block.
+var stTxt34 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 34 Text Click Test Tools / Test OCR block',
+  /Step\s*34\s*[—-]\s*Text Click Test Tools/i.test(stTxt34) ||
+  /Step 34.*Test OCR/i.test(stTxt34)
+);
+
+// 246. CHANGELOG mentions Step 34.
+var chTxt34 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 34 — Text Click Test Tools',
+  /Step\s*34.*Text Click Test Tools/i.test(chTxt34) ||
+  /Шаг\s*34.*Text Click Test Tools/i.test(chTxt34) ||
+  /Text Click Test Tools/i.test(chTxt34)
+);
+
+// 247. package.json STILL declares no OCR / OpenCV / image-matching
+//      / real-input modules at step 34.
+if (pkg) {
+  var allDeps34 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step34Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps34, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 34',
+    step34Forbidden.length === 0,
+    step34Forbidden.length ? step34Forbidden.join(', ') : ''
+  );
+}
+
+// 248. Step-34 source files don't import OCR / OpenCV / real-input.
+var step34SourceFiles = [
+  'main.js', 'preload.js',
+  'src/text-click-test-tools.js',
+  'src/text-click-test-ui.js'
+];
+var step34ForbiddenImports = [
+  'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+  'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep34Imports = [];
+step34SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step34ForbiddenImports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep34Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 34 source files',
+  foundStep34Imports.length === 0,
+  foundStep34Imports.length ? foundStep34Imports.join(', ') : ''
+);
+
+// 249. Step 34 introduces no new IPC channel.
+record(
+  'main.js does not register any textClick.test.* IPC handler at step 34',
+  !/ipcMain\.handle\(['"]textClick\.test/.test(mainTxt) &&
+  !/ipcMain\.on\(['"]textClick\.test/.test(mainTxt)
+);
+record(
+  'preload.js does not expose any textClick.test.* API at step 34',
+  preloadTxt.indexOf("'textClick.test.") === -1 &&
+  preloadTxt.indexOf('"textClick.test.') === -1 &&
+  preloadTxt.indexOf('textClickTest') === -1
+);
+
+// 250. main.js / index.html still hold the safety flags at step 34.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 34)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 34)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 34 (no unsafe-inline / unsafe-eval)',
+  htmlTxt34.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt34.indexOf('unsafe-inline') === -1 &&
+  htmlTxt34.indexOf('unsafe-eval') === -1
+);
+
+// 251. renderer.js wires initTextClickTestUi() and the diagnostics
+//      card / Copy diagnostics line.
+var rendererTxt34 = readText('src/renderer.js');
+record(
+  'renderer.js calls initTextClickTestUi()',
+  rendererTxt34.indexOf('initTextClickTestUi(') !== -1
+);
+record(
+  'renderer.js Copy diagnostics has a `Text click test:` line',
+  /Text click test:/.test(rendererTxt34) &&
+  /testDoesNotClick=true/.test(rendererTxt34) &&
+  /ocrMockOnly=true/.test(rendererTxt34) &&
+  /realOcrEnabled=false/.test(rendererTxt34) &&
+  /realTextClickEnabled=false/.test(rendererTxt34)
+);
+record(
+  'renderer.js diagnostics card uses textClickTestDiagnostics i18n key',
+  rendererTxt34.indexOf("t('textClickTestDiagnostics')") !== -1
+);
+
+// 252. text-click-test-ui.js targets the text_click form section
+//      and builds the test panel container.
+record(
+  'text-click-test-ui.js references #form-section-text-click container',
+  tctUi.indexOf("'form-section-text-click'") !== -1 ||
+  tctUi.indexOf('"form-section-text-click"') !== -1
+);
+record(
+  'text-click-test-ui.js builds the text-click-test-panel container',
+  tctUi.indexOf("'text-click-test-panel'") !== -1 ||
+  tctUi.indexOf('"text-click-test-panel"') !== -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

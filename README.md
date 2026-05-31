@@ -29,7 +29,7 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools).
 - Версия: **`0.1.0-beta`**.
 - Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлены read-only **Screen Capture Foundation** (Step 25 — preview only), **Region Selector Foundation** (Step 26 — rectangular selection on the preview), **Template Asset Manager** (Step 27 — image assets storage only), **Template Matching Mock / Dry-run** (Step 28 — mock-only pipeline), **Real Template Matching Engine Foundation** (Step 29 — plain-JS preview-only engine producing a real confidence score) и новый тип сценария **image_click** (Step 30 — simulation-only orchestration: matcher запускается на каждой итерации, action-pipeline эмитит `action.imageClick.simulated`, реального клика нет). Поиск шаблонов на live-screen, OCR, OpenCV и реальные клики **по-прежнему не реализованы**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
@@ -464,6 +464,62 @@ tesseract.js не подключены и не добавлены в package.jso
 по-прежнему mock-only. Реальные курсор/клавиатура отсутствуют.
 simple_click и image_click сценарии продолжают работать без
 изменений.**
+**Step 34:** в форме `text_click` сценария добавлен новый блок
+**Text click test tools** с тремя информационными карточками
+(Screen preview status / Region summary / OCR settings),
+кнопкой **Test OCR** и кнопками быстрой навигации
+(Open OCR / Open Screen Capture / Open Region Selector). Кнопка
+**Test OCR** запускает Step-32 mock OCR над текущими значениями
+формы и captured preview и рисует: цветной headline (matched /
+no-match / failed), метрики (target text / language / match
+mode / case sensitive / matched text / confidence / bbox /
+target / duration), список **OCR blocks** (matched row с
+зелёной подсветкой и MATCHED-бейджем), визуальный **OCR
+blocks overlay** поверх preview (region — пунктирный синий,
+mock blocks — оранжевые dashed, matched block — сплошной
+зелёный с label, target dot — красный круг), и
+**`text_click` action preview** (JSON через
+`<pre>.textContent`, `realClick: false`, `realOcr: false`).
+Понятные локализованные ошибки (`Target text is required`,
+`Capture a screen preview first`, `Region is invalid`,
+`Mock OCR engine is unavailable`, `Target text was not found`,
+`Unsupported match mode`, `Unsupported OCR language`).
+**Test OCR никогда не сохраняет сценарий**, **никогда не
+выполняет click**, **никогда не запускает scenario**,
+**никогда не использует настоящий OCR**, **никогда не пишет
+скриншот / debug result на диск**, **никогда не открывает
+новый IPC канал**. Добавлены два новых модуля:
+[`src/text-click-test-tools.js`](./src/text-click-test-tools.js)
+(pure logic — `buildTextClickTestInput`,
+`validateTextClickTestInput`, `runTextClickTest`,
+`createTextClickDebugResult`, `clearTextClickTestResult`,
+`getTextClickTestStatus`, `getLastTextClickTestResult`) и
+[`src/text-click-test-ui.js`](./src/text-click-test-ui.js) (DOM/UI
+— `initTextClickTestUi`, `refreshTextClickTestPanel`,
+`renderTextClickScreenPreviewStatus`,
+`renderTextClickRegionSummary`, `renderTextClickOcrSettings`,
+`runTextClickTestFromForm`, `renderTextClickTestResult`,
+`clearTextClickTestResultUi`, `renderTextClickBlocksList`,
+`renderTextClickOcrOverlay`, `renderTextClickActionPreview`).
+В `src/audit-events.js` — 6 новых allowlisted типов
+(`textClick.test.started/completed/failed/noMatch/cleared/actionPreview.created`).
+В Advanced → Safety — новая карточка **Text click test
+diagnostics** с lastTextClickTestAt / Matched / Confidence /
+DurationMs / TargetTextLen / ErrorsCount / Language /
+MatchMode / RegionUsed / BlocksCount; в `Copy diagnostics`
+— новая строка `Text click test: …` (только числа, id и
+длина текста, никогда полный target text). Новый документ
+[`docs/TEXT_CLICK_TEST_TOOLS.md`](./docs/TEXT_CLICK_TEST_TOOLS.md).
+Обновлены `docs/TEXT_CLICK_SCENARIO.md`,
+`docs/OCR_FOUNDATION.md`, `docs/SECURITY_CHECKLIST.md`,
+`docs/SMOKE_TESTS.md`. Smoke-check расширен Step-34-инвариантами.
+Добавлено 30 новых i18n-ключей RU + EN. **Реальные клики /
+настоящий OCR / Tesseract / tesseract.js / OpenCV / robotjs /
+nut.js / iohook / uiohook-napi по-прежнему отсутствуют.
+realDesktopActions=false, simulationOnly=true,
+ocrEngineImplemented=false, tesseractAvailable=false,
+contextIsolation: true, nodeIntegration: false — без
+изменений.**
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -691,6 +747,7 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/IMAGE_CLICK_TEST_TOOLS.md`](./docs/IMAGE_CLICK_TEST_TOOLS.md) — описание Image Click Test Tools: Test Match flow, debug overlay, action preview, troubleshooting, safety notes (Step 31).
 - [`docs/OCR_FOUNDATION.md`](./docs/OCR_FOUNDATION.md) — описание OCR Foundation: mock OCR flow, input/result format, `text_click` action preview, region support, future Tesseract integration, safety notes (Step 32).
 - [`docs/TEXT_CLICK_SCENARIO.md`](./docs/TEXT_CLICK_SCENARIO.md) — описание Text Click Scenario Type Foundation: формат сценария, target text, OCR settings, optional region, execution flow, simulation-only invariants, что **не** реализовано (Step 33).
+- [`docs/TEXT_CLICK_TEST_TOOLS.md`](./docs/TEXT_CLICK_TEST_TOOLS.md) — описание Text Click Test Tools: Test OCR flow, OCR blocks overlay, action preview, troubleshooting, safety notes (Step 34).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
