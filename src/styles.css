@@ -2631,3 +2631,461 @@ body {
   .form-group-region .form-row { gap: var(--space-1); }
   .form-group-region .form-row .btn { width: 100%; }
 }
+
+
+
+/* =====================================================================
+   Step 31 — Image Click Scenario UX Polish + Visual Test Tools
+   ---------------------------------------------------------------------
+   Test Match panel inside the scenario form. Cards mirror the
+   Advanced dashboard look-and-feel, but compact enough to fit
+   under the image_click section without hurting the form layout.
+   ===================================================================== */
+
+.image-click-test-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.image-click-test-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.image-click-test-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-strong);
+}
+
+.image-click-test-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.image-click-test-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.image-click-test-nav-button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.image-click-test-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.image-click-test-card-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-strong);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.image-click-test-empty {
+  padding: var(--space-3);
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--bg-subtle);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.image-click-test-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 12.5px;
+  padding: 2px 0;
+}
+
+.image-click-test-row-label {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.image-click-test-row-value {
+  color: var(--text);
+  text-align: right;
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Template preview card --- */
+
+.image-click-test-template-card .image-click-test-template-body {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.image-click-test-template-preview-box {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 120px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image-click-test-template-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.image-click-test-template-meta {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* --- Test Match controls row --- */
+
+.image-click-test-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.image-click-test-button {
+  flex: 1 1 auto;
+  min-width: 160px;
+  font-weight: 600;
+}
+
+.image-click-test-button-busy {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.image-click-test-clear-button {
+  flex: 0 0 auto;
+}
+
+/* --- Errors / warnings blocks --- */
+
+.image-click-test-errors {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  color: var(--text-strong);
+}
+
+.image-click-test-errors-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--danger);
+  margin-bottom: var(--space-1);
+}
+
+.image-click-test-errors-list,
+.image-click-test-warnings-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.image-click-test-errors-item,
+.image-click-test-warnings-item {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.image-click-test-warnings {
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  color: var(--warning-text);
+}
+
+.image-click-test-warnings-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: var(--space-1);
+  color: var(--warning-text);
+}
+
+/* --- Result panel --- */
+
+.image-click-test-result-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.image-click-test-result-headline {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.image-click-test-result-headline-matched {
+  background: var(--success-soft);
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.image-click-test-result-headline-failed {
+  background: var(--danger-soft);
+  color: #991b1b;
+  border: 1px solid var(--danger-border);
+}
+
+.image-click-test-result-headline-no-match {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
+}
+
+.image-click-test-result-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.image-click-test-result-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* --- Debug overlay (preview + bbox + target + region) --- */
+
+.image-click-test-overlay-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.image-click-test-overlay-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.image-click-test-overlay-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.image-click-test-overlay-region {
+  position: absolute;
+  border: 2px dashed rgba(79, 142, 247, 0.85);
+  background: rgba(79, 142, 247, 0.08);
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+.image-click-test-overlay-bbox {
+  position: absolute;
+  border: 2px solid rgba(34, 197, 94, 0.95);
+  background: rgba(34, 197, 94, 0.12);
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+.image-click-test-overlay-bbox-candidate {
+  border: 2px dashed rgba(245, 158, 11, 0.95);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.image-click-test-confidence-badge {
+  position: absolute;
+  top: -10px;
+  left: 4px;
+  background: rgba(34, 197, 94, 0.95);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.image-click-test-confidence-badge-low {
+  background: rgba(245, 158, 11, 0.95);
+}
+
+.image-click-test-overlay-target {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(239, 68, 68, 0.4);
+  pointer-events: none;
+}
+
+.image-click-test-overlay-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* --- Action preview block --- */
+
+.image-click-test-action-preview {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.image-click-test-action-preview-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.image-click-test-action-preview-json {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280px;
+  overflow: auto;
+}
+
+/* --- Dark theme tweaks --- */
+
+[data-theme="dark"] .image-click-test-panel {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .image-click-test-card,
+[data-theme="dark"] .image-click-test-result-panel,
+[data-theme="dark"] .image-click-test-overlay-card,
+[data-theme="dark"] .image-click-test-action-preview {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .image-click-test-empty {
+  background: var(--card-hover);
+  border-color: var(--border-strong);
+  color: var(--muted);
+}
+
+[data-theme="dark"] .image-click-test-result-headline-matched {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+[data-theme="dark"] .image-click-test-result-headline-failed {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+[data-theme="dark"] .image-click-test-result-headline-no-match {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+[data-theme="dark"] .image-click-test-errors {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.40);
+  color: #fecaca;
+}
+
+[data-theme="dark"] .image-click-test-warnings {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.40);
+  color: #fde68a;
+}
+
+[data-theme="dark"] .image-click-test-action-preview-json {
+  background: var(--card-hover);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* --- Mobile fallback --- */
+
+@media (max-width: 760px) {
+  .image-click-test-panel {
+    padding: var(--space-3);
+  }
+  .image-click-test-template-card .image-click-test-template-body {
+    flex-direction: column;
+  }
+  .image-click-test-template-preview-box {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 160px;
+  }
+  .image-click-test-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .image-click-test-button,
+  .image-click-test-clear-button {
+    width: 100%;
+  }
+}

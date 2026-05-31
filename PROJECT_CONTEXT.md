@@ -7,6 +7,54 @@
 
 ## Текущий шаг
 
+**Шаг 31 завершён.** Image Click Scenario UX Polish + Visual
+Test Tools. Проект остаётся в стадии `0.1.0-beta`
+(simulation-only). На шаге 31 в форму `image_click` сценария
+(шаг 30) добавлен блок **Image click test tools**: три
+информационные карточки (Template preview / Screen preview
+status / Region summary), кнопка **Run Test Match**,
+визуальный debug overlay поверх preview (region — пунктирный
+синий, bbox — сплошной зелёный или dashed orange при низкой
+достоверности, бейдж confidence, красная точка target point),
+action preview JSON (через `<pre>.textContent`,
+`realClick: false`), быстрая навигация (Open Templates /
+Open Screen Capture / Open Region Selector → `setAdvancedTab(tab)`).
+Test Match запускает Step-29 matcher над текущими значениями
+формы и captured preview; **никогда не выполняет click**,
+**никогда не запускает scenario**, **никогда не пишет
+скриншот / debug result на диск**, **никогда не открывает
+новый IPC канал**. Понятные локализованные ошибки
+(`No template selected` / `Template image is missing` /
+`Capture a screen preview first` / `Region is invalid` /
+`Template is larger than search area` / `Match confidence is
+below threshold` / `Matching took too long` /
+`Matching engine unavailable`). Добавлены два новых модуля
+[`src/image-click-test-tools.js`](./src/image-click-test-tools.js)
+(pure logic) и
+[`src/image-click-test-ui.js`](./src/image-click-test-ui.js)
+(DOM/UI). В `src/audit-events.js` — 5 новых allowlisted типов
+(`imageClick.test.started/completed/failed/lowConfidence/cleared`).
+В Advanced → Safety — карточка **Image click test diagnostics**
+(`Last test at`, `Last test matched`, `Last test confidence`,
+`Last test duration`, `Last test template`, `Last test errors`,
+`Test Match does not click = enabled`, `Real matching disabled`,
+`Real click disabled`); в `Copy diagnostics` — новая строка
+`Image click test: …, testDoesNotClick=true, realMatching=false,
+realClick=false` (только числа и id, никогда `imageDataUrl`).
+Создан [`docs/IMAGE_CLICK_TEST_TOOLS.md`](./docs/IMAGE_CLICK_TEST_TOOLS.md);
+обновлены `docs/IMAGE_CLICK_SCENARIO.md`,
+`docs/TEMPLATE_MATCHING_ENGINE.md`,
+`docs/SECURITY_CHECKLIST.md`, `docs/SMOKE_TESTS.md` (Step 31
+checks #278–#298). Smoke-check расширен Step-31-инвариантами.
+Добавлено 47 новых i18n-ключей RU + EN.
+**Реальные клики / OCR / image recognition / template matching
+на live screen / OpenCV / Tesseract / robotjs / nut.js / iohook /
+uiohook-napi по-прежнему не реализованы. realDesktopActions=false,
+simulationOnly=true, contextIsolation: true, nodeIntegration:
+false, CSP — без изменений.**
+
+## Прошлый шаг
+
 **Шаг 26 завершён.** Region Selector Foundation. Проект остаётся
 в стадии `0.1.0-beta` (simulation-only). На шаге 26 поверх
 Screen Capture preview из шага 25 добавлен **прямоугольный
@@ -59,7 +107,7 @@ OpenCV / robotjs / nut.js / iohook по-прежнему не реализова
 `contextIsolation: true`, `nodeIntegration: false`, CSP — без
 изменений.
 
-## Прошлый шаг
+## Прошлые шаги
 
 **Шаг 25.** Screen Capture Foundation. Проект остаётся
 в стадии `0.1.0-beta` (simulation-only) и параллельно открывает
@@ -816,8 +864,33 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
 | 28 | Template Matching Mock / Dry-run (mock-only pipeline that wires the Step 25 preview, the Step 26 region, and the Step 27 templates into a deterministic mock match — features themselves still not implemented): new pure-logic `src/template-matching-mock.js` (`createTemplateMatchInput`, `validateTemplateMatchInput`, `runMockTemplateMatch`, `createMockMatchResult`, `getMockTargetPoint`, `createImageClickActionPreview`, `clearMockMatchResult`, `getLastMockMatchResult`, `getTemplateMatchingMockStatus`). The matcher is mock — it never decodes a single pixel and only consumes widths, heights, ids, and rectangles. The result is a `{ id, mode: "mock", matched, confidence, boundingBox, targetPoint, usedRegion, templateId, templateName, sourceId, sourceName, previewSize, createdAt, realMatching: false, realClick: false }` record. Confidence is deterministic — picked from a frozen set by hashing the input metadata. New `src/template-matching-ui.js` (`renderTemplateMatchingTab`, `buildTemplateMatchInputFromState`, `runTemplateMatchingMock`, `clearTemplateMatchingMockResult`, `renderTemplateMatchingRequirements`, `renderTemplateMatchingInputSummary`, `renderTemplateMatchingResult`, `renderTemplateMatchingOverlay`, `renderActionPreview`). New 10th Advanced tab **Template Matching / Поиск шаблона**: mock notice, five-row requirements checklist (preview / template / region / real-matching disabled / real-click disabled), input summary, Run / Clear buttons, visual overlay (bounding box + target point + dashed region) on top of the screen-capture preview, result card, `image_click` action-preview JSON block (rendered via `<pre>.textContent`, never submitted to the click engine). `appState.templateMatching` slice (`lastInput`, `lastResult`, `isRunning`, `lastError`, `lastRunAt`) + 6 mutators (`setTemplateMatchingInput`, `setTemplateMatchingResult`, `setTemplateMatchingRunning`, `setTemplateMatchingError`, `clearTemplateMatchingResult`, `resetTemplateMatchingState`) — strips any `imageDataUrl` / `previewDataUrl` a buggy caller might pass. Five new audit-event types (`template.match.mock.requested/completed/failed/cleared`, `image.click.preview.created`); payloads carry only ids and numeric metadata. Diagnostics: compact **Template matching (mock)** card in Advanced → Safety + new `Template matching mock: …` line in Copy diagnostics (numeric / metadata only — never base64). 27 new RU + EN i18n keys. `docs/TEMPLATE_MATCHING_MOCK.md`. **No real image matching, no OCR, no real clicks, no OpenCV / opencv.js / opencv4nodejs / @u4/opencv4nodejs, no Tesseract / tesseract.js, no `image_click` scenario execution. The matcher is pure metadata math — `realMatching=false`, `realClick=false`, `matcherImplemented=false`, `imageClickScenarioImplemented=false` hold across every status response and audit event. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
 | 29 | Real Template Matching Engine Foundation (renderer-side plain-JS template matching producing a real confidence score against the captured preview — not the live screen, not a real click): new `src/template-matching-engine.js` (`loadImageFromDataUrl`, `imageToCanvas`, `getImageDataFromDataUrl`, `cropImageData`, `resizeImageDataIfNeeded`, `runTemplateMatch`, `findBestMatch`, `calculatePatchScore`, `createTemplateMatchResult`, `getTemplateMatchEngineStatus`, `estimateSearchCost`). Mock mode from Step 28 is **kept**. The Template Matching tab gains a Match-mode selector (Mock / Real preview), a Threshold input (default `0.75`), and a Step selector (`1 / 2 / 4 / 8 / 16`, default `4`). Algorithm: mean RGB absolute difference over a regular grid (`step` pixels apart) with a per-template sub-step (`1 / 2 / 3 / 4` depending on template area). Big previews are downscaled to ≤ 1200×800; big templates are downscaled to ≤ 320×320; the bounding box is mapped back to the original preview coordinates. Cost guard raises the effective step when the estimate exceeds 16 M comparisons and emits a `template.match.engine.warning` audit event. `appState.templateMatching` gains `mode` / `threshold` / `step` + three setters (`setTemplateMatchingMode`, `setTemplateMatchingThreshold`, `setTemplateMatchingStep`). `_cloneTemplateMatchResult` carries the new `threshold / durationMs / step / requestedStep / pixelStep / scannedPositions / downscaledSearch / downscaledTemplate` fields. Five new audit-event types (`template.match.realPreview.requested/completed/failed`, `template.match.lowConfidence`, `template.match.engine.warning`). Result card gains a `Match found` / `Low confidence — showing best candidate` headline; the visual overlay paints solid green for matches and dashed for low-confidence candidates. Diagnostics card gains `Match mode`, `Threshold`, `Step`, `Duration`, `Engine available`, `Search region used`. `Copy diagnostics` line is broadened to `Template matching: …, mode=…, threshold=…, step=…, engineAvailable=…, lastDurationMs=…, lastMode=…, realMatching=false, realClick=false, ocrImplemented=false, opencvAvailable=false, matcherImplemented=true, imageClickScenarioImplemented=false`. 27 new RU + EN i18n keys. `docs/TEMPLATE_MATCHING_ENGINE.md`. **The engine analyses the captured preview, NOT the live screen. No real cursor movement, no real click, no OCR, no OpenCV / opencv.js / opencv-js / sharp / jimp / pixelmatch / looks-same / robotjs / nut.js / iohook / uiohook-napi. The `image_click` action preview is still rendered through `<pre>.textContent` and never reaches the click engine, the action pipeline, the mock adapter, or the dry-run sandbox. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
 | 30 | Image Click Scenario Type Foundation (new scenario type `image_click` orchestrating the Step 25–29 building blocks into a simulation-only end-to-end flow — features themselves still not implemented): `src/scenario-manager.js` gains `validateImageClickScenario`, `createImageClickScenario`, `updateImageClickScenario`, `getScenariosByType`. `createScenario` / `updateScenario` dispatch on `type`; missing `type` is treated as `simple_click` for backward compatibility. `src/click-engine.js` gains `runImageClickScenario(scenario, callbacks, options)` (capture preview → run Step-29 matcher → simulated `image_click` action via the action-pipeline). The dispatcher in `runScenario` routes by `scenario.type`. `src/action-pipeline.js` learns the `image_click` action shape; `validateAction` accepts `{ type: 'image_click', templateId, targetPoint: {x>=0, y>=0}, boundingBox?, confidence?, realClick: false }`; `realClick: true` is rejected outright. `image_click` flows through the legacy simulate path (the mock adapter only knows `click`) and emits `action.imageClick.simulated`. `src/safety-gates.js` mirrors the validation. New scenario form: `Scenario type` select (`Coordinate click` / `Image click`); image_click-only fields (template select, region summary + Use selected region / Clear region buttons, threshold, step, timeoutMs, intervalMs, repeatCount). The form auto-detects scenario type on edit and renders the right section. `formatLastAction(action)` renders both types. New scenario card badge `image_click`. New 9 audit-event types (`scenario.imageClick.started / stopped / match.started / match.completed / noMatch / simulated / failed`, `action.imageClick.simulated`, `action.imageClick.realBlocked`); payloads carry only ids / numeric metadata. New compact `image_click scenario` diagnostics card + new `Image click scenario: …, imageClickSimulationOnly=true, realImageClickEnabled=false, ocrImplemented=false` line in `Copy diagnostics`. 26 new RU + EN i18n keys. `docs/IMAGE_CLICK_SCENARIO.md`. **simple_click scenarios unchanged. No real cursor movement, no real click, no OCR / Tesseract, no OpenCV / opencv.js / opencv-js / sharp / jimp / pixelmatch / looks-same / robotjs / nut-js / iohook / uiohook-napi. `realClick: true` on `image_click` is always blocked. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
+| 31 | Image Click Scenario UX Polish + Visual Test Tools (Test Match flow inside the `image_click` scenario form — never executes the scenario, never clicks): two new pure renderer modules. `src/image-click-test-tools.js` is pure logic (`buildImageClickTestInput(formData, appState)`, `validateImageClickTestInput(input)`, `runImageClickTest(input)`, `createImageClickDebugResult(matchResult, input)`, `clearImageClickTestResult()`, `getImageClickTestStatus()`, `getLastImageClickTestResult()`). Stable error IDs map to localised strings (`noTemplateSelected`, `templateImageMissing`, `captureScreenPreviewFirst`, `invalidRegion`, `templateLargerThanSearchArea`, `matchingTookTooLong`, `matchingEngineUnavailable`, `thresholdInvalid`, `stepInvalid`). Stable warning IDs (`matchBelowThreshold`, `searchAreaCostHigh`, `stepRaisedByEngine`, `templateDownscaled`, `searchAreaDownscaled`). Soft 8-second timeout cap on top of the engine's own cost guards. Module-local `_lastTestResult` + `_diagnostics` (`lastImageClickTestAt / Matched / Confidence / DurationMs / TemplateId / ErrorsCount`) — never `imageDataUrl`, never thumbnails. `src/image-click-test-ui.js` is the DOM/UI layer (`initImageClickTestUi`, `refreshImageClickTestPanel`, `renderImageClickTemplatePreview`, `renderImageClickScreenPreviewStatus`, `renderImageClickRegionSummary`, `runImageClickTestFromForm`, `renderImageClickTestResult`, `clearImageClickTestResultUi`, `renderImageClickDebugOverlay`, `renderImageClickActionPreview`). The panel sits inside `#form-section-image-click` with: header + Test-Match-does-not-click subtitle, three quick navigation buttons (Open Templates / Open Screen Capture / Open Region Selector → `setAdvancedTab(tab)`), three info cards (template preview / screen preview status / region summary), Run Test Match (primary) + Clear result buttons, errors block (red), warnings block (yellow), result panel with coloured headline (matched=green / failed=red / no-match=yellow) and metric rows, debug overlay (region=dashed blue, bbox=solid green or dashed orange "candidate", confidence badge, target dot — all percentage-positioned over the preview `<img>`), action preview (`<pre>.textContent`, `realClick: false`). All user-visible text via `textContent`; image previews via `<img>.src` only; `innerHTML` only as `= ''`. Result mirrors into `appState.templateMatching.lastResult` (numbers / ids only) so the existing Template Matching tab and the Advanced → Safety diagnostics card see the same numbers. New 5 audit-event types (`imageClick.test.started / completed / failed / lowConfidence / cleared`); payloads carry only ids and numeric metadata. New compact **Image click test diagnostics** card in Advanced → Safety with `Last test at`, `Last test matched`, `Last test confidence`, `Last test duration`, `Last test template`, `Last test errors`, `Test Match does not click = enabled`, `Real matching disabled = enabled`, `Real click disabled = enabled`. New `Image click test: …, testDoesNotClick=true, realMatching=false, realClick=false` line in `Copy diagnostics` (numeric / metadata only — never base64). New `docs/IMAGE_CLICK_TEST_TOOLS.md`. Updated `docs/IMAGE_CLICK_SCENARIO.md` (new Test Match section), `docs/TEMPLATE_MATCHING_ENGINE.md` (engine is also used by Test Match), `docs/SECURITY_CHECKLIST.md` (new "image_click test tools (Step 31)" section), `docs/SMOKE_TESTS.md` (Step 31 smoke checks #278–#298). 47 new RU + EN i18n keys. **Test Match never executes the scenario, never moves the cursor, never clicks, never opens a new IPC channel, never persists the screenshot or the debug result on disk. The action preview is always `mode: "preview"`, `realClick: false`, `realMatching: false` and is never consumed by the click engine, the action pipeline, the mock adapter, or the dry-run sandbox. No OCR / OpenCV / Tesseract / robotjs / nut.js / iohook / uiohook-napi. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
 
-## Что логично делать после шага 30
+## Что логично делать после шага 31
+
+- **Шаг 32 — Image Click Scenario Live Test Run (всё ещё
+  simulation-only).** Логичные кандидаты на шаг 32 (выбрать
+  **один**):
+  1. **Test Run from form.** Кнопка «Test run» рядом с Test Match,
+     которая запускает уже сохранённый сценарий через тот же
+     click-engine но с лимитом `repeatCount = 1`, и показывает
+     лог-стрим в самой форме. Реальные клики **по-прежнему**
+     отсутствуют — это полная simulation-цепочка.
+  2. **Persistent Test Match log.** Вкладка «Test Match log» в
+     Advanced с историей последних N запусков (число из
+     diagnostics, не imageDataUrl) — для отладки нестабильных
+     шаблонов.
+  3. **Multi-match preview.** Top-N кандидатов на overlay с
+     убывающим confidence и серой dashed-рамкой, плюс таблица
+     результатов. Клик-движок продолжает использовать только
+     лучший кандидат.
+  4. **Threshold suggestion.** Test Match подсказывает «попробуйте
+     порог N% — лучший кандидат сейчас на M%». Без авто-применения.
+- **OCR / text detection** — отдельная safety-gated линия. До
+  начала кодинга обязательно пройти
+  [`docs/REAL_ACTIONS_GO_NO_GO.md`](./docs/REAL_ACTIONS_GO_NO_GO.md).
+- **Visual scenario builder** — drag-drop конструктор image_click
+  / region / template-набора в одну сцену. **Не** в `0.1.x` линии.
 
 - **Шаг 28 — Template gallery / matcher prep (всё ещё simulation-only).**
   Активный шаблон уже выбирается, но никуда не «прикрепляется».

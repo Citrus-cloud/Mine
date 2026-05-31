@@ -104,7 +104,20 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   ScenarioImageClickSimulated:      'scenario.imageClick.simulated',
   ScenarioImageClickFailed:         'scenario.imageClick.failed',
   ActionImageClickSimulated:        'action.imageClick.simulated',
-  ActionImageClickRealBlocked:      'action.imageClick.realBlocked'
+  ActionImageClickRealBlocked:      'action.imageClick.realBlocked',
+  // Step 31: image_click Test Match (UX polish + visual test tools).
+  // Test Match runs the template matcher against the captured
+  // preview to debug a draft scenario BEFORE saving / running it.
+  // Payloads carry only ids and numeric metadata (confidence,
+  // target X / Y, durationMs, threshold, step, errorsCount,
+  // warningsCount, hasRegion: bool) — never an imageDataUrl,
+  // never a thumbnail, never a screenshot. Test Match never
+  // executes the scenario and never moves the cursor.
+  ImageClickTestStarted:            'imageClick.test.started',
+  ImageClickTestCompleted:          'imageClick.test.completed',
+  ImageClickTestFailed:             'imageClick.test.failed',
+  ImageClickTestLowConfidence:      'imageClick.test.lowConfidence',
+  ImageClickTestCleared:            'imageClick.test.cleared'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

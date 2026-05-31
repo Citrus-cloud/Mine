@@ -29,7 +29,7 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools).
 - Версия: **`0.1.0-beta`**.
 - Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлены read-only **Screen Capture Foundation** (Step 25 — preview only), **Region Selector Foundation** (Step 26 — rectangular selection on the preview), **Template Asset Manager** (Step 27 — image assets storage only), **Template Matching Mock / Dry-run** (Step 28 — mock-only pipeline), **Real Template Matching Engine Foundation** (Step 29 — plain-JS preview-only engine producing a real confidence score) и новый тип сценария **image_click** (Step 30 — simulation-only orchestration: matcher запускается на каждой итерации, action-pipeline эмитит `action.imageClick.simulated`, реального клика нет). Поиск шаблонов на live-screen, OCR, OpenCV и реальные клики **по-прежнему не реализованы**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
@@ -392,6 +392,27 @@ target и неизменными флагами `imageClickSimulationOnly = on /
 realImageClickDisabled = on`. **OCR нет, OpenCV нет, реальные
 курсор/клавиатура отсутствуют. simple_click сценарии продолжают
 работать без изменений.**
+**Step 31:** в форме `image_click` сценария добавлен новый
+блок **Image click test tools** с информационными карточками
+(Template preview / Screen preview status / Region summary),
+кнопкой **Run Test Match** и кнопками быстрой навигации
+(Open Templates / Open Screen Capture / Open Region Selector).
+Run Test Match запускает Step-29 matcher над текущими значениями
+формы и captured preview и рисует цветной headline (matched /
+no match / failed), метрики (confidence / threshold / bbox /
+target / duration / step), визуальный **debug overlay** поверх
+preview (region — пунктирный синий, bbox — сплошной зелёный или
+dashed orange при низкой достоверности, бейдж confidence,
+красная точка target point) и **action preview** (JSON через
+`<pre>.textContent`, `realClick: false`). Понятные локализованные
+ошибки (`No template selected`, `Template image is missing`,
+`Capture a screen preview first`, `Region is invalid`,
+`Template is larger than search area`, `Match confidence is
+below threshold`, `Matching took too long`, `Matching engine
+unavailable`). **Test Match никогда не сохраняет сценарий**,
+**никогда не выполняет click**, **никогда не запускает
+scenario**, **никогда не пишет скриншот / debug result на диск**,
+**никогда не открывает новый IPC канал**.
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -616,6 +637,7 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/TEMPLATE_MATCHING_MOCK.md`](./docs/TEMPLATE_MATCHING_MOCK.md) — описание Template Matching Mock / Dry-run: входной формат, mock result, action preview, safety-инварианты, что **не** реализовано (Step 28).
 - [`docs/TEMPLATE_MATCHING_ENGINE.md`](./docs/TEMPLATE_MATCHING_ENGINE.md) — описание Real Template Matching Engine Foundation: алгоритм plain-JS, threshold/step контролы, region scoping, performance limits, что **не** реализовано (Step 29).
 - [`docs/IMAGE_CLICK_SCENARIO.md`](./docs/IMAGE_CLICK_SCENARIO.md) — описание Image Click Scenario Type Foundation: формат сценария, обязательный шаблон, опциональная область, threshold/step, execution flow, simulation-only invariants, что **не** реализовано (Step 30).
+- [`docs/IMAGE_CLICK_TEST_TOOLS.md`](./docs/IMAGE_CLICK_TEST_TOOLS.md) — описание Image Click Test Tools: Test Match flow, debug overlay, action preview, troubleshooting, safety notes (Step 31).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и

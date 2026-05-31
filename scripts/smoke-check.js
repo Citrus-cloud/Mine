@@ -3017,6 +3017,449 @@ record(
   htmlTxt3.indexOf('unsafe-eval') === -1
 );
 
+
+// =====================================================================
+// Step 31 — Image Click Scenario UX Polish + Visual Test Tools
+// =====================================================================
+
+// 159. New source files exist.
+record(
+  'src/image-click-test-tools.js exists',
+  fileExists('src/image-click-test-tools.js')
+);
+record(
+  'src/image-click-test-ui.js exists',
+  fileExists('src/image-click-test-ui.js')
+);
+
+// 160. New documentation exists.
+record(
+  'docs/IMAGE_CLICK_TEST_TOOLS.md exists',
+  fileExists('docs/IMAGE_CLICK_TEST_TOOLS.md')
+);
+
+// 161. image-click-test-tools.js declares the documented function names.
+var ictTools = readText('src/image-click-test-tools.js');
+[
+  'function buildImageClickTestInput',
+  'function validateImageClickTestInput',
+  'function runImageClickTest',
+  'function createImageClickDebugResult',
+  'function clearImageClickTestResult',
+  'function getImageClickTestStatus'
+].forEach(function (sig) {
+  record(
+    'image-click-test-tools.js declares ' + sig,
+    ictTools.indexOf(sig) !== -1
+  );
+});
+
+// 162. image-click-test-ui.js declares the documented function names.
+var ictUi = readText('src/image-click-test-ui.js');
+[
+  'function initImageClickTestUi',
+  'function renderImageClickTemplatePreview',
+  'function renderImageClickScreenPreviewStatus',
+  'function renderImageClickRegionSummary',
+  'function runImageClickTestFromForm',
+  'function renderImageClickTestResult',
+  'function clearImageClickTestResultUi',
+  'function renderImageClickDebugOverlay',
+  'function renderImageClickActionPreview'
+].forEach(function (sig) {
+  record(
+    'image-click-test-ui.js declares ' + sig,
+    ictUi.indexOf(sig) !== -1
+  );
+});
+
+// 163. Both Step-31 modules are pure-renderer code: no `require()`,
+//      no electron / ipcRenderer / fs / localStorage usage.
+//
+// We strip comments before scanning so doc strings that LITERALLY
+// describe the invariants (e.g. "this module never uses
+// `ipcRenderer`") don't trigger false positives.
+function _stripJsComments(src) {
+  // Remove /* ... */ block comments, and // ... line comments.
+  // Order matters: strip block first.
+  var noBlock = src.replace(/\/\*[\s\S]*?\*\//g, '');
+  return noBlock.replace(/(^|[^:])\/\/[^\n\r]*/g, '$1');
+}
+[
+  ['src/image-click-test-tools.js', _stripJsComments(ictTools)],
+  ['src/image-click-test-ui.js',    _stripJsComments(ictUi)]
+].forEach(function (pair) {
+  var rel = pair[0]; var txt = pair[1];
+  record(
+    rel + ' does not require() anything',
+    !/\brequire\s*\(/.test(txt)
+  );
+  record(
+    rel + ' does not import electron',
+    txt.indexOf("require('electron')") === -1 &&
+    txt.indexOf('require("electron")') === -1 &&
+    txt.indexOf("from 'electron'") === -1
+  );
+  record(
+    rel + ' does not use ipcRenderer',
+    txt.indexOf('ipcRenderer') === -1
+  );
+  record(
+    rel + ' does not use fs',
+    !/\brequire\s*\(\s*['"]fs['"]\s*\)/.test(txt)
+  );
+  record(
+    rel + ' does not use localStorage',
+    txt.indexOf('localStorage') === -1
+  );
+});
+
+// 164. Both Step-31 modules contain no innerHTML on user data.
+//      Allowed: ` = ''` and ` = "";` only (clearing a container).
+[
+  ['src/image-click-test-tools.js', ictTools],
+  ['src/image-click-test-ui.js',    ictUi]
+].forEach(function (pair) {
+  var rel = pair[0]; var txt = pair[1];
+  // Find every "innerHTML" occurrence and ensure each is followed
+  // by `= ''` or `= ""`.
+  var lines = txt.split(/\r?\n/);
+  var bad = [];
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    if (ln.indexOf('innerHTML') === -1) continue;
+    // strip comments
+    var cleaned = ln.replace(/\/\/.*$/, '');
+    if (cleaned.indexOf('innerHTML') === -1) continue;
+    // accept `<thing>.innerHTML = ''` or `= ""`
+    if (/innerHTML\s*=\s*(''|"")\s*;?\s*$/.test(cleaned)) continue;
+    bad.push((i + 1) + ': ' + ln.trim());
+  }
+  record(
+    rel + ' uses innerHTML only as `= \'\'` (container clear)',
+    bad.length === 0,
+    bad.length ? bad.slice(0, 3).join(' | ') : ''
+  );
+});
+
+// 165. Both Step-31 modules render image previews via <img>.src only
+//      (no innerHTML for image data). They reference `<img>` and
+//      `.src = ` for the preview.
+record(
+  'image-click-test-ui.js renders image previews via <img>.src only',
+  ictUi.indexOf("createElement('img')") !== -1 &&
+  /img\.src\s*=/.test(ictUi)
+);
+
+// 166. action preview is rendered via <pre>.textContent.
+record(
+  'image-click-test-ui.js renders action preview via <pre>.textContent',
+  /createElement\(['"]pre['"]\)/.test(ictUi) &&
+  /\.textContent\s*=\s*JSON\.stringify/.test(ictUi)
+);
+
+// 167. The Test Match flow does not call runScenario / runImageClickScenario / executeAction.
+//      Use comment-stripped text so doc strings can explain the
+//      invariants without tripping these scans.
+var ictToolsClean = _stripJsComments(ictTools);
+var ictUiClean    = _stripJsComments(ictUi);
+record(
+  'image-click-test-tools.js does not call runScenario',
+  ictToolsClean.indexOf('runScenario(') === -1
+);
+record(
+  'image-click-test-tools.js does not call runImageClickScenario',
+  ictToolsClean.indexOf('runImageClickScenario(') === -1
+);
+record(
+  'image-click-test-tools.js does not call executeAction with executionMode: "real"',
+  !/executeAction\s*\([^)]*executionMode:\s*['"]real['"]/.test(ictToolsClean)
+);
+record(
+  'image-click-test-ui.js does not call runScenario',
+  ictUiClean.indexOf('runScenario(') === -1
+);
+record(
+  'image-click-test-ui.js does not call runImageClickScenario',
+  ictUiClean.indexOf('runImageClickScenario(') === -1
+);
+
+// 168. Both modules stamp realClick: false / realMatching: false.
+record(
+  'image-click-test-tools.js stamps realClick: false',
+  /realClick:\s*false/.test(ictTools)
+);
+record(
+  'image-click-test-tools.js stamps realMatching: false',
+  /realMatching:\s*false/.test(ictTools)
+);
+
+// 169. Audit allowlist contains the 5 new types.
+var auditTxt31 = readText('src/audit-events.js');
+[
+  'imageClick.test.started',
+  'imageClick.test.completed',
+  'imageClick.test.failed',
+  'imageClick.test.lowConfidence',
+  'imageClick.test.cleared'
+].forEach(function (eventType) {
+  record(
+    'audit-events.js allowlists ' + eventType,
+    auditTxt31.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 170. i18n.js declares the new keys in BOTH locales.
+var i18nTxt31 = readText('src/i18n.js');
+var step31I18nKeys = [
+  'testMatch',
+  'runTestMatch',
+  'testMatchResult',
+  'imageClickTestTools',
+  'templatePreview',
+  'screenPreviewStatus',
+  'regionSummary',
+  'noTemplateSelected',
+  'captureScreenPreviewFirst',
+  'invalidRegion',
+  'templateLargerThanSearchArea',
+  'matchBelowThreshold',
+  'matchingTookTooLong',
+  'matchingEngineUnavailable',
+  'openTemplates',
+  'openScreenCapture',
+  'openRegionSelector',
+  'testMatched',
+  'testNoMatch',
+  'testFailed',
+  'debugOverlay',
+  'scenarioDraft',
+  'testDoesNotClick',
+  'imageClickTestStarted',
+  'imageClickTestCompleted',
+  'imageClickTestLowConfidence',
+  'imageClickTestCleared'
+];
+step31I18nKeys.forEach(function (key) {
+  // Each key must appear at least twice (once per locale block).
+  var pattern = new RegExp('\\b' + key + '\\s*:', 'g');
+  var matches = i18nTxt31.match(pattern) || [];
+  record(
+    'i18n.js defines key "' + key + '" in both RU and EN',
+    matches.length >= 2,
+    matches.length === 0 ? 'missing entirely' : 'only ' + matches.length + ' occurrence(s)'
+  );
+});
+
+// 171. index.html loads the new scripts in the correct order:
+//      template-matching-engine.js → image-click-test-tools.js →
+//      image-click-test-ui.js → renderer.js
+var htmlTxt31 = readText('src/index.html');
+record(
+  'index.html loads image-click-test-tools.js',
+  /<script\s+src=["']image-click-test-tools\.js["']/.test(htmlTxt31)
+);
+record(
+  'index.html loads image-click-test-ui.js',
+  /<script\s+src=["']image-click-test-ui\.js["']/.test(htmlTxt31)
+);
+(function () {
+  var enginePos = htmlTxt31.indexOf('template-matching-engine.js');
+  var toolsPos  = htmlTxt31.indexOf('image-click-test-tools.js');
+  var uiPos     = htmlTxt31.indexOf('image-click-test-ui.js');
+  var rendererPos = htmlTxt31.indexOf('renderer.js');
+  record(
+    'index.html loads template-matching-engine.js before image-click-test-tools.js',
+    enginePos !== -1 && toolsPos !== -1 && enginePos < toolsPos
+  );
+  record(
+    'index.html loads image-click-test-tools.js before image-click-test-ui.js',
+    toolsPos !== -1 && uiPos !== -1 && toolsPos < uiPos
+  );
+  record(
+    'index.html loads image-click-test-ui.js before renderer.js',
+    uiPos !== -1 && rendererPos !== -1 && uiPos < rendererPos
+  );
+})();
+
+// 172. README and PROJECT_CONTEXT mention Step 31 / Test Match.
+var readmeTxt31      = readText('README.md');
+var contextTxt31     = readText('PROJECT_CONTEXT.md');
+record(
+  'README.md mentions Test Match or image click test',
+  /Test Match|Image click test|image_click test|image click test tools/i.test(readmeTxt31)
+);
+record(
+  'PROJECT_CONTEXT.md mentions Test Match or image click test',
+  /Test Match|Image click test|image_click test|image click test tools/i.test(contextTxt31)
+);
+record(
+  'README or PROJECT_CONTEXT mentions step 31',
+  /шаг\s*31|step\s*31/i.test(readmeTxt31 + '\n' + contextTxt31)
+);
+
+// 173. docs/IMAGE_CLICK_TEST_TOOLS.md asserts simulation-only +
+//      "does not click".
+var ictDoc = readText('docs/IMAGE_CLICK_TEST_TOOLS.md');
+record(
+  'docs/IMAGE_CLICK_TEST_TOOLS.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(ictDoc)
+);
+record(
+  'docs/IMAGE_CLICK_TEST_TOOLS.md asserts Test Match does not click',
+  /(does\s+not\s+click|never\s+clicks|never moves the cursor|never executes the scenario)/i.test(ictDoc)
+);
+record(
+  'docs/IMAGE_CLICK_TEST_TOOLS.md describes Test Match flow / debug result',
+  /Test Match flow/i.test(ictDoc) && /debug result/i.test(ictDoc)
+);
+record(
+  'docs/IMAGE_CLICK_TEST_TOOLS.md asserts no real click / no OCR',
+  /no real clicks?|no OCR|never persists/i.test(ictDoc)
+);
+
+// 174. SECURITY_CHECKLIST has an "image_click test tools (Step 31)" section.
+var ictSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has image_click test tools (Step 31) section',
+  /image_click\s+test\s+tools\s*\(?step\s*31/i.test(ictSec) ||
+  /## image_click test tools/i.test(ictSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts Test Match does not click / preview only',
+  /Test Match does not click/i.test(ictSec) &&
+  /preview only/i.test(ictSec)
+);
+
+// 175. SMOKE_TESTS doc has a Step 31 image_click test tools block.
+var stTxt31 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 31 image_click UX / Test Match block',
+  /Step\s*31\s*[—-]\s*Image Click Scenario UX/i.test(stTxt31) ||
+  /Step 31.*Test Match/i.test(stTxt31)
+);
+
+// 176. CHANGELOG mentions Step 31.
+var chTxt31 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 31 — Image Click Scenario UX Polish + Visual Test Tools',
+  /Step\s*31.*Image Click Scenario UX Polish/i.test(chTxt31) ||
+  /Шаг\s*31.*Image Click Scenario UX/i.test(chTxt31) ||
+  /Image Click Scenario UX Polish/i.test(chTxt31)
+);
+
+// 177. package.json STILL declares no OCR / OpenCV / image-matching
+//      / real-input modules at step 31.
+if (pkg) {
+  var allDeps31 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step31Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps31, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 31',
+    step31Forbidden.length === 0,
+    step31Forbidden.length ? step31Forbidden.join(', ') : ''
+  );
+}
+
+// 178. Step-31 source files don't import OCR / OpenCV / real-input.
+var step31SourceFiles = [
+  'main.js', 'preload.js',
+  'src/image-click-test-tools.js',
+  'src/image-click-test-ui.js'
+];
+var step31ForbiddenImports = [
+  'tesseract.js', 'tesseract', 'opencv4nodejs', '@u4/opencv4nodejs',
+  'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep31Imports = [];
+step31SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step31ForbiddenImports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep31Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 31 source files',
+  foundStep31Imports.length === 0,
+  foundStep31Imports.length ? foundStep31Imports.join(', ') : ''
+);
+
+// 179. Step 31 introduces no new IPC channel (renderer-only).
+record(
+  'main.js does not register any imageClick.test.* IPC handler at step 31',
+  !/ipcMain\.handle\(['"]imageClick\.test/.test(mainTxt) &&
+  !/ipcMain\.on\(['"]imageClick\.test/.test(mainTxt)
+);
+record(
+  'preload.js does not expose any imageClick.test.* API at step 31',
+  preloadTxt.indexOf("'imageClick.test.") === -1 &&
+  preloadTxt.indexOf('"imageClick.test.') === -1 &&
+  preloadTxt.indexOf('imageClickTest') === -1
+);
+
+// 180. main.js / index.html / preload still hold the safety flags.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 31)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 31)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 31 (no unsafe-inline / unsafe-eval)',
+  htmlTxt31.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt31.indexOf('unsafe-inline') === -1 &&
+  htmlTxt31.indexOf('unsafe-eval') === -1
+);
+
+// 181. renderer.js wires initImageClickTestUi() and the diagnostics line.
+var rendererTxt31 = readText('src/renderer.js');
+record(
+  'renderer.js calls initImageClickTestUi()',
+  rendererTxt31.indexOf('initImageClickTestUi(') !== -1
+);
+record(
+  'renderer.js Copy diagnostics has an `Image click test:` line',
+  /Image click test:/.test(rendererTxt31) &&
+  /testDoesNotClick=true/.test(rendererTxt31) &&
+  /realMatching=false/.test(rendererTxt31) &&
+  /realClick=false/.test(rendererTxt31)
+);
+record(
+  'renderer.js diagnostics card uses imageClickTestDiagnostics i18n key',
+  rendererTxt31.indexOf("t('imageClickTestDiagnostics')") !== -1
+);
+
+// 182. The test panel HTML id is referenced by the UI module.
+record(
+  'image-click-test-ui.js references #form-section-image-click container',
+  ictUi.indexOf("'form-section-image-click'") !== -1 ||
+  ictUi.indexOf('"form-section-image-click"') !== -1
+);
+record(
+  'image-click-test-ui.js builds the image-click-test-panel container',
+  ictUi.indexOf("'image-click-test-panel'") !== -1 ||
+  ictUi.indexOf('"image-click-test-panel"') !== -1
+);
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {
@@ -3028,3 +3471,5 @@ console.log('---------------------');
 console.log('Total: ' + checks.length + '   Failed: ' + failed);
 
 process.exit(failed === 0 ? 0 : 1);
+
+

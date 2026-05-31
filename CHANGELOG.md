@@ -8,7 +8,7 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
-## [Unreleased] — Steps 15-30
+## [Unreleased] — Steps 15-31
 
 Final stabilization of the simulation-only beta, design-only handoff
 to the future real-input release line, the Step 17 architectural
@@ -20,13 +20,236 @@ post-pack QA and release blocker pass, the Step 24 final beta
 release preparation, the Step 25 Screen Capture Foundation, the
 Step 26 Region Selector Foundation, the Step 27 Template Asset
 Manager, the Step 28 Template Matching Mock / Dry-run, the
-Step 29 Real Template Matching Engine Foundation, and the
-**Step 30 Image Click Scenario Type Foundation** (new
-simulation-only scenario type that orchestrates the previous
-five foundations end-to-end — the matcher runs on every
-iteration, the action-pipeline emits `action.imageClick.simulated`
-through the simulate path, the cursor never moves, no key is
-pressed). **Still simulation-only.**
+Step 29 Real Template Matching Engine Foundation, the
+Step 30 Image Click Scenario Type Foundation, and the
+**Step 31 Image Click Scenario UX Polish + Visual Test Tools**
+(Test Match panel inside the `image_click` scenario form — never
+executes the scenario, never moves the cursor, never clicks).
+**Still simulation-only.**
+
+### Added (Step 31 — Image Click Scenario UX Polish + Visual Test Tools)
+
+- `src/image-click-test-tools.js` (new pure-renderer module):
+  - `buildImageClickTestInput(formData, appState)` — collects
+    template, screen preview, region (form copy), threshold,
+    step, scenarioDraftName from the form + the renderer state
+    slices. Sanitises every field; copies pixel-bearing fields
+    (`previewDataUrl` / `imageDataUrl`) into the input only —
+    never copies them onward into diagnostics, audit payloads,
+    or persisted state.
+  - `validateImageClickTestInput(input)` — returns
+    `{ valid, errors: [stableId], warnings: [stableId] }`.
+    Stable error IDs: `noTemplateSelected`,
+    `templateImageMissing`, `captureScreenPreviewFirst`,
+    `invalidRegion`, `templateLargerThanSearchArea`,
+    `matchingTookTooLong`, `matchingEngineUnavailable`,
+    `thresholdInvalid`, `stepInvalid`. Stable warning IDs:
+    `matchBelowThreshold`, `searchAreaCostHigh`,
+    `stepRaisedByEngine`, `templateDownscaled`,
+    `searchAreaDownscaled`.
+  - `runImageClickTest(input)` (async) — validates, calls the
+    Step-29 `runTemplateMatch(screenDataUrl, templateDataUrl,
+    options)` engine, builds a debug result. 8-second soft
+    timeout cap. Records `imageClick.test.started` /
+    `imageClick.test.completed` / `imageClick.test.failed` /
+    `imageClick.test.lowConfidence` audit events. Never calls
+    `runScenario`, `runImageClickScenario`, `executeAction`
+    real branch, the mock adapter, or the dry-run sandbox.
+  - `createImageClickDebugResult(matchResult, input)` — builds
+    `{ scenarioDraftName, templateId, templateName,
+    screenSourceName, screenSourceId, previewSize, region,
+    threshold, step, matched, confidence, boundingBox,
+    targetPoint, durationMs, actionPreview, errors, warnings,
+    createdAt, realClick: false, realMatching: false,
+    engineMode, pixelStep, scannedPositions, downscaledSearch,
+    downscaledTemplate }`. The action preview is built via the
+    Step-28 `createImageClickActionPreview` helper and is
+    plain-data (`mode: "preview"`, `realClick: false`,
+    `realMatching: false`, `note: "Preview only…"`).
+  - `clearImageClickTestResult()` — wipes module-local
+    `_lastTestResult` + `_diagnostics` and emits
+    `imageClick.test.cleared`.
+  - `getImageClickTestStatus()` — diagnostics snapshot
+    (`hasResult`, `lastImageClickTestAt`,
+    `lastImageClickTestMatched`,
+    `lastImageClickTestConfidence`,
+    `lastImageClickTestDurationMs`,
+    `lastImageClickTestTemplateId`,
+    `lastImageClickTestErrorsCount`, `realClick: false`,
+    `realMatching: false`, `testDoesNotClick: true`).
+  - `getLastImageClickTestResult()` — shallow copy of the
+    last debug result. Module-local; never persisted.
+- `src/image-click-test-ui.js` (new renderer UI module):
+  - `initImageClickTestUi()` — builds the panel skeleton
+    inside `#form-section-image-click` once. Idempotent.
+  - `refreshImageClickTestPanel()` — re-renders the three
+    info cards.
+  - `renderImageClickTemplatePreview()` — Template preview
+    card (image preview via `<img>.src`, name, image size in
+    pixels, file size in KiB / MiB).
+  - `renderImageClickScreenPreviewStatus()` — Screen preview
+    status card (source name, image size, capturedAt,
+    `Preview only = enabled` reminder).
+  - `renderImageClickRegionSummary()` — Region summary card
+    (used region from form draft + selected region from the
+    region-selector slice).
+  - `runImageClickTestFromForm()` — collects form data,
+    validates, runs the engine, renders the result, mirrors
+    the result into `appState.templateMatching.lastResult`
+    (numbers / ids only).
+  - `renderImageClickTestResult(result)` — coloured headline
+    (matched=green / failed=red / no-match=yellow), metric
+    rows, errors block, warnings block, debug overlay,
+    action preview.
+  - `clearImageClickTestResultUi()` — collapses every block.
+  - `renderImageClickDebugOverlay(result)` — preview `<img>`
+    with overlay rectangles positioned via CSS percentages:
+    region (dashed blue), bounding box (solid green for
+    matched, dashed orange for low-confidence candidate),
+    confidence badge inside the rectangle, target dot.
+  - `renderImageClickActionPreview(result)` — JSON of the
+    planned `image_click` action via `<pre>.textContent`
+    (no HTML interpolation, never executed).
+  - Three quick navigation buttons (Open Templates / Open
+    Screen Capture / Open Region Selector → `setAdvancedTab(tab)`).
+- `src/audit-events.js` — 5 new allowlisted event types:
+  `imageClick.test.started`,
+  `imageClick.test.completed`,
+  `imageClick.test.failed`,
+  `imageClick.test.lowConfidence`,
+  `imageClick.test.cleared`. Payloads carry only ids and
+  numeric metadata (confidence, target X / Y, durationMs,
+  threshold, step, errorsCount, warningsCount, hasRegion).
+- `src/i18n.js` — 47 new keys per language (RU + EN):
+  `testMatch`, `runTestMatch`, `testMatchResult`,
+  `imageClickTestTools`, `templatePreview`, `screenPreviewStatus`,
+  `regionSummary`, `noTemplateSelected`,
+  `captureScreenPreviewFirst`, `invalidRegion`,
+  `templateLargerThanSearchArea`, `matchBelowThreshold`,
+  `matchingTookTooLong`, `matchingEngineUnavailable`,
+  `thresholdInvalid`, `stepInvalid`, `openTemplates`,
+  `openScreenCapture`, `openRegionSelector`, `testMatched`,
+  `testNoMatch`, `testFailed`, `debugOverlay`, `confidenceBadge`,
+  `scenarioDraft`, `testDoesNotClick`, `imageClickTestStarted`,
+  `imageClickTestCompleted`, `imageClickTestLowConfidence`,
+  `imageClickTestCleared`, `imageClickTestFormTypeMismatch`,
+  `searchAreaCostHigh`, `stepRaisedByEngine`,
+  `templateDownscaled`, `searchAreaDownscaled`,
+  `openingAdvancedTab`, `imageClickTestDiagnostics`,
+  `lastImageClickTestAt`, `lastImageClickTestMatched`,
+  `lastImageClickTestConfidence`, `lastImageClickTestDurationMs`,
+  `lastImageClickTestTemplateId`, `lastImageClickTestErrorsCount`.
+  (`templateImageMissing` and `lowConfidence` already exist
+  from Step 29.)
+- `src/index.html` — loads `image-click-test-tools.js` and
+  `image-click-test-ui.js` between `template-matching-ui.js`
+  and `renderer.js`. CSP unchanged. Tab list unchanged. No new
+  `<script>` injected at runtime.
+- `src/renderer.js`:
+  - `init()` ends with `initImageClickTestUi()`.
+  - `openCreateScenarioForm` / `openEditScenarioForm` /
+    `closeScenarioForm` clear the test panel result via
+    `clearImageClickTestResultUi()` and refresh the cards.
+  - `syncScenarioFormSections` refreshes the test panel when
+    the user switches to the image_click section.
+  - `populateTemplateSelect` ends with
+    `renderImageClickTemplatePreview()`.
+  - `refreshImageClickRegionSummary` ends with the UI module's
+    `renderImageClickRegionSummary()` (different name, no
+    recursion).
+  - `inputTemplateId` `change` listener refreshes the template
+    preview card.
+  - New **Image click test diagnostics** card in
+    `renderAdvancedSafety` with last-test rows + always-on
+    safety reminders.
+  - New `Image click test: hasResult=…, lastImageClickTestAt=…,
+    lastImageClickTestMatched=…, lastImageClickTestConfidence=…,
+    lastImageClickTestDurationMs=…,
+    lastImageClickTestTemplateId=…,
+    lastImageClickTestErrorsCount=…, testDoesNotClick=true,
+    realMatching=false, realClick=false` line in
+    `Copy diagnostics`. Numeric / metadata only — never
+    base64, never `imageDataUrl`.
+- `src/styles.css` — new section "Step 31 — Image Click
+  Scenario UX Polish + Visual Test Tools": `.image-click-test-panel`,
+  `.image-click-test-header`, `.image-click-test-title`,
+  `.image-click-test-subtitle`, `.image-click-test-nav`,
+  `.image-click-test-nav-button`, `.image-click-test-card`,
+  `.image-click-test-card-title`, `.image-click-test-empty`,
+  `.image-click-test-row`, `.image-click-test-row-label`,
+  `.image-click-test-row-value`, `.image-click-test-template-card`,
+  `.image-click-test-template-preview-box`,
+  `.image-click-test-template-preview-image` (max-height 100%,
+  `object-fit: contain`), `.image-click-test-controls`,
+  `.image-click-test-button`, `.image-click-test-button-busy`,
+  `.image-click-test-clear-button`, `.image-click-test-errors`,
+  `.image-click-test-warnings`, `.image-click-test-result-panel`,
+  `.image-click-test-result-headline` with three coloured
+  variants (matched=green, failed=red, no-match=yellow),
+  `.image-click-test-overlay-card`,
+  `.image-click-test-overlay-wrapper`,
+  `.image-click-test-overlay-image` (`max-width: 100%`),
+  `.image-click-test-overlay-region` (dashed blue),
+  `.image-click-test-overlay-bbox` (solid green),
+  `.image-click-test-overlay-bbox-candidate` (dashed orange),
+  `.image-click-test-confidence-badge`,
+  `.image-click-test-confidence-badge-low`,
+  `.image-click-test-overlay-target` (red dot with white halo),
+  `.image-click-test-action-preview-json` (max-height 280 px,
+  monospace, `<pre>.textContent` only). Dark-theme tweaks via
+  `[data-theme="dark"]`. Mobile fallback at `max-width: 760px`.
+- `docs/IMAGE_CLICK_TEST_TOOLS.md` — new doc covering purpose,
+  current status, Test Match flow, required data, debug
+  result with example JSON, stable error / warning IDs
+  tables, debug overlay, action preview, what is not
+  executed, troubleshooting, safety notes.
+- `docs/IMAGE_CLICK_SCENARIO.md` — adds **Test Match (Step 31)**
+  section linking to the new doc.
+- `docs/TEMPLATE_MATCHING_ENGINE.md` — adds **Step 31 — engine
+  is also used by Test Match** section.
+- `docs/SECURITY_CHECKLIST.md` — adds **image_click test tools
+  (Step 31)** section with behavioural / pipeline-level /
+  Electron-security invariants.
+- `docs/SMOKE_TESTS.md` — adds **Step 31 — Image Click Scenario
+  UX Polish + Visual Test Tools** smoke checks (#278–#298).
+- `scripts/smoke-check.js` — Step 31 invariants (see below).
+
+### Safety invariants kept (Step 31)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `realMatching: false`, `realClick: false`,
+  `ocrImplemented: false`, `opencvAvailable: false`,
+  `imageClickTestRealExecution: false`,
+  `testDoesNotClick: true` in every status response, audit
+  payload, and diagnostics line.
+- Test Match runs entirely in the renderer. It never opens a
+  new IPC channel, never imports `electron`, `ipcRenderer`,
+  `fs`, or `localStorage`. `image-click-test-tools.js` and
+  `image-click-test-ui.js` contain no `require()` of any
+  prohibited module (`tesseract` / `tesseract.js` /
+  `opencv4nodejs` / `@u4/opencv4nodejs` / `opencv.js` /
+  `opencv-js` / `sharp` / `jimp` / `pixelmatch` / `looks-same`
+  / `robotjs` / `nut-js` / `nutjs` / `@nut-tree/nut-js` /
+  `iohook` / `uiohook-napi` / `node-key-sender`).
+- The mock desktop adapter does not consume preview-mode
+  `image_click` actions. Any `realClick: true` is rejected
+  by `validateAction`. `executionMode: "real"` is blocked
+  exactly as it is for `simple_click`.
+- The action preview is rendered through `<pre>.textContent`.
+  No HTML interpolation. The click engine, the action
+  pipeline, the mock adapter, and the dry-run sandbox do
+  not consume `mode: "preview"` actions.
+- The screenshot is never persisted on disk by Test Match.
+  The debug result is never written into `scenarios.json`,
+  `settings.json`, `profiles.json`, `templates.json`, or
+  `localStorage`. Module-local `_lastTestResult` lives in
+  renderer memory and is cleared on
+  `clearImageClickTestResult()` and on every scenario form
+  open / close.
+- Audit payloads carry only ids and numeric metadata. No
+  `imageDataUrl`, no thumbnails, no PII.
 
 ### Added (Step 30 — Image Click Scenario Type Foundation)
 

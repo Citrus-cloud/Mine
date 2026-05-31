@@ -205,9 +205,9 @@ function renderScenarioList() {
 
 function openScenarioList() { addLogEntry(createLog('info', t('logScenariosOpened'))); showView('scenarios'); renderScenarioList(); renderState(); }
 function selectScenarioById(id) { const sc = getScenarioById(id); if (!sc) return; setSelectedScenario(sc); addLogEntry(createLog('success', `${t('select')}: ${sc.name}`)); showView('main'); renderState(); }
-function openCreateScenarioForm() { setScenarioFormMode('create'); setEditingScenarioId(null); clearScenarioForm(); clearFormError(); formTitle.textContent = t('createScenarioTitle'); showView('scenarioForm'); }
-function openEditScenarioForm(id) { const sc = getScenarioById(id); if (!sc) return; setScenarioFormMode('edit'); setEditingScenarioId(id); fillScenarioForm(sc); clearFormError(); formTitle.textContent = t('editScenarioTitle'); showView('scenarioForm'); }
-function closeScenarioForm() { setScenarioFormMode(null); setEditingScenarioId(null); clearFormError(); showView('scenarios'); renderScenarioList(); }
+function openCreateScenarioForm() { setScenarioFormMode('create'); setEditingScenarioId(null); clearScenarioForm(); clearFormError(); formTitle.textContent = t('createScenarioTitle'); showView('scenarioForm'); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); if (typeof initImageClickTestUi === 'function') initImageClickTestUi(); else if (typeof refreshImageClickTestPanel === 'function') refreshImageClickTestPanel(); }
+function openEditScenarioForm(id) { const sc = getScenarioById(id); if (!sc) return; setScenarioFormMode('edit'); setEditingScenarioId(id); fillScenarioForm(sc); clearFormError(); formTitle.textContent = t('editScenarioTitle'); showView('scenarioForm'); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); if (typeof initImageClickTestUi === 'function') initImageClickTestUi(); else if (typeof refreshImageClickTestPanel === 'function') refreshImageClickTestPanel(); }
+function closeScenarioForm() { setScenarioFormMode(null); setEditingScenarioId(null); clearFormError(); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); showView('scenarios'); renderScenarioList(); }
 
 async function saveScenarioFromForm() {
   const data = getScenarioFormData(); const state = getState(); let result;
@@ -952,6 +952,39 @@ function renderAdvancedSafety() {
   addCardRow(icCard, t('realImageClickDisabled'),   t('flagEnabled'));
   c.appendChild(icCard);
 
+  // --- Step 31: Image Click Test Match diagnostics card ---
+  // Surfaces the last Test Match invocation from the scenario form.
+  // Test Match never clicks — these are debug numbers only.
+  const ictCard = document.createElement('div'); ictCard.className = 'adv-card';
+  const ictTitle = document.createElement('div'); ictTitle.className = 'adv-card-title';
+  ictTitle.textContent = t('imageClickTestDiagnostics');
+  ictCard.appendChild(ictTitle);
+  let ictStatus = null;
+  if (typeof getImageClickTestStatus === 'function') {
+    try { ictStatus = getImageClickTestStatus(); } catch (e) { ictStatus = null; }
+  }
+  if (ictStatus) {
+    addCardRow(ictCard, t('lastImageClickTestAt'),         ictStatus.lastImageClickTestAt        || t('none2'));
+    addCardRow(ictCard, t('lastImageClickTestMatched'),    ictStatus.lastImageClickTestMatched === null ? t('none2') : (ictStatus.lastImageClickTestMatched ? t('yes') : t('no')));
+    addCardRow(ictCard, t('lastImageClickTestConfidence'),
+      (typeof ictStatus.lastImageClickTestConfidence === 'number')
+        ? (Math.round(ictStatus.lastImageClickTestConfidence * 1000) / 10).toFixed(1) + '%'
+        : t('none2'));
+    addCardRow(ictCard, t('lastImageClickTestDurationMs'),
+      (typeof ictStatus.lastImageClickTestDurationMs === 'number')
+        ? ictStatus.lastImageClickTestDurationMs + ' ms'
+        : t('none2'));
+    addCardRow(ictCard, t('lastImageClickTestTemplateId'), ictStatus.lastImageClickTestTemplateId || t('none2'));
+    addCardRow(ictCard, t('lastImageClickTestErrorsCount'), String(ictStatus.lastImageClickTestErrorsCount | 0));
+  } else {
+    addCardRow(ictCard, '', t('noData'));
+  }
+  // Always-on safety reminders.
+  addCardRow(ictCard, t('testDoesNotClick'),         t('flagEnabled'));
+  addCardRow(ictCard, t('realMatchingDisabled'),     t('flagEnabled'));
+  addCardRow(ictCard, t('realClickDisabled'),        t('flagEnabled'));
+  c.appendChild(ictCard);
+
   // --- Step 18: Desktop adapter status ---
   const adCard = document.createElement('div'); adCard.className = 'adv-card';
   const adTitle = document.createElement('div'); adTitle.className = 'adv-card-title'; adTitle.textContent = t('desktopAdapterStatus'); adCard.appendChild(adTitle);
@@ -1207,7 +1240,23 @@ async function copyDiagnostics() {
   const lastIcTargetX = (lastIcDiag && lastIcDiag.targetPoint) ? (lastIcDiag.targetPoint.x | 0) : 'none';
   const lastIcTargetY = (lastIcDiag && lastIcDiag.targetPoint) ? (lastIcDiag.targetPoint.y | 0) : 'none';
   const icLine = `Image click scenario: imageClickScenariosCount=${icCountDiag}, lastImageClickStatus=${lastIcStatus}, lastImageClickConfidence=${lastIcConfidence}, lastImageClickTargetPoint=${lastIcTargetX},${lastIcTargetY}, imageClickSimulationOnly=true, realImageClickEnabled=false, ocrImplemented=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  // Step 31: Image Click Test Match line. Numbers and short
+  // strings only — never base64, never imageDataUrl.
+  let ictDiagStatus = null;
+  if (typeof getImageClickTestStatus === 'function') {
+    try { ictDiagStatus = getImageClickTestStatus(); } catch (e) { ictDiagStatus = null; }
+  }
+  const ictHasResult     = ictDiagStatus ? !!ictDiagStatus.hasResult : false;
+  const ictAt            = ictDiagStatus ? (ictDiagStatus.lastImageClickTestAt || 'none') : 'none';
+  const ictMatched       = ictDiagStatus ? (ictDiagStatus.lastImageClickTestMatched === null ? 'none' : !!ictDiagStatus.lastImageClickTestMatched) : 'none';
+  const ictConfidence    = ictDiagStatus && (typeof ictDiagStatus.lastImageClickTestConfidence === 'number')
+    ? ictDiagStatus.lastImageClickTestConfidence : 'none';
+  const ictDuration      = ictDiagStatus && (typeof ictDiagStatus.lastImageClickTestDurationMs === 'number')
+    ? ictDiagStatus.lastImageClickTestDurationMs : 'none';
+  const ictTemplateId    = ictDiagStatus ? (ictDiagStatus.lastImageClickTestTemplateId || 'none') : 'none';
+  const ictErrors        = ictDiagStatus ? (ictDiagStatus.lastImageClickTestErrorsCount | 0) : 0;
+  const ictLine = `Image click test: hasResult=${ictHasResult}, lastImageClickTestAt=${ictAt}, lastImageClickTestMatched=${ictMatched}, lastImageClickTestConfidence=${ictConfidence}, lastImageClickTestDurationMs=${ictDuration}, lastImageClickTestTemplateId=${ictTemplateId}, lastImageClickTestErrorsCount=${ictErrors}, testDoesNotClick=true, realMatching=false, realClick=false`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\n${ictLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
@@ -1551,6 +1600,13 @@ async function init() {
 
   addLogEntry(createLog('info', t('logAppReady')));
   showView('main'); renderState();
+
+  // Step 31: build the Test Match panel skeleton inside the
+  // image_click section once the DOM is fully ready. Safe to call
+  // even if the user never opens the scenario form.
+  if (typeof initImageClickTestUi === 'function') {
+    try { initImageClickTestUi(); } catch (e) {}
+  }
 }
 init();
 
@@ -1566,6 +1622,14 @@ function syncScenarioFormSections() {
   var type = (inputScenarioType && inputScenarioType.value) ? inputScenarioType.value : 'simple_click';
   if (formSectionSimple) formSectionSimple.classList.toggle('view-hidden', type !== 'simple_click');
   if (formSectionImage)  formSectionImage.classList.toggle('view-hidden',  type !== 'image_click');
+  // Step 31: keep the Test Match panel in sync with the visible
+  // section. The panel itself lives inside the image_click section
+  // so it auto-hides with it, but we still refresh its content so
+  // the user sees current template / preview / region as soon as
+  // they switch.
+  if (type === 'image_click' && typeof refreshImageClickTestPanel === 'function') {
+    refreshImageClickTestPanel();
+  }
 }
 
 // Populate the <select id="input-template-id"> with the current
@@ -1601,6 +1665,11 @@ function populateTemplateSelect(activeId) {
   if (!inputTemplateId.value && items[0] && items[0].id) {
     inputTemplateId.value = items[0].id;
   }
+  // Step 31: refresh the Test Match template preview card whenever
+  // the select content changes.
+  if (typeof renderImageClickTemplatePreview === 'function') {
+    renderImageClickTemplatePreview();
+  }
 }
 
 // Render the region summary line — text only, never HTML.
@@ -1613,6 +1682,10 @@ function refreshImageClickRegionSummary() {
   } else {
     imageClickRegionSummary.textContent = t('noRegionSelected') || 'No region selected';
     imageClickRegionSummary.classList.remove('image-click-region-summary-active');
+  }
+  // Step 31: keep the Test Match Region summary card in sync.
+  if (typeof renderImageClickRegionSummary === 'function') {
+    renderImageClickRegionSummary();
   }
 }
 
@@ -1653,6 +1726,16 @@ function bindScenarioFormImageClickHandlers() {
   }
   if (btnImageClickClearRegion) {
     btnImageClickClearRegion.addEventListener('click', clearImageClickFormRegion);
+  }
+  // Step 31: when the user changes the active template / threshold
+  // / step inside the form, refresh the Test Match preview card
+  // (template metadata may differ; threshold/step affect the
+  // engine call). We do NOT auto-run the test — the user must
+  // press the button.
+  if (inputTemplateId) {
+    inputTemplateId.addEventListener('change', function () {
+      if (typeof renderImageClickTemplatePreview === 'function') renderImageClickTemplatePreview();
+    });
   }
 }
 bindScenarioFormImageClickHandlers();
