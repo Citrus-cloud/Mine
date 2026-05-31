@@ -646,3 +646,86 @@ See [`docs/IMAGE_CLICK_TEST_TOOLS.md`](./IMAGE_CLICK_TEST_TOOLS.md)
 for the full description, the debug-result shape, the error /
 warning IDs, the troubleshooting list, and the list of features
 that are **not** implemented at Step 31.
+
+
+
+## OCR Foundation (Step 32)
+
+> Step 32 ships the OCR Foundation as a renderer-only mock
+> ([`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md)). The mock
+> engine fabricates plausible OCR blocks from preview metadata.
+> It NEVER recognises real text, NEVER clicks, NEVER persists
+> the screenshot or the result on disk, and NEVER opens a new
+> IPC channel.
+
+### Behavioural invariants
+- [x] **OCR mock only.** `runMockOcr` builds the blocks from the
+      preview width / height / region / target text. It never
+      decodes pixels and never calls a real OCR engine.
+- [x] **No Tesseract.** `package.json` declares zero of
+      `tesseract`, `tesseract.js`, `tesseract-ocr`,
+      `node-tesseract-ocr`. The mock engine and the OCR UI never
+      `require()` anything.
+- [x] **No OpenCV.** `package.json` declares zero of
+      `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`,
+      `opencv-js`, `sharp`, `jimp`, `pixelmatch`, `looks-same`.
+- [x] **No real click.** The mock never moves the cursor, never
+      presses a key, never focuses a window. The action preview
+      it builds is `mode: "preview"`, `realClick: false`,
+      `realOcr: false` and is rendered through
+      `<pre>.textContent`. The click engine, the action
+      pipeline, the mock adapter, and the dry-run sandbox refuse
+      to consume `text_click` actions.
+- [x] **`text_click` action preview not executed.** There is no
+      `text_click` scenario type at Step 32. `validateScenario`
+      still accepts only `simple_click` and `image_click`.
+      `validateAction` accepts only `click` and `image_click`.
+      Any caller that builds a `text_click` and tries to run it
+      is rejected.
+- [x] **Mock OCR uses preview only.** The engine never opens a
+      new screenshot session. It only sees the preview the user
+      explicitly captured in Step 25, and only the metadata
+      portion (sourceId / name / width / height / capturedAt) —
+      the `imageDataUrl` is read by the UI for the overlay
+      `<img>.src` only and is never sent to the engine, never
+      audited, never persisted.
+
+### Storage-level invariants
+- [x] **No `imageDataUrl` in the OCR slice.** `appState.ocr` and
+      its `lastInput` / `lastResult` carry only ids, numbers and
+      short text — never an `imageDataUrl`, never a thumbnail.
+      The cloning helpers in `app-state.js` strip pixel fields
+      defensively.
+- [x] **No `imageDataUrl` in audit / diagnostics.** The five new
+      audit event types (`ocr.mock.requested`,
+      `ocr.mock.completed`, `ocr.mock.failed`, `ocr.mock.cleared`,
+      `text.click.preview.created`) and the new `OCR:` line in
+      `Copy diagnostics` carry only short metadata — never the
+      full target text, never an `imageDataUrl`, never PII.
+- [x] **No screenshot persisted.** Mock OCR never writes the
+      preview, the recognised blocks, the action preview, or
+      the result on disk. Module-local state lives in renderer
+      memory only and is reset on `clearOcrMockResult()`.
+
+### Pipeline-level invariants
+- [x] **No new IPC channel at Step 32.** `main.js` registers no
+      `ocr.*` handler. `preload.js` exposes no `ocr.*` API. OCR
+      is a renderer-only feature.
+- [x] **No prohibited dependencies / imports.** `ocr-mock-engine.js`
+      and `ocr-ui.js` contain no `require()` of any
+      OCR / OpenCV / image-matching / real-input module.
+- [x] **No HTML interpolation.** Every user-visible OCR string
+      is rendered through `textContent`. The action-preview JSON
+      uses `<pre>.textContent`. Image previews use `<img>.src`
+      only.
+
+### Electron-security invariants (re-checked at Step 32)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no
+      `unsafe-eval`, no remote sources.
+
+See [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md) for the full
+description, the data shapes, the troubleshooting list, and the
+list of features that are **not** implemented at Step 32.

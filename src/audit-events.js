@@ -117,7 +117,25 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   ImageClickTestCompleted:          'imageClick.test.completed',
   ImageClickTestFailed:             'imageClick.test.failed',
   ImageClickTestLowConfidence:      'imageClick.test.lowConfidence',
-  ImageClickTestCleared:            'imageClick.test.cleared'
+  ImageClickTestCleared:            'imageClick.test.cleared',
+  // Step 32: OCR Foundation (mock only). Mock OCR fabricates
+  // recognised-text blocks from the captured preview metadata so
+  // the user can shape a future text_click action. NO real OCR
+  // engine is connected: no Tesseract, no tesseract.js, no native
+  // OCR. Payloads carry only short metadata (matchMode, language,
+  // hasRegion: bool, blocksCount, durationMs, target text length —
+  // never the full target text, never an imageDataUrl, never PII).
+  // The accompanying `text.click.preview.created` event records
+  // the action preview the engine builds; that preview is plain
+  // data (`type: "text_click"`, `mode: "preview"`,
+  // `realClick: false`, `realOcr: false`) and is NEVER consumed
+  // by the click engine, the action pipeline, the mock adapter,
+  // or the dry-run sandbox at Step 32.
+  OcrMockRequested:                 'ocr.mock.requested',
+  OcrMockCompleted:                 'ocr.mock.completed',
+  OcrMockFailed:                    'ocr.mock.failed',
+  OcrMockCleared:                   'ocr.mock.cleared',
+  TextClickPreviewCreated:          'text.click.preview.created'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );
