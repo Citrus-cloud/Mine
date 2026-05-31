@@ -637,3 +637,57 @@ See [`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md)
 and [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md) for the full
 description, the data shapes, the troubleshooting list, and the
 safety contract.
+
+
+
+## 17. Visual Builder + Scenario Presets are foundation-only (Step 36)
+
+The Visual Builder gathers the smart-features into one tab and
+ships three frozen presets, but it does **not** introduce a new
+execution path. Every limitation below is intentional.
+
+### 17.1 OCR still mock only
+- The Visual Builder reads `state.ocr.lastResult` produced by the
+  Step 32 mock engine. There is no real OCR backend. Tesseract /
+  `tesseract.js` are not connected and not declared in
+  `package.json`.
+
+### 17.2 Presets are basic
+- Three frozen entries: `preset-coordinate-basic`,
+  `preset-image-click-basic`, `preset-text-click-basic`.
+- Settings are conservative defaults (interval 500–1000 ms,
+  repeat 1–10, timeout 10 000 ms, threshold 0.75, step 4,
+  language `ru+en`, match mode `contains`).
+- No user-defined presets, no preset import / export, no preset
+  authoring UI.
+
+### 17.3 Visual Builder is foundation only
+- The Visual Builder displays the captured preview, draws
+  overlays, surfaces the chain of smart-features, and creates
+  drafts. It does **not** click, **does not** run a scenario,
+  **does not** save a scenario, **does not** perform real OCR.
+- Onboarding hints are static text + a navigation button. There
+  is no autopilot.
+
+### 17.4 Scenario drafts require manual save
+- Both the Visual Builder draft preview and the Scenario Presets
+  flow open the existing scenario form pre-filled. The user
+  must press the Save button to persist anything.
+- A draft never lands in `scenarios.json` automatically.
+
+### 17.5 Matching accuracy limited
+- Image-click drafts inherit the Step 29 plain-JS preview
+  matcher's limitations: simple search, no rotation invariance,
+  no OpenCV. Heavy compression / transparency / scaling can
+  reduce confidence.
+
+### 17.6 No real click
+- The Visual Builder never moves the cursor and never clicks.
+- Presets never move the cursor and never click.
+- The action pipeline still rejects every `realClick: true`
+  outright, regardless of where the action originates.
+
+See [`docs/SMART_FEATURES_LIMITATIONS.md`](./SMART_FEATURES_LIMITATIONS.md)
+for the consolidated smart-features limitations list, and
+[`docs/SMART_FEATURES_QA.md`](./SMART_FEATURES_QA.md) for the
+manual QA checklist.

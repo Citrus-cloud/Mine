@@ -8,6 +8,412 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-37
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, the Step 24 final beta
+release preparation, the Step 25 Screen Capture Foundation, the
+Step 26 Region Selector Foundation, the Step 27 Template Asset
+Manager, the Step 28 Template Matching Mock / Dry-run, the
+Step 29 Real Template Matching Engine Foundation, the
+Step 30 Image Click Scenario Type Foundation, the
+Step 31 Image Click Scenario UX Polish + Visual Test Tools, the
+Step 32 OCR Foundation (mock only), the
+Step 33 Text Click Scenario Type Foundation, the
+Step 34 Text Click Test Tools + OCR UX Polish, the
+**Step 36 Visual Builder UX Polish + Scenario Presets**, and
+the **Step 37 Smart Features QA + Next Branch Preparation**
+(documentation-only QA pass that prepares the project for the
+next big direction — Real OCR Integration is recommended).
+**Still simulation-only.**
+
+### Added (Step 36 — Visual Builder UX Polish + Scenario Presets)
+
+- `src/scenario-presets.js` (new pure-renderer module):
+  - Three frozen preset definitions:
+    `preset-coordinate-basic` (`simple_click`,
+    `x: 500, y: 400, button: 'left', intervalMs: 500,
+    repeatCount: 10`),
+    `preset-image-click-basic` (`image_click`,
+    `templateId: null, region: null, threshold: 0.75,
+    step: 4, timeoutMs: 10000, intervalMs: 1000,
+    repeatCount: 1`),
+    `preset-text-click-basic` (`text_click`,
+    `targetText: '', language: 'ru+en',
+    matchMode: 'contains', caseSensitive: false,
+    region: null, timeoutMs: 10000, intervalMs: 1000,
+    repeatCount: 1`).
+  - `getScenarioPresets()` returns deep-copies of every
+    preset so a buggy caller cannot mutate the frozen
+    list.
+  - `getScenarioPresetById(id)` returns a deep-copy or
+    `null`.
+  - `validateScenarioPreset(preset)` returns
+    `{ valid, errors: [stableId] }` with stable error IDs:
+    `presetMissing`, `presetIdMissing`,
+    `presetTypeInvalid`, `presetSettingsMissing`,
+    `presetCoordinatesInvalid`, `presetIntervalInvalid`,
+    `presetRepeatInvalid`, `presetButtonInvalid`,
+    `presetThresholdInvalid`, `presetStepInvalid`,
+    `presetTimeoutInvalid`, `presetLanguageInvalid`,
+    `presetMatchModeInvalid`.
+  - `applyVisualContextToPreset(preset, visualContext)`
+    merges numbers and short ids/strings from a visual
+    context into a copy of the preset:
+    - coordinate preset borrows `targetPoint` (e.g. from
+      a recent image-match) or falls back to the centre
+      of the selected region;
+    - image preset borrows `templateId`, `region`,
+      `threshold`, `step`;
+    - text preset borrows `matchedText` (truncated to
+      200 chars), `region`, `ocrLanguage`, `matchMode`,
+      `caseSensitive`.
+    Pixel data is NEVER copied. The function
+    `_sanitizeVisualContext` strips anything that smells
+    like an `imageDataUrl` even if a buggy caller
+    attaches one.
+  - `createScenarioDraftFromPreset(presetId, context)`
+    returns `{ ok: true, presetId, type, name, settings,
+    source: 'preset' | 'preset+visual', realClick: false,
+    realOcr?: false, createdAt }` or
+    `{ ok: false, errors: [stableId] }`. Defensive:
+    `realClick: false` and (for text_click)
+    `realOcr: false` are stamped on every draft.
+- `src/visual-builder.js` (new pure-renderer module):
+  - Module-local state: `_overlaySettings` (six booleans),
+    `_selectedActionType`, `_lastDraftPreview`,
+    `_lastUsedPresetId`, `_lastDraftType`,
+    `_missingRequirementsCount`.
+  - `getVisualBuilderState()` returns a deep-copy
+    snapshot.
+  - Overlay control: `setOverlaySetting(key, value)`
+    (validated against the frozen `OVERLAY_KEYS` list),
+    `showAllOverlays()`, `hideAllOverlays()`,
+    `clearOverlays()` (clears the last draft preview so
+    the action-target dot disappears).
+  - `setSelectedActionType(type)` accepts only
+    `simple_click` / `image_click` / `text_click`.
+  - `buildVisualContextFromState(state)` builds the
+    plain-data visual context from the renderer slices:
+    `region` from the region-selector slice (numbers
+    only), `templateId` from `state.templates`,
+    `targetPoint` / `threshold` / `step` from
+    `state.templateMatching.lastResult`, `matchedText` /
+    `ocrLanguage` / `matchMode` / `caseSensitive` from
+    `state.ocr.lastResult`. Pixel data is never copied.
+  - `buildDraftPreviewFromState(state, type, options)`
+    builds a draft per type with safe defaults. Hard
+    errors: `image_click` without an active template,
+    `text_click` without target text. Returns
+    `{ ok, draft, missing }` or
+    `{ ok: false, errors, missing }`.
+  - `getMissingRequirements(state, type)` returns stable
+    string ids: `screenPreviewMissing`, `regionMissing`,
+    `templateMissing`, `targetTextMissing`,
+    `ocrResultMissing`, `imageMatchMissing`.
+  - `getOverlayLayers(state)` returns a declarative list
+    of overlay layers: region (blue dashed), template
+    match bbox (green / orange depending on confidence),
+    template target point (red), OCR blocks (yellow
+    dashed; matched is green solid with label), OCR
+    target point (red), action-target derived from the
+    last draft preview (cyan).
+  - `getVisualBuilderDiagnostics()` returns
+    `{ presetsAvailable, presetsCount, lastUsedPresetId,
+    lastDraftType, visualBuilderDraftAvailable,
+    overlaySettings, selectedActionType,
+    missingRequirementsCount, realClick: false,
+    realOcr: false, autoSavesScenarios: false,
+    autoRunsScenarios: false }`.
+  - `clearDraftPreview()` wipes module-local
+    `_lastDraftPreview` and `_lastDraftType`.
+  - All cloning helpers (`_cloneDraft`,
+    `_sanitizeVisualContext`) defensively delete
+    `imageDataUrl` / `previewDataUrl` even if a buggy
+    caller attaches them.
+- `src/visual-builder-ui.js` (new renderer UI module):
+  - `renderVisualBuilderTab()` builds the entire tab
+    inside `#advanced-tab-visualBuilder` from scratch.
+    Idempotent.
+  - Header card with title, subtitle, always-on safety
+    banner ("Visual Builder runs in simulation only. No
+    real clicks. No real OCR.").
+  - `_renderStatusRow(state)` — six status cells
+    (Screen preview / Region / Template / Image match /
+    OCR result / Real clicks). Real clicks is **always**
+    `disabled` (red badge).
+  - `_renderOnboardingHints(state)` — surfaces context-
+    aware hints:
+    - no preview → "Capture a screen preview first." +
+      Open Screen Capture button;
+    - no region → "You can select a region…" + Open
+      Region Selector button;
+    - `image_click` + no template → "Import a template
+      image." + Open Templates button;
+    - `text_click` + no OCR result → "Run mock OCR or
+      enter target text manually." + Open OCR button.
+    Each button calls `setAdvancedTab(tab)` only.
+  - `_renderActionTypeAndPreview(state)` — action-type
+    select (Coordinate / Image / Text), preview card
+    with `<img>.src = imageDataUrl` (only consumer of
+    the captured preview) and percentage-positioned
+    overlay layers, overlay legend.
+  - `_renderOverlayControls(state)` — six checkboxes
+    bound to `setOverlaySetting`, plus Show all / Hide
+    all / Clear overlays buttons. Each change records
+    `visualBuilder.overlay.changed`.
+  - `_renderActionsPanel(state)` — six quick-action
+    buttons (Capture preview / Select region / Run
+    image test / Run OCR test / Create scenario draft /
+    Open scenario form). The first four navigate to
+    other tabs; the fifth runs
+    `buildDraftPreviewFromState` and re-renders;
+    the sixth opens the existing scenario form.
+  - `_renderScenarioPresets(state)` — three preset
+    cards. Each card has name (i18n), monospace type
+    badge, description (i18n), brief settings summary
+    line, and two buttons (Use preset / Use with
+    current visual context). Each click runs
+    `createScenarioDraftFromPreset` and opens the
+    scenario form pre-filled (via
+    `setTimeout(..., 0)` after
+    `openCreateScenarioForm()`).
+  - `_renderDraftPreview(state)` — draft preview card
+    with type / name / source / `realClicks: false`
+    (and `realOcr: false` for `text_click`) /
+    settings summary, plus an Open draft in form
+    button.
+  - `_openScenarioFormFromDraft(draft)` patches the
+    existing scenario-form inputs after opening the
+    form. NEVER calls `createScenario` /
+    `updateScenario` / `saveScenarios`.
+  - All user data is rendered via `textContent` only.
+    `innerHTML = ''` is the only `innerHTML` form
+    used (for clearing a container).
+- `src/audit-events.js` — 6 new allowlisted event types:
+  `scenarioPreset.selected`,
+  `scenarioPreset.draft.created`,
+  `scenarioPreset.form.opened`,
+  `visualBuilder.overlay.changed`,
+  `visualBuilder.requirement.missing`,
+  `visualBuilder.draft.preview.created`. Payloads carry
+  only ids, type strings, and short metadata
+  (`hasRegion`, `hasTemplate`, `targetTextLen`,
+  `missingCount`, `withVisualContext`, overlay
+  `key` / `value`). Payloads NEVER carry the full target
+  text, an `imageDataUrl`, a thumbnail, or PII.
+- `src/i18n.js` — ~70 new keys per language (RU + EN):
+  `visualBuilder`, `visualBuilderSubtitle`,
+  `visualBuilderSimulationOnlyNotice`,
+  `visualBuilderStatus`, `visualBuilderPreview`,
+  `visualBuilderActions`, `visualBuilderDraftCreated`,
+  `onboardingHints`, `noOnboardingHints`,
+  `screenPreview`, `region`, `template`, `imageMatch`,
+  `ocrResult`, `realClicks`, `ready`, `missing`,
+  `disabled`, `selectedActionType`, `overlayLegend`,
+  `capturePreview`, `selectRegion`, `runImageTest`,
+  `runOcrTest`, `createScenarioDraft`,
+  `openScenarioForm`, `scenarioPresets`,
+  `presetCoordinateBasic`, `presetCoordinateBasicDesc`,
+  `presetImageClickBasic`, `presetImageClickBasicDesc`,
+  `presetTextClickBasic`, `presetTextClickBasicDesc`,
+  `usePreset`, `useWithCurrentVisualContext`,
+  `draftPreview`, `noDraftPreview`, `openDraftInForm`,
+  `missingVisualRequirement`, `screenPreviewMissingHint`,
+  `templateMissingHint`, `regionOptionalHint`,
+  `ocrResultMissingHint`, `showRegionOverlay`,
+  `showTemplateMatchOverlay`,
+  `showTemplateTargetOverlay`, `showOcrBlocksOverlay`,
+  `showOcrTargetOverlay`, `showActionTargetOverlay`,
+  `showAllOverlays`, `hideAllOverlays`, `clearOverlays`,
+  `overlaySettings`, `presetSelected`,
+  `scenarioDraftOpened`, `presetDraftFailed`,
+  `openTemplates`, `openRegionSelector`,
+  `openScreenCapture`, `noPresets`,
+  `visualBuilderDiagnostics`, `presetsAvailable`,
+  `presetsCount`, `lastUsedPresetId`, `lastDraftType`,
+  `visualBuilderDraftAvailable`,
+  `selectedActionTypeShort`, `missingRequirementsCount`,
+  `source`, `realClicksLabel`, `realOcrLabel`. Final
+  i18n parity: 745/745.
+- `src/index.html` — new tab button
+  `data-advanced-tab="visualBuilder"`, new
+  `<section id="advanced-tab-visualBuilder">`, three new
+  `<script src="…">` tags (`scenario-presets.js`,
+  `visual-builder.js`, `visual-builder-ui.js`) loaded
+  between `text-click-test-ui.js` and `renderer.js`.
+  CSP unchanged.
+- `src/renderer.js`:
+  - `renderAdvancedDashboard` dispatches
+    `case 'visualBuilder': renderVisualBuilderTab()`.
+  - New `Visual Builder:` line in `Copy diagnostics`
+    (`presetsAvailable`, `presetsCount`,
+    `lastUsedPresetId`, `lastDraftType`,
+    `visualBuilderDraftAvailable`, `selectedActionType`,
+    `missingRequirementsCount`, six `show*` overlay
+    booleans, `autoSavesScenarios=false`,
+    `autoRunsScenarios=false`, `realClick=false`,
+    `realOcr=false`). NO full target text. NO
+    `imageDataUrl`.
+- `src/styles.css` — new section "Step 36 — Visual
+  Builder UX Polish + Scenario Presets":
+  `.vb-header-card`, `.vb-subtitle`, `.vb-safety-banner`
+  (yellow), `.vb-status-card`, `.vb-status-grid`,
+  `.vb-status-cell`, `.vb-status-label`,
+  `.vb-status-badge` with four variants (`-ok`,
+  `-missing`, `-warning`, `-danger`),
+  `.vb-hints-card`, `.vb-hint-row`, `.vb-hint-text`,
+  `.vb-hint-button`, `.vb-preview-card`,
+  `.vb-type-row`, `.vb-type-label`, `.vb-type-select`,
+  `.vb-preview-wrapper`, `.vb-preview-image`,
+  `.vb-preview-empty`, `.vb-overlay-rect`,
+  `.vb-overlay-kind-region` / `-bbox` / `-block`,
+  `.vb-overlay-point`, `.vb-overlay-color-blue` /
+  `-green` / `-red` / `-yellow` / `-orange` / `-cyan`,
+  `.vb-overlay-label`, `.vb-overlay-legend`,
+  `.vb-legend-row`, `.vb-legend-swatch`,
+  `.vb-overlay-controls-card`,
+  `.vb-overlay-controls-grid`,
+  `.vb-overlay-checkbox-row`, `.vb-overlay-buttons`,
+  `.vb-actions-card`, `.vb-actions-grid`,
+  `.vb-action-btn`, `.vb-presets-card`,
+  `.vb-presets-list`, `.vb-presets-empty`,
+  `.vb-preset-card`, `.vb-preset-name`,
+  `.vb-preset-type-badge` (with three monospace
+  variants), `.vb-preset-description`,
+  `.vb-preset-summary`, `.vb-preset-buttons`,
+  `.vb-draft-card`, `.vb-draft-empty`,
+  `.vb-draft-grid`, `.vb-draft-row`,
+  `.vb-draft-row-label`, `.vb-draft-row-value`. Dark
+  theme variants. Mobile fallback at
+  `max-width: 760px`.
+
+### Safety invariants kept (Step 36)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `realMatching: false`, `realClick: false`,
+  `realOcr: false`, `ocrEngineImplemented: false`,
+  `tesseractAvailable: false`, `ocrMockOnly: true`,
+  `realOcrEnabled: false`, `realTextClickEnabled: false`,
+  `autoSavesScenarios: false`, `autoRunsScenarios: false`
+  in every status response, audit payload, and
+  diagnostics line.
+- The Visual Builder runs entirely in the renderer. It
+  never opens a new IPC channel. `main.js` registers no
+  `visualBuilder.*` / `scenarioPreset.*` handler.
+  `preload.js` exposes no `visualBuilder.*` /
+  `scenarioPreset.*` API.
+- `scenario-presets.js`, `visual-builder.js`, and
+  `visual-builder-ui.js` contain no `require()` of any
+  prohibited module (`tesseract` / `tesseract.js` /
+  `tesseract-ocr` / `node-tesseract-ocr` /
+  `opencv4nodejs` / `@u4/opencv4nodejs` / `opencv.js` /
+  `opencv-js` / `sharp` / `jimp` / `pixelmatch` /
+  `looks-same` / `robotjs` / `nut-js` / `nutjs` /
+  `@nut-tree/nut-js` / `iohook` / `uiohook-napi` /
+  `node-key-sender`).
+- The action-pipeline / safety-gates / mock adapter /
+  dry-run sandbox are unchanged. They still reject every
+  `realClick: true` (and every `realOcr: true` for
+  text_click) outright. The Visual Builder never sends
+  any action through those — it only opens the existing
+  scenario form pre-filled.
+- The screenshot is never persisted on disk by the
+  Visual Builder. The draft preview is module-local and
+  never written into `scenarios.json`, `settings.json`,
+  `profiles.json`, `templates.json`, or
+  `localStorage`. Module-local `_lastDraftPreview`
+  lives in renderer memory and is cleared by
+  `clearDraftPreview()`.
+- Audit payloads carry only ids and short metadata. No
+  `imageDataUrl`, no thumbnails, never the full target
+  text (only `targetTextLen`), no PII.
+- No new dependencies. `package.json` declares zero of
+  every prohibited module.
+
+### Added (Step 37 — Smart Features QA + Next Branch Preparation)
+
+- `docs/SMART_FEATURES_QA.md` — manual QA-checklist for
+  the entire smart-features chain: 12 sections (Scope,
+  Screen Capture, Region Selector, Template Assets,
+  Template Matching, Image Click, OCR Mock, Text Click,
+  Visual Builder, Scenario Presets, Safety checks,
+  Known issues, Release recommendation). Each QA
+  section ships Steps + Expected + `Status: Not tested`.
+- `docs/NEXT_BRANCH_PLAN.md` — three-branch roadmap
+  document:
+  - **Branch A — Real OCR Integration:** Tesseract /
+    `tesseract.js` research, language data packaging,
+    worker setup, performance, privacy, fallback, UI
+    progress, no real click yet. *Risk: medium.*
+  - **Branch B — Real Desktop Adapter:** final safety
+    review, feature flag, OS permissions, adapter
+    installation, audit persistence, emergency-stop
+    audit, manual QA, real click only after approval.
+    *Risk: high.*
+  - **Branch C — Android Research:** Accessibility
+    Service, MediaProjection, permissions,
+    limitations, separate repository or subproject.
+    *Risk: low (research only).*
+  - **Recommendation: start with Branch A** because real
+    OCR without real clicks is significantly less risky
+    than a real desktop adapter. Branch B should wait
+    for at least one stable Branch A release in the
+    wild plus a fresh
+    `docs/REAL_ACTIONS_GO_NO_GO.md` review.
+- `docs/SMART_FEATURES_LIMITATIONS.md` — consolidated
+  smart-features limitations: screen-capture
+  permissions vary by OS, single rectangular region,
+  template asset constraints, simple JS preview
+  matcher, mock OCR only, image_click simulation only,
+  text_click uses mock OCR only, Visual Builder is
+  foundation only, scenario drafts require manual
+  save, no real click.
+- `docs/SMOKE_TESTS.md` — adds **Step 36 — Visual
+  Builder UX Polish + Scenario Presets** smoke checks
+  (#359–#381) and **Step 37 — Smart Features QA + Next
+  Branch Preparation** smoke checks (#382–#388).
+- `docs/SECURITY_CHECKLIST.md` — adds **Visual Builder
+  + Scenario Presets (Step 36)** section with
+  behavioural / audit / diagnostics / Electron-security
+  invariants. Confirms drafts only, no auto-save, no
+  auto-run, no real click, no real OCR, no
+  `imageDataUrl` outside the screen-capture slice, no
+  new IPC channel, no prohibited dependencies.
+- `docs/KNOWN_LIMITATIONS.md` — adds new section
+  **17. Visual Builder + Scenario Presets are
+  foundation-only (Step 36)** with subsections 17.1
+  (OCR still mock only), 17.2 (Presets are basic),
+  17.3 (Visual Builder is foundation only), 17.4
+  (Scenario drafts require manual save), 17.5
+  (Matching accuracy limited), 17.6 (No real click).
+- `README.md` — updates the current-status section and
+  adds Step 36 + Step 37 paragraphs. Asserts
+  simulation-only, no real clicks, no real OCR, no
+  OpenCV, no mobile.
+- `PROJECT_CONTEXT.md` — promotes the previous "Шаг
+  34" entry to "Прошлый шаг" and replaces the
+  "Текущий шаг" entry with a Step 36 + Step 37 summary.
+- `scripts/smoke-check.js` — Step 36 + Step 37
+  invariants.
+
+### Safety invariants kept (Step 37)
+
+- ClickFlow remains **simulation-only**. No real clicks.
+  No real OCR. No OpenCV. No mobile. No new IPC channel.
+  No new dependency.
+- The smoke-check suite still passes with 0 failures
+  after the Step 36 / Step 37 invariants are added.
+- Documentation explicitly states the recommended next
+  branch: **Branch A — Real OCR Integration**.
+
 ## [Unreleased] — Steps 15-34
 
 Final stabilization of the simulation-only beta, design-only handoff

@@ -4734,6 +4734,477 @@ record(
   tctUi.indexOf('"text-click-test-panel"') !== -1
 );
 
+// =====================================================================
+// Step 36 — Visual Builder UX Polish + Scenario Presets
+// =====================================================================
+
+// 253. New Step 36 modules exist on disk.
+[
+  'src/scenario-presets.js',
+  'src/visual-builder.js',
+  'src/visual-builder-ui.js'
+].forEach(function (rel) {
+  record('Step 36 file exists: ' + rel, fileExists(rel));
+});
+
+// 254. index.html loads the three new <script src="…"> tags.
+var htmlTxt36 = readText('src/index.html');
+record(
+  'index.html loads scenario-presets.js',
+  htmlTxt36.indexOf('scenario-presets.js') !== -1
+);
+record(
+  'index.html loads visual-builder.js',
+  htmlTxt36.indexOf('visual-builder.js') !== -1 &&
+  htmlTxt36.indexOf('visual-builder-ui.js') !== -1
+);
+
+// 255. index.html exposes the Visual Builder tab + section.
+record(
+  'index.html declares the Visual Builder tab button',
+  htmlTxt36.indexOf('data-advanced-tab="visualBuilder"') !== -1
+);
+record(
+  'index.html declares the Visual Builder section',
+  htmlTxt36.indexOf('id="advanced-tab-visualBuilder"') !== -1
+);
+
+// 256. scenario-presets.js declares the three frozen presets and
+//      the public surface.
+var presetsTxt = readText('src/scenario-presets.js');
+record(
+  'scenario-presets.js declares preset-coordinate-basic',
+  presetsTxt.indexOf("id: 'preset-coordinate-basic'") !== -1
+);
+record(
+  'scenario-presets.js declares preset-image-click-basic',
+  presetsTxt.indexOf("id: 'preset-image-click-basic'") !== -1
+);
+record(
+  'scenario-presets.js declares preset-text-click-basic',
+  presetsTxt.indexOf("id: 'preset-text-click-basic'") !== -1
+);
+record(
+  'scenario-presets.js exports getScenarioPresets',
+  /function\s+getScenarioPresets\s*\(/.test(presetsTxt)
+);
+record(
+  'scenario-presets.js exports getScenarioPresetById',
+  /function\s+getScenarioPresetById\s*\(/.test(presetsTxt)
+);
+record(
+  'scenario-presets.js exports createScenarioDraftFromPreset',
+  /function\s+createScenarioDraftFromPreset\s*\(/.test(presetsTxt)
+);
+record(
+  'scenario-presets.js exports applyVisualContextToPreset',
+  /function\s+applyVisualContextToPreset\s*\(/.test(presetsTxt)
+);
+record(
+  'scenario-presets.js exports validateScenarioPreset',
+  /function\s+validateScenarioPreset\s*\(/.test(presetsTxt)
+);
+record(
+  'scenario-presets.js stamps realClick: false on every draft',
+  presetsTxt.indexOf('realClick: false') !== -1
+);
+
+// 257. visual-builder.js declares the overlay state shape and the
+//      key public functions.
+var vbTxt = readText('src/visual-builder.js');
+[
+  'showRegion',
+  'showTemplateMatch',
+  'showTemplateTarget',
+  'showOcrBlocks',
+  'showOcrTarget',
+  'showActionTarget'
+].forEach(function (k) {
+  record(
+    'visual-builder.js declares overlay key ' + k,
+    vbTxt.indexOf(k + ':') !== -1
+  );
+});
+[
+  'getVisualBuilderState',
+  'setOverlaySetting',
+  'showAllOverlays',
+  'hideAllOverlays',
+  'clearOverlays',
+  'setSelectedActionType',
+  'buildVisualContextFromState',
+  'buildDraftPreviewFromState',
+  'getMissingRequirements',
+  'getOverlayLayers',
+  'getVisualBuilderDiagnostics'
+].forEach(function (fn) {
+  record(
+    'visual-builder.js exports ' + fn,
+    new RegExp('function\\s+' + fn + '\\s*\\(').test(vbTxt)
+  );
+});
+record(
+  'visual-builder.js diagnostics carry autoSavesScenarios: false',
+  /autoSavesScenarios:\s*false/.test(vbTxt)
+);
+record(
+  'visual-builder.js diagnostics carry autoRunsScenarios: false',
+  /autoRunsScenarios:\s*false/.test(vbTxt)
+);
+record(
+  'visual-builder.js diagnostics carry realClick: false',
+  /realClick:\s*false/.test(vbTxt)
+);
+
+// 258. visual-builder-ui.js renders the tab and uses textContent.
+var vbUiTxt = readText('src/visual-builder-ui.js');
+record(
+  'visual-builder-ui.js exports renderVisualBuilderTab',
+  /function\s+renderVisualBuilderTab\s*\(/.test(vbUiTxt)
+);
+record(
+  'visual-builder-ui.js targets the #advanced-tab-visualBuilder container',
+  vbUiTxt.indexOf("'advanced-tab-visualBuilder'") !== -1 ||
+  vbUiTxt.indexOf('"advanced-tab-visualBuilder"') !== -1
+);
+// User data must never be set via innerHTML on a non-empty value.
+// We allow `innerHTML = ''` for clearing only; nothing else.
+var vbBadInnerHtml = /\.innerHTML\s*=\s*(?!''|""|``)/.test(vbUiTxt);
+record(
+  'visual-builder-ui.js never assigns innerHTML to user data',
+  !vbBadInnerHtml
+);
+
+// 259. Step 36 modules do not import any forbidden module.
+var step36SourceFiles = [
+  'src/scenario-presets.js',
+  'src/visual-builder.js',
+  'src/visual-builder-ui.js'
+];
+var step36ForbiddenModules = [
+  'tesseract', 'tesseract.js', 'tesseract-ocr', 'node-tesseract-ocr',
+  'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi', 'node-key-sender'
+];
+var step36ForbiddenFound = [];
+step36SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step36ForbiddenModules.forEach(function (mod) {
+    var n1 = "require('" + mod + "')";
+    var n2 = 'require("' + mod + '")';
+    if (txt.indexOf(n1) !== -1 || txt.indexOf(n2) !== -1) {
+      step36ForbiddenFound.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 36 source files',
+  step36ForbiddenFound.length === 0,
+  step36ForbiddenFound.join(', ')
+);
+
+// 260. package.json still declares zero of the prohibited modules
+//      (re-checked at step 36 — adding Visual Builder must NOT
+//      pull in any new dependency).
+if (pkg) {
+  var allDeps36 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var pkgForbidden36 = step36ForbiddenModules.filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps36, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 36',
+    pkgForbidden36.length === 0,
+    pkgForbidden36.join(', ')
+  );
+}
+
+// 261. main.js does not register any visualBuilder.* / scenarioPreset.*
+//      IPC handler. preload.js does not expose any such API.
+var mainTxt36 = readText('main.js');
+record(
+  'main.js does not register any visualBuilder.* IPC handler at step 36',
+  !/'visualBuilder\./.test(mainTxt36) && !/"visualBuilder\./.test(mainTxt36)
+);
+record(
+  'main.js does not register any scenarioPreset.* IPC handler at step 36',
+  !/'scenarioPreset\./.test(mainTxt36) && !/"scenarioPreset\./.test(mainTxt36)
+);
+var preloadTxt36 = readText('preload.js');
+record(
+  'preload.js does not expose any visualBuilder.* API at step 36',
+  preloadTxt36.indexOf('visualBuilder') === -1 ||
+  // Allow the word as a substring of an existing benign identifier;
+  // the strict check is on the IPC channel form.
+  (!/'visualBuilder/.test(preloadTxt36) && !/"visualBuilder/.test(preloadTxt36))
+);
+record(
+  'preload.js does not expose any scenarioPreset.* API at step 36',
+  !/'scenarioPreset/.test(preloadTxt36) && !/"scenarioPreset/.test(preloadTxt36)
+);
+
+// 262. Electron security flags re-checked at step 36.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 36)',
+  /contextIsolation\s*:\s*true/.test(mainTxt36)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 36)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt36)
+);
+var htmlTxt36b = readText('src/index.html');
+record(
+  'src/index.html CSP unchanged at step 36 (no unsafe-inline / unsafe-eval)',
+  htmlTxt36b.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt36b.indexOf('unsafe-inline') === -1 &&
+  htmlTxt36b.indexOf('unsafe-eval') === -1
+);
+
+// 263. Audit allowlist contains the 6 new Step 36 types.
+var auditTxt36 = readText('src/audit-events.js');
+[
+  'scenarioPreset.selected',
+  'scenarioPreset.draft.created',
+  'scenarioPreset.form.opened',
+  'visualBuilder.overlay.changed',
+  'visualBuilder.requirement.missing',
+  'visualBuilder.draft.preview.created'
+].forEach(function (eventType) {
+  record(
+    'audit allowlist includes ' + eventType,
+    auditTxt36.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 264. renderer.js wires the Visual Builder dispatch and the
+//      Visual Builder diagnostics line.
+var rendererTxt36 = readText('src/renderer.js');
+record(
+  "renderer.js dispatches the Visual Builder tab to renderVisualBuilderTab",
+  rendererTxt36.indexOf("case 'visualBuilder'") !== -1 &&
+  rendererTxt36.indexOf('renderVisualBuilderTab') !== -1
+);
+record(
+  'renderer.js Copy diagnostics has a `Visual Builder:` line',
+  rendererTxt36.indexOf('Visual Builder:') !== -1 &&
+  rendererTxt36.indexOf('autoSavesScenarios=false') !== -1 &&
+  rendererTxt36.indexOf('autoRunsScenarios=false') !== -1
+);
+
+// 265. i18n parity is preserved AND the new Step 36 keys exist.
+var i18nTxt36 = readText('src/i18n.js');
+[
+  'visualBuilder',
+  'visualBuilderSubtitle',
+  'visualBuilderSimulationOnlyNotice',
+  'scenarioPresets',
+  'presetCoordinateBasic',
+  'presetCoordinateBasicDesc',
+  'presetImageClickBasic',
+  'presetImageClickBasicDesc',
+  'presetTextClickBasic',
+  'presetTextClickBasicDesc',
+  'usePreset',
+  'useWithCurrentVisualContext',
+  'draftPreview',
+  'openDraftInForm',
+  'missingVisualRequirement',
+  'screenPreviewMissingHint',
+  'templateMissingHint',
+  'regionOptionalHint',
+  'ocrResultMissingHint',
+  'showRegionOverlay',
+  'showTemplateMatchOverlay',
+  'showTemplateTargetOverlay',
+  'showOcrBlocksOverlay',
+  'showOcrTargetOverlay',
+  'showActionTargetOverlay',
+  'showAllOverlays',
+  'hideAllOverlays',
+  'overlaySettings',
+  'presetSelected',
+  'scenarioDraftOpened'
+].forEach(function (key) {
+  record(
+    'i18n declares Step 36 key ' + key,
+    new RegExp('\\b' + key + ':\\s*"').test(i18nTxt36)
+  );
+});
+
+// 266. README / PROJECT_CONTEXT mention Step 36 / Step 37 / Visual
+//      Builder / Scenario Presets / Smart Features.
+var readme36 = readText('README.md');
+var ctx36 = readText('PROJECT_CONTEXT.md');
+record(
+  'README or PROJECT_CONTEXT mentions step 36',
+  /step\s*36|шаг\s*36|Step 36|Шаг 36/.test(readme36) ||
+  /step\s*36|шаг\s*36|Step 36|Шаг 36/.test(ctx36)
+);
+record(
+  'README or PROJECT_CONTEXT mentions step 37',
+  /step\s*37|шаг\s*37|Step 37|Шаг 37/.test(readme36) ||
+  /step\s*37|шаг\s*37|Step 37|Шаг 37/.test(ctx36)
+);
+record(
+  'README or PROJECT_CONTEXT mentions Visual Builder',
+  /Visual Builder|Визуальный конструктор|визуальный конструктор/i.test(readme36) ||
+  /Visual Builder|Визуальный конструктор|визуальный конструктор/i.test(ctx36)
+);
+record(
+  'README or PROJECT_CONTEXT mentions Scenario Presets',
+  /Scenario Presets|Пресеты сценариев/i.test(readme36) ||
+  /Scenario Presets|Пресеты сценариев/i.test(ctx36)
+);
+record(
+  'CHANGELOG.md mentions Step 36 — Visual Builder UX Polish + Scenario Presets',
+  readText('CHANGELOG.md').indexOf('Step 36 — Visual Builder UX Polish + Scenario Presets') !== -1
+);
+
+// =====================================================================
+// Step 37 — Smart Features QA + Next Branch Preparation
+// =====================================================================
+
+// 267. New Step 37 docs exist on disk.
+[
+  'docs/SMART_FEATURES_QA.md',
+  'docs/NEXT_BRANCH_PLAN.md',
+  'docs/SMART_FEATURES_LIMITATIONS.md'
+].forEach(function (rel) {
+  record('Step 37 doc exists: ' + rel, fileExists(rel));
+});
+
+// 268. SMART_FEATURES_QA.md content sanity.
+var qaTxt = readText('docs/SMART_FEATURES_QA.md');
+record(
+  'docs/SMART_FEATURES_QA.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(qaTxt)
+);
+record(
+  'docs/SMART_FEATURES_QA.md covers Visual Builder QA',
+  /Visual Builder QA/i.test(qaTxt)
+);
+record(
+  'docs/SMART_FEATURES_QA.md covers Scenario Presets QA',
+  /Scenario Presets QA/i.test(qaTxt)
+);
+record(
+  'docs/SMART_FEATURES_QA.md uses Status: Not tested format',
+  /Status:\*?\*?\s*Not tested/.test(qaTxt) ||
+  /\*\*Status:\*\*\s*Not tested/.test(qaTxt)
+);
+record(
+  'docs/SMART_FEATURES_QA.md mentions Release recommendation',
+  /Release recommendation/i.test(qaTxt)
+);
+
+// 269. NEXT_BRANCH_PLAN.md content sanity.
+var nbpTxt = readText('docs/NEXT_BRANCH_PLAN.md');
+record(
+  'docs/NEXT_BRANCH_PLAN.md describes Branch A — Real OCR Integration',
+  /Branch A.*Real OCR/i.test(nbpTxt)
+);
+record(
+  'docs/NEXT_BRANCH_PLAN.md describes Branch B — Real Desktop Adapter',
+  /Branch B.*Real Desktop Adapter/i.test(nbpTxt)
+);
+record(
+  'docs/NEXT_BRANCH_PLAN.md describes Branch C — Android Research',
+  /Branch C.*Android/i.test(nbpTxt)
+);
+record(
+  'docs/NEXT_BRANCH_PLAN.md recommends Branch A first',
+  /Start with Branch A|Branch A.*first|сначала Branch A|сначала.*real OCR/i.test(nbpTxt)
+);
+
+// 270. SMART_FEATURES_LIMITATIONS.md content sanity.
+var limTxt = readText('docs/SMART_FEATURES_LIMITATIONS.md');
+record(
+  'docs/SMART_FEATURES_LIMITATIONS.md mentions OCR mock only',
+  /mock-only|mock only|OCR is mock|mock OCR/i.test(limTxt)
+);
+record(
+  'docs/SMART_FEATURES_LIMITATIONS.md mentions no real click',
+  /no real click|never click|never moves the cursor/i.test(limTxt)
+);
+record(
+  'docs/SMART_FEATURES_LIMITATIONS.md mentions Visual Builder is foundation',
+  /foundation/i.test(limTxt) && /Visual Builder/i.test(limTxt)
+);
+
+// 271. CHANGELOG mentions Step 37.
+record(
+  'CHANGELOG.md mentions Step 37 — Smart Features QA + Next Branch Preparation',
+  readText('CHANGELOG.md').indexOf('Step 37 — Smart Features QA + Next Branch Preparation') !== -1
+);
+
+// 272. SMOKE_TESTS.md has Step 36 + Step 37 sections.
+var smokeTxt = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 36 — Visual Builder block',
+  /Step 36.*Visual Builder/i.test(smokeTxt)
+);
+record(
+  'docs/SMOKE_TESTS.md has a Step 37 — Smart Features QA block',
+  /Step 37.*Smart Features QA/i.test(smokeTxt)
+);
+
+// 273. SECURITY_CHECKLIST.md has the Step 36 Visual Builder section.
+var secTxt37 = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has a Visual Builder + Scenario Presets section',
+  /Visual Builder.*Scenario Presets|Step 36/i.test(secTxt37)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts Visual Builder creates drafts only',
+  /drafts only|never auto-save|Visual Builder creates drafts only/i.test(secTxt37)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts presets do not execute automatically',
+  /Presets do not execute|presets do not execute|never auto-runs/i.test(secTxt37)
+);
+
+// 274. KNOWN_LIMITATIONS.md mentions Visual Builder foundation only.
+var klTxt37 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md mentions Visual Builder + Scenario Presets are foundation-only',
+  /Visual Builder.*foundation|foundation-only|Visual Builder.*Scenario Presets/i.test(klTxt37)
+);
+record(
+  'docs/KNOWN_LIMITATIONS.md mentions scenario drafts require manual save',
+  /manual save|require.*manual|drafts.*manual/i.test(klTxt37)
+);
+
+// 275. Hard guarantees: smoke-check itself never starts Electron,
+//      never runs OCR, never runs matching, never executes system
+//      actions — by construction this script only uses fs / path
+//      and never spawns a child process. We verify there is no
+//      actual `require()` of those modules outside of this very
+//      check (the check itself contains the string as a literal,
+//      so we match against the parser-friendly form
+//      `\nrequire(` at column 0 only).
+var smokeCheckSelf = readText('scripts/smoke-check.js');
+// Strip the parts of the file that build these literal needles
+// to avoid a self-reference false positive.
+var smokeCheckSelfStripped = smokeCheckSelf
+  .replace(/\/\/[^\n]*$/gm, '')
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/'require\([^']*\)'/g, '""')
+  .replace(/"require\([^"]*\)"/g, '""');
+record(
+  'smoke-check.js does not import child_process',
+  !/\brequire\s*\(\s*['"]child_process['"]\s*\)/.test(smokeCheckSelfStripped)
+);
+record(
+  'smoke-check.js does not import electron',
+  !/\brequire\s*\(\s*['"]electron['"]\s*\)/.test(smokeCheckSelfStripped)
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

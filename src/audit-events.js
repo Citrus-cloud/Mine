@@ -168,7 +168,19 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   TextClickTestFailed:                'textClick.test.failed',
   TextClickTestNoMatch:               'textClick.test.noMatch',
   TextClickTestCleared:               'textClick.test.cleared',
-  TextClickTestActionPreviewCreated:  'textClick.test.actionPreview.created'
+  TextClickTestActionPreviewCreated:  'textClick.test.actionPreview.created',
+  // Step 36: Visual Builder UX Polish + Scenario Presets.
+  // Payloads carry only ids, short metadata (type, hasRegion,
+  // hasTemplate, targetTextLen, missingCount, withVisualContext)
+  // — never the full target text, never an `imageDataUrl`, never
+  // a thumbnail, never a screenshot, never PII. Visual Builder
+  // never auto-saves, never auto-runs, never clicks.
+  ScenarioPresetSelected:             'scenarioPreset.selected',
+  ScenarioPresetDraftCreated:         'scenarioPreset.draft.created',
+  ScenarioPresetFormOpened:           'scenarioPreset.form.opened',
+  VisualBuilderOverlayChanged:        'visualBuilder.overlay.changed',
+  VisualBuilderRequirementMissing:    'visualBuilder.requirement.missing',
+  VisualBuilderDraftPreviewCreated:   'visualBuilder.draft.preview.created'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );
