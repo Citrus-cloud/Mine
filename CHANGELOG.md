@@ -8,7 +8,7 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
-## [Unreleased] — Steps 15-26
+## [Unreleased] — Steps 15-27
 
 Final stabilization of the simulation-only beta, design-only handoff
 to the future real-input release line, the Step 17 architectural
@@ -17,11 +17,168 @@ adapter, the Step 19 real-action sandbox with dry-run preview, the
 Step 20 final beta QA pass, the Step 21 beta release packaging
 pass, the Step 22 GitHub beta release finalization, the Step 23
 post-pack QA and release blocker pass, the Step 24 final beta
-release preparation, the Step 25 Screen Capture Foundation, and the
-**Step 26 Region Selector Foundation** (rectangular drag selector
-on top of the screen-capture preview — only the foundation, the
-features themselves are still not implemented). **Still
+release preparation, the Step 25 Screen Capture Foundation, the
+Step 26 Region Selector Foundation, and the **Step 27 Template
+Asset Manager** (storage layer for the future smart-visual line —
+the matcher itself is still not implemented). **Still
 simulation-only.**
+
+### Added (Step 27 — Template Asset Manager)
+
+- `main/template-assets.js` — new main-process module that owns
+  the template asset manager. Registers six IPC handlers
+  through a single `registerTemplateAssetsIpc({ ipcMain, dialog,
+  getMainWindow, getUserDataPath })` entry point:
+  - `templates:load` — reads `userData/templates/templates.json`,
+    materialises an in-memory `previewDataUrl` for each entry
+    whose image is still on disk, and returns
+    `{ success, data: { templates: [...] }, corrupted: bool }`.
+    Corrupt JSON quarantines the file as
+    `templates.json.broken-<timestamp>` and falls back to `[]`.
+  - `templates:import-image` — opens `dialog.showOpenDialog`
+    with a `png/jpg/jpeg/webp` filter, re-checks the file via
+    magic bytes (PNG / JPEG / WebP signatures), enforces a
+    16 MiB cap, copies the bytes into
+    `userData/templates/images/template-<id>.<ext>`, parses
+    width/height from the file header (no pixel decoding),
+    appends metadata to `templates.json`, and returns
+    `{ template: {...}, previewDataUrl: "..." }`.
+  - `templates:save-metadata` — updates `name` and `description`
+    only. `id`, `fileName`, `mimeType`, `sizeBytes`, `width`,
+    `height`, `createdAt` stay frozen.
+  - `templates:delete` — removes one entry; deletes the image
+    file best-effort; never throws on a missing file.
+  - `templates:reset` — wipes `templates.json` and removes any
+    file in `images/` whose basename starts with `template-`.
+  - `templates:get-stats` — read-only diagnostics passthrough
+    (`{ count, storageReady, lastError }`).
+  Also exports `getTemplatesStats` for the diagnostics card and
+  an `_internal` test-only handle. **No native dependencies.**
+- `main.js` — wires the new module:
+  `const templateAssets = require('./main/template-assets');`
+  + `templateAssets.registerTemplateAssetsIpc({...})` right
+  before `app.whenReady()`.
+- `preload.js` — exposes the new `window.clickflow.templates`
+  namespace through `contextBridge` (raw `ipcRenderer` is still
+  not exposed):
+  `templates: { load, importImage, saveMetadata(templateId, updates),
+  delete(templateId), reset, getStats }`.
+- `src/template-manager.js` — new renderer client built on top
+  of the preload bridge:
+  `initTemplates`, `getTemplates`, `getTemplateById`,
+  `getActiveTemplate`, `setActiveTemplate`, `importTemplateImage`,
+  `updateTemplateMetadata`, `deleteTemplate`, `resetTemplates`,
+  `validateTemplateMetadata`, `loadTemplates`,
+  `getTemplatesStats`. Validates locally (name required,
+  ≤80 chars; description ≤300 chars; mime in
+  `image/png|image/jpeg|image/webp`); main is the final gate.
+  Never imports `electron` or `ipcRenderer`.
+- `src/template-ui.js` — new renderer UI module driving the
+  Templates tab:
+  `openTemplatesTab`, `renderTemplatesTab`, `renderTemplateList`,
+  `renderTemplateCard`, `renderActiveTemplate`,
+  `openTemplateImport`, `openTemplateEdit`, `saveTemplateEdit`,
+  `cancelTemplateEdit`, `deleteTemplateById`,
+  `resetTemplateAssets`, `refreshTemplates`. All user-visible
+  text via `textContent`; `innerHTML` only as `= ''` (container
+  clear). Image previews go to `<img>.src` only.
+- `src/app-state.js` — new `appState.templates` slice:
+  `items`, `activeTemplateId`, `isLoading`, `lastError`. Five
+  mutators: `setTemplates`, `setActiveTemplateId`,
+  `setTemplatesLoading`, `setTemplatesError`,
+  `resetTemplatesState`. `getState()` deep-copies the slice.
+- `src/audit-events.js` — eight new allowlisted event types:
+  `template.import.requested`, `template.import.completed`,
+  `template.import.cancelled`, `template.import.failed`,
+  `template.metadata.updated`, `template.selected`,
+  `template.deleted`, `template.reset`. Payloads carry only
+  template id and short metadata — never base64 / pixel data.
+- `src/index.html` — adds the Templates tab button and section,
+  and loads `template-manager.js` then `template-ui.js` before
+  `renderer.js`. Tab list is now nine entries.
+- `src/renderer.js` —
+  - `setAdvancedTab` switch gains `case 'templates'`;
+  - `init()` calls `await initTemplates()` after profiles;
+  - `renderAdvancedSafety()` gains a compact **Image templates**
+    diagnostics card (`templatesCount`, `activeTemplateId`,
+    `activeTemplateName`, `templatesStorageReady`, `lastError`,
+    `screenMatchingNotImplemented`, `templateMatchingPlanned`);
+  - `copyDiagnostics()` gains a new `Templates: …` line
+    (numeric / metadata only — never base64).
+- `src/styles.css` — new section "Step 27 — Template Asset
+  Manager" at the bottom: `.template-actions`,
+  `.template-grid`, `.template-card`, `.template-card.selected`,
+  `.template-selected-badge`, `.template-preview-box`,
+  `.template-preview-image` (`max-height: 140px` so big
+  templates can't stretch the layout), `.template-card-name`,
+  `.template-card-description`, `.template-card-meta`,
+  `.template-card-actions`, `.template-active-card`,
+  `.template-empty-state`, `.template-edit-input`,
+  `.template-edit-textarea`, `.template-edit-error`. Dark-theme
+  tweaks via `[data-theme="dark"]`. Mobile fallback at
+  `max-width: 760px`.
+- `src/i18n.js` — 27 new keys per language (RU + EN):
+  `templates`, `imageTemplates`, `importTemplate`,
+  `resetTemplates`, `refreshTemplates`, `noTemplates`,
+  `activeTemplate`, `noActiveTemplate`, `selectedTemplate`,
+  `selectTemplate`, `editTemplate`, `deleteTemplate`,
+  `templateName`, `templateDescription`, `originalFileName`,
+  `imageSize`, `fileSize`, `createdAt`, `templateImported`,
+  `templateImportCancelled`, `templateImportFailed`,
+  `templateDeleted`, `templateSelected`, `templateMetadataSaved`,
+  `templatesReset`, `templateSafetyNote`, `templatesDiagnostics`,
+  `templatesCount`, `templatesStorageReady`,
+  `templateNameRequired`, `templateNameTooLong`,
+  `templateDescriptionTooLong`, `screenMatchingNotImplemented`,
+  `templateMatchingPlanned`.
+- `docs/TEMPLATE_ASSETS.md` — new doc covering purpose, current
+  status, storage model, supported formats, metadata format,
+  privacy/safety notes, what is **not** implemented, future use
+  for template matching, and the planned `image_click` action.
+- `docs/SECURITY_CHECKLIST.md` — adds **Template Asset Manager
+  (Step 27)** section.
+- `docs/KNOWN_LIMITATIONS.md` — adds **Template asset manager
+  (Step 27)** section.
+- `docs/SMOKE_TESTS.md` — adds **Step 27 — Template Asset
+  Manager** smoke checks.
+- `docs/ACTION_SCHEMA.md` — adds the planned `image_click`
+  action description (still **not** implemented).
+- `scripts/smoke-check.js` — adds Step-27 invariants:
+  `main/template-assets.js` exists, `src/template-manager.js`
+  exists, `src/template-ui.js` exists, `docs/TEMPLATE_ASSETS.md`
+  exists, `preload.js` exposes `templates: { load, importImage,
+  saveMetadata, delete, reset, getStats }`, `main.js` registers
+  the five `templates:*` IPC handlers, `package.json` still
+  declares zero OCR / OpenCV / robotjs / nut.js / iohook /
+  uiohook-napi / sharp / jimp / pixelmatch / looks-same
+  dependencies, and the renderer modules don't import `electron`
+  or `ipcRenderer`.
+
+### Safety invariants kept (Step 27)
+
+- `nodeIntegration: false`, `contextIsolation: true`,
+  `webPreferences.preload` — unchanged.
+- CSP unchanged (`default-src 'self'`, no `unsafe-inline`, no
+  `unsafe-eval`).
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `ocrImplemented: false`, `imageRecognitionImplemented: false`
+  in every system-info / status response.
+- `previewDataUrl` lives only in renderer process memory. It is
+  never written to `templates.json`, `settings.json`,
+  `scenarios.json`, or `profiles.json`.
+- `templates.json` is metadata-only — no base64 / no pixel data.
+- Image imports go through `dialog.showOpenDialog` only, with a
+  `png/jpg/jpeg/webp` allow-list and a magic-bytes check.
+- The renderer never sees the original chosen filesystem path —
+  only the basename, stored in `originalFileName`.
+- The click engine, the action pipeline, the safety gates, the
+  mock adapter, and the dry-run sandbox are unchanged. **Real
+  desktop clicks remain blocked.**
+- Templates are stored ASSETS only. ClickFlow does **not** match
+  a template against the screenshot, run OCR, or trigger any
+  click on a matched location. The matcher and any
+  `image_click` action are gated behind
+  [`docs/REAL_ACTIONS_GO_NO_GO.md`](./docs/REAL_ACTIONS_GO_NO_GO.md).
 
 ### Added (Step 26 — Region Selector Foundation)
 

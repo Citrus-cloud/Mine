@@ -47,6 +47,18 @@ const appState = {
     lastUpdatedAt: null,
     lastError: null
   },
+  // Step 27 — Template Asset Manager. Renderer-side memory only.
+  // `items` is a list of metadata records returned by the main-process
+  // IPC `templates:load`. `previewDataUrl` lives only inside each
+  // item and is never written back to settings / scenarios /
+  // profiles. We do NOT persist this slice — the source of truth is
+  // templates.json owned by the main process.
+  templates: {
+    items: [],
+    activeTemplateId: null,
+    isLoading: false,
+    lastError: null
+  },
   settings: {
     language: "ru",
     theme: "system",
@@ -85,6 +97,12 @@ function getState() {
       imageSize:        appState.regionSelector.imageSize   ? { ...appState.regionSelector.imageSize }   : null,
       lastUpdatedAt:    appState.regionSelector.lastUpdatedAt,
       lastError:        appState.regionSelector.lastError
+    },
+    templates: {
+      items:            appState.templates.items.map(function (it) { return it ? { ...it } : it; }),
+      activeTemplateId: appState.templates.activeTemplateId,
+      isLoading:        appState.templates.isLoading,
+      lastError:        appState.templates.lastError
     },
     settings: {
       ...appState.settings,
@@ -269,4 +287,36 @@ function resetRegionSelectorState() {
   appState.regionSelector.imageSize = null;
   appState.regionSelector.lastUpdatedAt = null;
   appState.regionSelector.lastError = null;
+}
+
+
+
+// --- Step 27: Template asset state (renderer memory only) ---
+// All mutators accept loose / null inputs and never throw; invalid
+// values collapse to safe defaults. The renderer is the only writer
+// and it goes through these helpers (it never touches
+// appState.templates directly) so the slice stays serialisable.
+//
+// Note: previewDataUrl is allowed inside individual `items`, but
+// nothing here ever writes the slice to disk. The source of truth
+// for templates is templates.json, owned by the main process.
+function setTemplates(items) {
+  appState.templates.items = Array.isArray(items)
+    ? items.map(function (it) { return (it && typeof it === 'object') ? { ...it } : null; }).filter(Boolean)
+    : [];
+}
+function setActiveTemplateId(id) {
+  appState.templates.activeTemplateId = (typeof id === 'string' && id.length > 0) ? id : null;
+}
+function setTemplatesLoading(isLoading) {
+  appState.templates.isLoading = !!isLoading;
+}
+function setTemplatesError(error) {
+  appState.templates.lastError = (typeof error === 'string' && error.length > 0) ? error : null;
+}
+function resetTemplatesState() {
+  appState.templates.items = [];
+  appState.templates.activeTemplateId = null;
+  appState.templates.isLoading = false;
+  appState.templates.lastError = null;
 }

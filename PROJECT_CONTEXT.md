@@ -753,13 +753,20 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
 ## Где что лежит
 
 - `main.js` — Electron main, IPC, menu, tray, hotkeys, lifecycle.
+- `main/template-assets.js` — main-process module for the
+  Step 27 Template Asset Manager (`templates:*` IPC handlers,
+  png/jpg/jpeg/webp allow-list, magic-bytes verification, header-
+  only width/height parsing, `userData/templates/` storage).
 - `preload.js` — contextBridge `window.clickflow.*`.
 - `src/` — renderer modules + `index.html` + `styles.css` + `i18n.js`.
   Включает `feature-flags.js`, `action-pipeline.js`, `safety-gates.js`,
   `audit-events.js` (Step 16-17), а также
   `desktop-adapter-interface.js`, `mock-desktop-adapter.js`,
-  `adapter-registry.js` (Step 18) и
-  `real-action-sandbox.js` (Step 19).
+  `adapter-registry.js` (Step 18),
+  `real-action-sandbox.js` (Step 19),
+  `screen-capture-client.js` / `screen-capture-ui.js` (Step 25),
+  `region-selector.js` / `region-selector-ui.js` (Step 26),
+  и `template-manager.js` / `template-ui.js` (Step 27).
 - `assets/` — packaging resources, локальный SVG-икон.
 - `docs/` — TEST_PLAN, MVP_CHECKLIST, SECURITY_CHECKLIST,
   SMOKE_TESTS, PACKAGING, DESKTOP_ADAPTER_PLAN, ACTION_SCHEMA,
@@ -803,9 +810,31 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
 | 24 | Final beta release preparation: `FINAL_RELEASE_SUMMARY.md`, `PRE_RELEASE_CHECKLIST.md`, `RELEASE_TAG_PLAN.md`, `RELEASE_COMMIT_MESSAGE.md`, expanded Release status card (18 rows + ready-for-pre-release-after-manual-QA badge), smoke-check 193 checks. Tag and publication remain manual; explicit list of forbidden commit body lines. |
 | 25 | Screen Capture Foundation (new line of smart visual features — features themselves not implemented yet): three IPC handlers via `desktopCapturer`, safe `window.clickflow.screenCapture` preload API, `screen-capture-client.js` (validation + memory cache), `screen-capture-ui.js` (new Advanced → Screen Capture tab with safety notice, sources grid with thumbnails, preview card), `appState.screenCapture` slice, six new audit-event types, compact Screen capture status diagnostics card, 24 RU + EN i18n keys, `docs/SCREEN_CAPTURE.md`. Screenshots never written to disk. **Real clicks / OCR / image recognition / template matching / OpenCV / robotjs / nut.js / iohook still absent.** |
 | 26 | Region Selector Foundation (rectangular drag selector on top of the Step 25 preview — features themselves still not implemented): pure-logic `region-selector.js` (`createRegion`, `validateRegion`, `scaleRegionToImage` / `scaleRegionToPreview`, `getRegionArea`, `formatRegion`, `createEmptyRegionState`), `region-selector-ui.js` (drag overlay; mousemove/mouseup bound only during drag), `appState.regionSelector` slice + 8 mutators, optional `scenario.settings.region` via new scenario-manager helpers (`validateRegionSettings`, `updateScenarioRegion`, `clearScenarioRegion`; old scenarios untouched), six new audit-event types (`region.selection.started/updated/completed/cleared`, `region.attached.toScenario`, `region.validation.failed`), compact Region selector status diagnostics card + new `Region selector: …` line in Copy diagnostics, 22 RU + EN i18n keys (parity 428/428), `docs/REGION_SELECTOR.md`. Region stored as four numbers only — never pixels. **Real clicks / OCR / image matching / template matching / OpenCV / robotjs / nut.js / iohook still absent.** |
+| 27 | Template Asset Manager (storage layer for the future smart-visual line — features themselves still not implemented): new `main/template-assets.js` with five `templates:*` IPC handlers (`load` / `import-image` / `save-metadata` / `delete` / `reset`) + `templates:get-stats`. Imports go through `dialog.showOpenDialog` with a `png/jpg/jpeg/webp` allow-list, magic-bytes verification, a ≤16 MiB cap, and header-only width/height parsing (no pixel decoding, no native deps). Storage lives at `userData/templates/templates.json` + `userData/templates/images/template-<id>.<ext>` — metadata only, no base64 / no pixel data, no original filesystem path. Corrupt JSON → quarantine + safe defaults. `preload.js` exposes `window.clickflow.templates`. Renderer modules: `src/template-manager.js` (`initTemplates`, `getTemplates`, `getTemplateById`, `getActiveTemplate`, `setActiveTemplate`, `importTemplateImage`, `updateTemplateMetadata`, `deleteTemplate`, `resetTemplates`, `validateTemplateMetadata`) and `src/template-ui.js` (`renderTemplatesTab`, `renderTemplateList`, `renderTemplateCard`, `renderActiveTemplate`, `openTemplateImport`, `openTemplateEdit`, `saveTemplateEdit`, `cancelTemplateEdit`, `deleteTemplateById`, `resetTemplateAssets`, `refreshTemplates`). `appState.templates` slice + 5 mutators (`setTemplates`, `setActiveTemplateId`, `setTemplatesLoading`, `setTemplatesError`, `resetTemplatesState`). Eight new audit-event types (`template.import.requested/completed/cancelled/failed`, `template.metadata.updated`, `template.selected`, `template.deleted`, `template.reset`). New 9th Advanced tab **Templates / Шаблоны**: header «Image Templates / Шаблоны изображений», safety notice, Import / Reset / Refresh buttons, grid of cards (preview, name, description, originalFileName, image size, file size, createdAt, Select / Edit / Delete), inline edit form (name + description, validated locally), active-template card. Diagnostics: compact **Image templates** card in Advanced → Safety + new `Templates: …` line in Copy diagnostics. 27 new RU + EN i18n keys. `docs/TEMPLATE_ASSETS.md`. `previewDataUrl` lives only in renderer memory and is **never** written back to settings / scenarios / profiles / templates.json. **Real clicks / OCR / image matching / template matching / OpenCV / robotjs / nut.js / iohook / sharp / jimp / pixelmatch still absent. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
 
-## Что логично делать после шага 24
+## Что логично делать после шага 27
 
+- **Шаг 28 — Template gallery / matcher prep (всё ещё simulation-only).**
+  Активный шаблон уже выбирается, но никуда не «прикрепляется».
+  Логичные кандидаты на шаг 28 (выбрать **один**):
+  1. **Привязка шаблона к сценарию.** Расширить `scenario-manager.js`
+     полями `validateTemplateRef`, `updateScenarioTemplate`,
+     `clearScenarioTemplate`. `scenario.settings.templateId`
+     становится опциональным полем (как `settings.region` после
+     шага 26). Click-engine **по-прежнему игнорирует** поле.
+  2. **Экспорт / импорт шаблонов.** `templates:export-bundle` /
+     `templates:import-bundle`: ZIP-подобный JSON-блок с
+     метаданными + base64 копий изображений, через
+     `dialog.showSaveDialog` / `showOpenDialog`. Полезно для
+     синхронизации шаблонов между машинами **без** сети.
+  3. **Drag-and-drop импорт.** Renderer ловит файлы, передаёт
+     путь main-процессу, main применяет тот же allow-list /
+     magic-bytes / size-cap, что и `templates:import-image`.
+- **Шаг 29 (запланировано, всё ещё simulation-only) — image
+  matching dry-run preview.** Параллельно с уже существующим
+  Step-19 dry-run sandbox добавить «match preview»: показать на
+  preview-скриншоте найденную позицию шаблона как прямоугольник.
+  **Без** реальных кликов; результат — чисто визуальный.
 - **Manual packaged-app QA** на хотя бы одной целевой ОС:
   локально выполнить `npm run pack` / `npm run dist`, пройти
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md)
@@ -825,7 +854,7 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
 - **GitHub Actions CI**: `actions/setup-node` + `npm install` +
   `npm run smoke` на каждый push и PR.
 - **Accessibility-аудит**: `aria-label`, `aria-live`, полная
-  клавиатурная навигация по 7 вкладкам Advanced.
+  клавиатурная навигация по 9 вкладкам Advanced.
 - **Smoke-harness 2.0** (Playwright или альтернатива):
   поднимает Electron headless и проверяет no-real-input invariants
   на всех 6 слоях защиты.

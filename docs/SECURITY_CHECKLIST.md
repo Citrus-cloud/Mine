@@ -223,3 +223,99 @@ simulation-only contract of the rest of the build.
 
 See [`docs/REGION_SELECTOR.md`](./REGION_SELECTOR.md) for the full
 description, the coordinate-space model, and the future-step gating.
+
+
+
+## Template Asset Manager (Step 27)
+
+Step 27 introduces a storage-only Template Asset Manager. The
+checks below confirm that the new code does not weaken any of the
+beta-MVP safety invariants.
+
+### File-level invariants
+- [x] Templates are imported **only through `dialog.showOpenDialog`**
+      with the explicit filter
+      `{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }`.
+      The renderer never sends an arbitrary path.
+- [x] Imports go through a **two-stage allow-list**: the dialog
+      extension filter AND a magic-bytes check on the file
+      content (`89 50 4E 47 …` for PNG, `FF D8 FF` for JPEG,
+      `RIFF???WEBP` for WebP). A renamed `.exe` cannot pass.
+- [x] Imports are capped at **16 MiB**. Larger files are
+      rejected before the copy with a generic error message.
+- [x] After the copy the original chosen path is forgotten by
+      the main process. Only the basename is stored as
+      `originalFileName`, never the directory.
+
+### Storage-level invariants
+- [x] `templates.json` carries **metadata only**. It is forbidden
+      to write `previewDataUrl`, `imageDataUrl`, base64 strings,
+      or pixel bytes into it. The main module strips any such
+      field through `_stripRuntimeOnlyFields()` before saving.
+- [x] Image files live exclusively under
+      `userData/templates/images/template-<id>.<ext>`. Path
+      validation (`_isInsideImagesDir`) refuses anything that
+      contains `..` or path separators.
+- [x] `previewDataUrl` is materialised in memory only (returned
+      by `templates:load` and `templates:import-image`). It
+      never reaches `templates.json`, `settings.json`,
+      `scenarios.json`, `profiles.json`, or `localStorage`.
+- [x] Corrupt `templates.json` is renamed to
+      `templates.json.broken-<timestamp>` and the app boots
+      with an empty list — same fallback as the other JSON
+      stores.
+
+### Renderer-level invariants
+- [x] The renderer reaches the templates feature only through
+      `window.clickflow.templates.*`. Raw `ipcRenderer` is
+      still **not** exposed.
+- [x] The renderer modules (`template-manager.js`,
+      `template-ui.js`) do **not** `require('electron')` or
+      `require('ipcRenderer')`.
+- [x] All user-visible strings (template name, description,
+      original filename, error messages) render via
+      `textContent`. `innerHTML` is used only as `= ''`
+      (container clear).
+- [x] `previewDataUrl` is written exclusively to `<img>.src`. It
+      is never inserted as raw HTML.
+
+### Format / behaviour invariants
+- [x] Templates are stored ASSETS only. ClickFlow does **not**
+      match a template against the screenshot, run OCR, or
+      trigger any click on a matched location at Step 27.
+- [x] No new dependencies. `package.json` declares **zero** of
+      `tesseract`, `tesseract.js`, `opencv4nodejs`,
+      `@u4/opencv4nodejs`, `sharp`, `jimp`, `pixelmatch`,
+      `looks-same`, `robotjs`, `nut-js`, `nutjs`,
+      `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`. Smoke check enforces this.
+- [x] No real clicks. The click engine, action pipeline, safety
+      gates, mock adapter, and dry-run sandbox are unchanged.
+      `simulationOnly: true`, `realActionsImplemented: false`
+      hold across every status response.
+- [x] No mobile platforms. Templates remain desktop-only.
+
+### Audit / diagnostics invariants
+- [x] All eight new audit-event types
+      (`template.import.requested/completed/cancelled/failed`,
+      `template.metadata.updated`, `template.selected`,
+      `template.deleted`, `template.reset`) are part of the
+      frozen `AUDIT_EVENT_TYPES` allowlist. Payloads carry only
+      template id and short metadata — never base64 or pixel
+      data.
+- [x] The `Templates: …` line in **Copy diagnostics** carries
+      numbers and ids only — no base64, no original path, no
+      previewDataUrl.
+
+### Electron-security invariants (re-checked at Step 27)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no `unsafe-eval`,
+      no remote sources.
+- [x] `preload.js` does **not** expose `ipcRenderer` — only
+      namespaced helper functions.
+
+See [`docs/TEMPLATE_ASSETS.md`](./TEMPLATE_ASSETS.md) for the full
+description, the storage model, and the list of features that are
+**not** implemented in Step 27.

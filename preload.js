@@ -55,5 +55,18 @@ contextBridge.exposeInMainWorld('clickflow', {
     listSources: () => ipcRenderer.invoke('screen-capture:list-sources'),
     capturePreview: (sourceId) => ipcRenderer.invoke('screen-capture:capture-preview', sourceId),
     getStatus: () => ipcRenderer.invoke('screen-capture:get-status')
+  },
+  // Step 27 — Template Asset Manager. Storage-only:
+  // - import goes through dialog.showOpenDialog (png/jpg/jpeg/webp);
+  // - templates.json holds metadata only — never base64 / pixel data;
+  // - load returns previewDataUrl in memory only, never written back;
+  // - no matching / OCR / real clicks.
+  templates: {
+    load: () => ipcRenderer.invoke('templates:load'),
+    importImage: () => ipcRenderer.invoke('templates:import-image'),
+    saveMetadata: (templateId, updates) => ipcRenderer.invoke('templates:save-metadata', templateId, updates),
+    delete: (templateId) => ipcRenderer.invoke('templates:delete', templateId),
+    reset: () => ipcRenderer.invoke('templates:reset'),
+    getStats: () => ipcRenderer.invoke('templates:get-stats')
   }
 });

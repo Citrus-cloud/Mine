@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, globalShortcut, Menu, Tray, nativeImage, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const templateAssets = require('./main/template-assets');
 
 // ---------------------------------------------------------------------
 // Step 25 — Screen Capture Foundation
@@ -624,6 +625,22 @@ ipcMain.handle('screen-capture:get-status', async () => {
     imageRecognitionImplemented: false,
     savesScreenshotsToDisk: false
   };
+});
+
+// --- IPC: Template Asset Manager (Step 27) ---
+// Storage-only module. The handlers do not perform image matching,
+// OCR, or any kind of click. They:
+//   - copy user-picked image files into userData/templates/images/
+//     under freshly generated ids (originals are never persisted);
+//   - keep metadata in templates.json (no base64, no pixel data);
+//   - materialise data URLs only at read time, in memory only;
+//   - reject anything outside png / jpg / jpeg / webp at both the
+//     dialog filter and the magic-bytes layer.
+templateAssets.registerTemplateAssetsIpc({
+  ipcMain: ipcMain,
+  dialog: dialog,
+  getMainWindow: function () { return mainWindow; },
+  getUserDataPath: function () { return app.getPath('userData'); }
 });
 
 // --- Lifecycle ---
