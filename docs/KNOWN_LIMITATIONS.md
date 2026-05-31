@@ -691,3 +691,47 @@ See [`docs/SMART_FEATURES_LIMITATIONS.md`](./SMART_FEATURES_LIMITATIONS.md)
 for the consolidated smart-features limitations list, and
 [`docs/SMART_FEATURES_QA.md`](./SMART_FEATURES_QA.md) for the
 manual QA checklist.
+
+
+
+## 18. Real OCR is planned, not connected (Step 38)
+
+Step 38 — Real OCR Research + Safe Integration Plan — ships the
+OCR provider architecture as **architecture only**. No real OCR
+backend runs, no Tesseract / `tesseract.js` is declared in
+`package.json`, no real cursor work is added.
+
+### 18.1 Architecture only
+- The OCR provider contract, the registry, the readiness UI,
+  the diagnostics line, and the audit events all describe a
+  **future** integration path. The mock provider is the
+  single active provider.
+- `getOcrProviderContract().realOcrAvailable === false`.
+- `getOcrProviderContract().mockOcrAvailable === true`.
+
+### 18.2 Tesseract provider is planned
+- The Tesseract provider is declared in the registry as
+  `planned: true, available: false, disabledReason: "Real OCR
+  is not connected in this build"`.
+- `setActiveOcrProvider('tesseract')` returns
+  `{ ok: false, error: { id: 'realOcrBlocked' } }`. The
+  active provider stays `mock`.
+
+### 18.3 Self-test is mock-only
+- `runOcrProviderSelfTest()` runs the mock engine against a
+  synthetic preview built with `1280×720` metadata. No
+  screenshot is captured during the self-test.
+
+### 18.4 Real OCR not connected
+- No `tesseract.js` dependency.
+- No worker shipped.
+- No language-pack bundle.
+- No real OCR call site at runtime.
+- The Step-32 mock engine still backs every OCR consumer:
+  Advanced → OCR tab, the Step-34 Test OCR panel, the
+  `text_click` scenario type, the Visual Builder.
+
+See [`docs/REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md)
+for the step-by-step path to a real backend, and
+[`docs/OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md)
+for the contract reference.

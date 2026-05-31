@@ -29,9 +29,9 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools + Visual Builder UX polish + Scenario Presets + Smart Features QA + Next Branch preparation).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools + Visual Builder UX polish + Scenario Presets + Smart Features QA + Next Branch preparation + **Real OCR Research + Safe Integration Plan**).
 - Версия: **`0.1.0-beta`**.
-- Состояние: **smart visual desktop MVP, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, и **Smart Features QA + Next Branch Plan (Step 37)**. Реальные клики **не реализованы**, настоящий OCR **не реализован**, OpenCV **не подключён**, мобильной версии **нет**.
+- Состояние: **smart visual desktop MVP, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, **Smart Features QA + Next Branch Plan (Step 37)**, и **OCR provider architecture (Step 38)**: provider interface, provider registry, readiness UI, diagnostics, audit events, integration plan. Реальные клики **не реализованы**, настоящий OCR **не подключён** (есть только mock provider), OpenCV **не подключён**, мобильной версии **нет**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
@@ -601,6 +601,72 @@ realDesktopActions=false, simulationOnly=true,
 ocrEngineImplemented=false, tesseractAvailable=false,
 contextIsolation: true, nodeIntegration: false — без
 изменений.**
+**Step 38 — Real OCR Research + Safe Integration Plan:**
+добавлены два новых модуля
+[`src/ocr-provider-interface.js`](./src/ocr-provider-interface.js)
+(`createOcrProviderResult`, `validateOcrProviderInput`,
+`normalizeOcrProviderOptions`, `getOcrProviderContract`,
+`getSupportedOcrLanguages`, `isRealOcrAllowed` — всегда
+возвращает `false` на шаге 38, `createOcrProviderStatus`) и
+[`src/ocr-provider-registry.js`](./src/ocr-provider-registry.js)
+(реестр с двумя провайдерами: `mock` — активный, `tesseract`
+— planned/unavailable; `getOcrProviders`,
+`getOcrProviderById`, `getActiveOcrProvider`,
+`setActiveOcrProvider` — БЛОКИРУЕТ выбор `tesseract`,
+`getOcrProviderRegistryStatus`,
+`isRealOcrProviderRegistered`, `runOcrProviderSelfTest`,
+`runActiveOcrProvider`). В Advanced → OCR — новая карточка
+**OCR readiness / Готовность OCR** со списком провайдеров,
+флагами `realOcrEnabled=no`, `realOcrAllowed=no`, языками,
+`OCR images not stored: yes`, кнопкой **Run provider self-
+test** (запускает mock-провайдер на синтетических метаданных
+preview без скриншота). В `src/feature-flags.js` —
+четыре новых safe-default флага: `realOcr: false`,
+`ocrProviderRegistry: true`, `ocrMockProvider: true`,
+`tesseractProvider: false`. В `src/audit-events.js` —
+6 новых allowlisted типов
+(`ocr.provider.selftest.started/.completed/.failed`,
+`ocr.provider.selection.blocked`,
+`ocr.provider.mock.active`,
+`ocr.provider.real.unavailable`); payload содержит только
+provider id, durations, counts, stable error IDs —
+**никогда** полный target text, **никогда** `imageDataUrl`,
+**никогда** PII. В `Copy diagnostics` — новая строка
+`OCR provider: activeProviderId=mock,
+mockProviderAvailable=true, tesseractProviderAvailable=false,
+realOcrEnabled=false, realOcrAllowed=false,
+tesseractAvailable=false, realOcr=false, realClick=false`.
+Добавлено ~26 новых i18n-ключей RU + EN, parity 771/771.
+Созданы документы
+[`docs/REAL_OCR_INTEGRATION_PLAN.md`](./docs/REAL_OCR_INTEGRATION_PLAN.md)
+(roadmap до Tesseract worker'а: библиотека, language packs,
+worker model, performance, privacy, security, UI progress,
+fallback, no real click) и
+[`docs/OCR_PROVIDER_INTERFACE.md`](./docs/OCR_PROVIDER_INTERFACE.md)
+(reference контракта, input/output, registry, self-test,
+safety rules). Обновлены `docs/OCR_FOUNDATION.md`,
+`docs/TEXT_CLICK_SCENARIO.md`,
+`docs/TEXT_CLICK_TEST_TOOLS.md`,
+`docs/NEXT_BRANCH_PLAN.md` (Branch A — progress note),
+`docs/SECURITY_CHECKLIST.md` (новый раздел OCR Provider
+Registry с поведенческими / audit / diagnostics /
+Electron-security инвариантами),
+`docs/KNOWN_LIMITATIONS.md` (новый раздел 18 — Real OCR
+planned, not connected),
+[`README.md`](./README.md), [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md),
+[`CHANGELOG.md`](./CHANGELOG.md). Smoke-check расширен
+Step-38-инвариантами. CSP не ослаблен, новых IPC-каналов
+нет. **Tesseract / tesseract.js / Tesseract runtime / OpenCV
+/ robotjs / nut.js / iohook / uiohook-napi не подключены.
+Real OCR не запускается. `setActiveOcrProvider('tesseract')`
+блокируется и эмитит `ocr.provider.selection.blocked` +
+`ocr.provider.real.unavailable`. text_click продолжает
+работать через mock OCR. Visual Builder продолжает работать.
+realDesktopActions=false, simulationOnly=true,
+realOcr=false, tesseractProvider=false,
+ocrProviderRegistry=true, ocrMockProvider=true,
+contextIsolation: true, nodeIntegration: false — без
+изменений.**
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -832,6 +898,8 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/SMART_FEATURES_QA.md`](./docs/SMART_FEATURES_QA.md) — manual QA checklist на всю smart-features цепочку: Screen Capture → Region → Templates → Matching → Image Click → OCR Mock → Text Click → Visual Builder → Scenario Presets, плюс Safety checks, Known issues, Release recommendation (Step 37).
 - [`docs/NEXT_BRANCH_PLAN.md`](./docs/NEXT_BRANCH_PLAN.md) — план следующих больших веток: Branch A (Real OCR Integration), Branch B (Real Desktop Adapter), Branch C (Android Research). Рекомендация: сначала Branch A (Step 37).
 - [`docs/SMART_FEATURES_LIMITATIONS.md`](./docs/SMART_FEATURES_LIMITATIONS.md) — консолидированный список ограничений smart-features: screen capture permissions, simple matching engine, mock OCR, simulation-only image_click / text_click, Visual Builder foundation, scenario drafts require manual save, no real click (Step 37).
+- [`docs/REAL_OCR_INTEGRATION_PLAN.md`](./docs/REAL_OCR_INTEGRATION_PLAN.md) — план будущей интеграции настоящего OCR: Tesseract.js, language packs, worker model, performance, privacy, security, UI progress, fallback. Real OCR на шаге 38 НЕ запускается (Step 38).
+- [`docs/OCR_PROVIDER_INTERFACE.md`](./docs/OCR_PROVIDER_INTERFACE.md) — формальный контракт OCR-провайдера: input/output shape, error IDs, registry, mock provider, planned Tesseract provider, self-test, safety rules (Step 38).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и

@@ -1026,3 +1026,86 @@ See [`docs/SMART_FEATURES_QA.md`](./SMART_FEATURES_QA.md) for the
 full smart-features QA checklist and
 [`docs/SMART_FEATURES_LIMITATIONS.md`](./SMART_FEATURES_LIMITATIONS.md)
 for the smart-features limitations.
+
+
+
+## OCR Provider Registry (Step 38)
+
+Step 38 ships the OCR provider architecture as **architecture
+only**: the contract, the registry, the readiness UI, the
+diagnostics line, the audit events, and the integration plan.
+The mock OCR provider is the only active provider, real OCR is
+not connected, no Tesseract runtime is added.
+
+### Behavioural invariants
+- [x] **Real OCR disabled.** `flags.realOcr === false` and
+      `flags.tesseractProvider === false` are hard-coded safe
+      defaults. There is no UI to toggle them.
+- [x] **Mock provider active.** `getActiveOcrProvider().id ===
+      'mock'`. The Advanced → OCR readiness card surfaces this.
+- [x] **Real providers blocked.**
+      `setActiveOcrProvider('tesseract')` returns
+      `{ ok: false, error: { id: 'realOcrBlocked' } }` and emits
+      `ocr.provider.selection.blocked` +
+      `ocr.provider.real.unavailable` audit events. The active
+      provider stays `mock`.
+- [x] **No Tesseract runtime.** `package.json` declares zero of
+      `tesseract`, `tesseract.js`, `tesseract-ocr`,
+      `node-tesseract-ocr`. `src/ocr-provider-interface.js` and
+      `src/ocr-provider-registry.js` contain no `require()` of
+      any of those.
+- [x] **OCR images not stored.** The provider contract sets
+      `storesImages: false`. The input validator rejects pixel
+      data inside the input envelope (stable error
+      `pixelDataNotAllowed`).
+- [x] **No real click.** The provider envelope has no
+      `realClick` field. Diagnostics line `OCR provider: ...`
+      reports `realClick=false`.
+- [x] **No new IPC channel.** `main.js` registers no
+      `ocr.provider.*` handler. `preload.js` exposes no
+      `ocrProvider*` API. The contract and the registry live
+      entirely in the renderer.
+- [x] **Self-test is mock-only.** `runOcrProviderSelfTest()`
+      runs the mock engine against a synthetic preview built
+      with `width: 1280`, `height: 720`, no pixel data. No
+      screenshot is taken during a self-test.
+
+### Audit invariants
+- [x] **Allowlist extension.** `audit-events.js` adds exactly
+      six new types: `ocr.provider.selftest.started`,
+      `ocr.provider.selftest.completed`,
+      `ocr.provider.selftest.failed`,
+      `ocr.provider.selection.blocked`,
+      `ocr.provider.mock.active`,
+      `ocr.provider.real.unavailable`. Payloads carry only
+      provider ids, durations, counts, stable error IDs, and
+      booleans — never the full target text, never an
+      `imageDataUrl`, never PII.
+
+### Diagnostics invariants
+- [x] **OCR provider line.** `Copy diagnostics` adds an
+      `OCR provider: ...` line carrying
+      `activeProviderId=mock`, `mockProviderAvailable=true`,
+      `tesseractProviderAvailable=false`,
+      `realOcrEnabled=false`, `realOcrAllowed=false`,
+      `tesseractAvailable=false`, `realOcr=false`,
+      `realClick=false`. The line never carries the full
+      target text, an `imageDataUrl`, or a thumbnail.
+
+### Electron-security invariants (re-checked at Step 38)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';`.
+- [x] **No prohibited dependencies.** `package.json` still
+      declares zero of `tesseract`, `tesseract.js`,
+      `tesseract-ocr`, `node-tesseract-ocr`, `opencv4nodejs`,
+      `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`,
+      `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`,
+      `nutjs`, `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`.
+
+See [`docs/OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md)
+for the contract reference and
+[`docs/REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md)
+for the future-integration roadmap.

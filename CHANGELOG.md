@@ -8,6 +8,281 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-38
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, the Step 24 final beta
+release preparation, the Step 25 Screen Capture Foundation, the
+Step 26 Region Selector Foundation, the Step 27 Template Asset
+Manager, the Step 28 Template Matching Mock / Dry-run, the
+Step 29 Real Template Matching Engine Foundation, the
+Step 30 Image Click Scenario Type Foundation, the
+Step 31 Image Click Scenario UX Polish + Visual Test Tools, the
+Step 32 OCR Foundation (mock only), the
+Step 33 Text Click Scenario Type Foundation, the
+Step 34 Text Click Test Tools + OCR UX Polish, the
+Step 36 Visual Builder UX Polish + Scenario Presets, the
+Step 37 Smart Features QA + Next Branch Preparation, and the
+**Step 38 Real OCR Research + Safe Integration Plan**
+(architecture-only OCR provider registry that prepares the
+project for a future Tesseract integration without shipping a
+real OCR runtime).
+**Still simulation-only.**
+
+### Added (Step 38 — Real OCR Research + Safe Integration Plan)
+
+- `src/ocr-provider-interface.js` (new pure-renderer module):
+  - `getOcrProviderContract()` — frozen-shape snapshot:
+    `version: 1`, `supportedProviders: ['mock']`,
+    `plannedProviders: ['tesseract']`,
+    `realOcrAllowed: false`, `mockOcrAvailable: true`,
+    `realOcrAvailable: false`, `requiresUserAction: true`,
+    `storesImages: false`, `supportedLanguages: ['ru', 'en',
+    'ru+en']`, `supportedMatchModes: ['contains', 'exact']`,
+    `maxTargetTextLength: 200`.
+  - `getSupportedOcrLanguages()` — `['ru', 'en', 'ru+en']`.
+  - `validateOcrProviderInput(input)` — returns
+    `{ valid, errors: [stableId] }`. Stable error IDs:
+    `inputMissing`, `screenPreviewMissing`,
+    `screenPreviewSizeMissing`, `targetTextMissing`,
+    `targetTextTooLong`, `languageInvalid`,
+    `matchModeInvalid`, `regionInvalid`,
+    `regionOutOfBounds`, `pixelDataNotAllowed`. Defensive:
+    rejects `imageDataUrl` / `previewDataUrl` / pixel
+    buffers inside the input envelope.
+  - `normalizeOcrProviderOptions(options)` — safe defaults
+    (`ru+en`, `contains`, case-insensitive, no region,
+    no requestId).
+  - `createOcrProviderResult(success, data, error)` —
+    sanitised envelope. Whitelists fields and drops
+    anything that smells like pixel data even from a
+    buggy provider.
+  - `createOcrProviderStatus(provider)` — readiness
+    snapshot. Real providers are forced
+    `available: false` at Step 38 regardless of input.
+  - `isRealOcrAllowed(flags, settings)` — central gate
+    for "is real OCR allowed". Hard-stop at Step 38:
+    always returns `false`, even with
+    `flags.realOcr === true`.
+- `src/ocr-provider-registry.js` (new pure-renderer module):
+  - Two frozen provider entries: `mock` (active,
+    available, type `mock`, `realOcr: false`) and
+    `tesseract` (planned, unavailable, type `real`,
+    `realOcr: true`, `disabledReason: "Real OCR is not
+    connected in this build"`).
+  - `getOcrProviders()` — deep-copy array of every
+    provider.
+  - `getOcrProviderById(id)` / `getActiveOcrProvider()`.
+  - `setActiveOcrProvider(id)` — returns
+    `{ ok: true, provider }` for the mock; returns
+    `{ ok: false, error: { id: 'realOcrBlocked' } }` for
+    any real provider, emits
+    `ocr.provider.selection.blocked` +
+    `ocr.provider.real.unavailable`.
+  - `getOcrProviderRegistryStatus()` — diagnostics-shaped
+    snapshot with `activeProviderId`,
+    `activeProviderName`, `mockProviderAvailable`,
+    `tesseractProviderAvailable`, `realOcrEnabled`
+    (always `false`), `realOcrAllowed` (always `false`),
+    `supportedLanguages`, `lastProviderSelfTest`,
+    `providerRegistryReady`, `storesImages: false`,
+    `requiresUserAction: true`, `realClick: false`.
+  - `isRealOcrProviderRegistered()` — always `false` at
+    Step 38.
+  - `runOcrProviderSelfTest()` — runs the mock engine
+    against synthetic `1280×720` preview metadata
+    (`sourceId: 'self-test'`, no pixels), validates the
+    input against the contract, asserts the result
+    envelope shape. Returns `{ ok, providerId, durationMs,
+    errors, details, ranAt }`. Emits
+    `ocr.provider.selftest.started` →
+    `ocr.provider.selftest.completed` (or `.failed`).
+  - `runActiveOcrProvider(input)` — thin dispatcher.
+    Routes to the mock engine through the existing
+    `runMockOcr` symbol. Defensive: if the active
+    provider is somehow non-mock at Step 38, emits
+    `ocr.provider.real.unavailable` and falls back to
+    the mock.
+- `src/feature-flags.js` — four new safe-default flags:
+  `realOcr: false`, `ocrProviderRegistry: true`,
+  `ocrMockProvider: true`, `tesseractProvider: false`.
+  `getFeatureFlagsForDiagnostics` reports them under
+  `safety` (`realOcr`, `tesseractProvider`) and
+  `capabilities` (`ocrProviderRegistry`,
+  `ocrMockProvider`). The flags are frozen; there is no
+  UI to toggle them.
+- `src/audit-events.js` — 6 new allowlisted event types:
+  `ocr.provider.selftest.started`,
+  `ocr.provider.selftest.completed`,
+  `ocr.provider.selftest.failed`,
+  `ocr.provider.selection.blocked`,
+  `ocr.provider.mock.active`,
+  `ocr.provider.real.unavailable`. Payloads carry only
+  provider ids, durations, counts, stable error IDs,
+  and booleans — never the full target text, never an
+  `imageDataUrl`, never PII.
+- `src/i18n.js` — ~26 new keys per language (RU + EN):
+  `ocrProvider`, `ocrProviders`, `activeOcrProvider`,
+  `mockOcrProvider`, `tesseractOcrProvider`,
+  `realOcrProvider`, `realOcrUnavailable`,
+  `realOcrPlanned`, `ocrReadiness`, `providerSelfTest`,
+  `runProviderSelfTest`, `providerSelfTestPassed`,
+  `providerSelfTestFailed`, `ocrProviderRegistry`,
+  `mockProviderAvailable`, `tesseractProviderAvailable`,
+  `realOcrEnabled`, `realOcrAllowed`,
+  `supportedOcrLanguages`, `realOcrNotConnectedYet`,
+  `mockProviderCurrentlyUsed`, `ocrImagesNotStored`,
+  `ocrRequiresUserAction`, `realOcrProviderBlocked`,
+  `providerSelfTestNotRun`, `ocrProviderArchitectureOnly`,
+  plus small `flagYes`, `flagNo`, `flagAvailable`,
+  `flagUnavailable`, `flagActive`. Final i18n parity:
+  771 ru / 771 en.
+- `src/index.html` — two new `<script src>` tags
+  (`ocr-provider-interface.js`, `ocr-provider-registry.js`)
+  loaded between `ocr-mock-engine.js` and `ocr-ui.js`.
+  CSP unchanged.
+- `src/ocr-ui.js` — new **OCR readiness card** rendered
+  at the top of the OCR tab below the existing notice.
+  The card surfaces the provider list (mock vs
+  tesseract), the readiness flags
+  (`Real OCR enabled: no`, `Real OCR allowed: no`,
+  `OCR images not saved to disk: yes`,
+  `OCR requires user action: yes`,
+  `Real clicks: disabled`), the supported languages,
+  the active provider, and a **Run provider self-test**
+  button. The button calls `runOcrProviderSelfTest`,
+  prints a success / warning log line, and re-renders
+  the card so the inline status updates.
+- `src/renderer.js` — new `OCR provider:` line in
+  `Copy diagnostics`:
+  `activeProviderId=mock,
+  activeProviderName=Mock OCR Provider,
+  mockProviderAvailable=true,
+  tesseractProviderAvailable=false,
+  realOcrEnabled=false, realOcrAllowed=false,
+  supportedLanguages=ru|en|ru+en,
+  providerRegistryReady=true,
+  lastProviderSelfTestOk=…,
+  lastProviderSelfTestAt=…,
+  lastProviderSelfTestBlocksCount=…,
+  lastProviderSelfTestDurationMs=…,
+  ocrEngineImplemented=false,
+  tesseractAvailable=false,
+  realOcr=false, realClick=false`.
+- `src/styles.css` — new section "Step 38 — OCR
+  provider readiness card": `.ocr-readiness-card`,
+  `.ocr-readiness-warning`, `.ocr-readiness-warning-badge`,
+  `.ocr-readiness-list`, `.ocr-readiness-provider-row`
+  (with `-active`, `-real` modifiers),
+  `.ocr-readiness-provider-name`,
+  `.ocr-readiness-provider-type` (with `-real`
+  modifier), `.ocr-readiness-provider-status` (with
+  `-active`, `-available`, `-planned`, `-unavailable`
+  modifiers), `.ocr-readiness-provider-reason`,
+  `.ocr-readiness-selftest-row`,
+  `.ocr-readiness-selftest-button`,
+  `.ocr-readiness-selftest-status` (with `-ok`, `-fail`
+  modifiers). Dark-theme variants. Mobile fallback at
+  760px.
+- `docs/REAL_OCR_INTEGRATION_PLAN.md` (new): full
+  step-by-step roadmap to Tesseract.js integration —
+  library / language data / worker model / performance
+  risks / privacy / security / UI progress / fallback /
+  no real click — with the explicit recommendation that
+  Step 39 follow this document and require a
+  `docs/REAL_OCR_GO_NO_GO.md` review before adding any
+  dependency.
+- `docs/OCR_PROVIDER_INTERFACE.md` (new): formal
+  contract reference. Sections: Provider contract,
+  Input format (with the full stable error-ID table),
+  Output format, Provider registry, Mock provider,
+  Planned real provider, Self-test, Safety rules.
+- `docs/OCR_FOUNDATION.md` — new "Provider architecture
+  (Step 38)" section that explains how the Step-32 mock
+  engine sits behind the new contract.
+- `docs/TEXT_CLICK_SCENARIO.md` — provider-architecture
+  note clarifying that `text_click` continues to use
+  the mock provider.
+- `docs/TEXT_CLICK_TEST_TOOLS.md` — provider-architecture
+  note clarifying that Test OCR uses the active
+  provider (currently mock).
+- `docs/NEXT_BRANCH_PLAN.md` — "Branch A — progress
+  note (Step 38)" section listing the deliverables
+  shipped at Step 38 and the umbrella safety flags
+  that remain unchanged.
+- `docs/SECURITY_CHECKLIST.md` — new "OCR Provider
+  Registry (Step 38)" section with behavioural / audit /
+  diagnostics / Electron-security invariants.
+- `docs/KNOWN_LIMITATIONS.md` — new section
+  **18. Real OCR is planned, not connected (Step 38)**
+  with subsections 18.1 (Architecture only),
+  18.2 (Tesseract provider is planned),
+  18.3 (Self-test is mock-only),
+  18.4 (Real OCR not connected).
+- `scripts/smoke-check.js` — Step 38 invariants. New
+  modules / docs / audit allowlist / new feature flags /
+  i18n parity / diagnostics line / no prohibited
+  dependencies / no new IPC handler / CSP unchanged.
+- `README.md` — new Step 38 paragraph in the linear
+  history. Updated current-status line to mention OCR
+  provider architecture and "real OCR is not
+  connected".
+- `PROJECT_CONTEXT.md` — promoted "Шаги 36 и 37
+  завершены вместе" to "Прошлый шаг" and replaced the
+  current step with Step 38 details.
+
+### Safety invariants kept (Step 38)
+
+- ClickFlow remains **simulation-only**.
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realDesktopActions: false`,
+  `realOcr: false`, `tesseractProvider: false`,
+  `ocrEngineImplemented: false`, `tesseractAvailable:
+  false`, `ocrMockOnly: true`, `realOcrEnabled: false`,
+  `realTextClickEnabled: false`,
+  `realImageClickEnabled: false`,
+  `autoSavesScenarios: false`, `autoRunsScenarios: false`,
+  `realClick: false`, `realOcr: false` in every status
+  response, audit payload, and diagnostics line.
+- The OCR provider interface and the registry run entirely
+  in the renderer. They never open a new IPC channel.
+  `main.js` registers no `ocr.provider.*` handler.
+  `preload.js` exposes no `ocrProvider*` API.
+- `src/ocr-provider-interface.js` and
+  `src/ocr-provider-registry.js` contain no `require()`
+  of any prohibited module (`tesseract` / `tesseract.js`
+  / `tesseract-ocr` / `node-tesseract-ocr` /
+  `opencv4nodejs` / `@u4/opencv4nodejs` / `opencv.js` /
+  `opencv-js` / `sharp` / `jimp` / `pixelmatch` /
+  `looks-same` / `robotjs` / `nut-js` / `nutjs` /
+  `@nut-tree/nut-js` / `iohook` / `uiohook-napi` /
+  `node-key-sender`).
+- The action-pipeline / safety-gates / mock adapter /
+  dry-run sandbox are unchanged. They still reject every
+  `realClick: true` outright. The OCR provider registry
+  never sends any action through those.
+- `setActiveOcrProvider('tesseract')` returns
+  `{ ok: false, error: { id: 'realOcrBlocked' } }` and
+  emits `ocr.provider.selection.blocked` +
+  `ocr.provider.real.unavailable`. The active provider
+  stays `mock`.
+- The provider self-test runs the mock engine against
+  synthetic preview metadata (`1280×720`, no pixels). It
+  never captures a screenshot.
+- Audit payloads carry only ids, counts, durations,
+  stable error IDs, and booleans. No `imageDataUrl`, no
+  thumbnails, never the full target text, no PII.
+- No new dependencies. `package.json` declares zero of
+  every prohibited module.
+- Visual Builder + Scenario Presets + image_click +
+  text_click + simple_click flows are unchanged.
+
 ## [Unreleased] — Steps 15-37
 
 Final stabilization of the simulation-only beta, design-only handoff

@@ -45,6 +45,18 @@ function renderOcrTab() {
   notice.appendChild(noticeText);
   c.appendChild(notice);
 
+  // 1b. OCR provider readiness card (Step 38). Architecture-only:
+  //     surfaces the registry status + a "Run provider self-test"
+  //     button. The mock provider is the only active provider; real
+  //     OCR providers are listed as planned and unavailable. The
+  //     button NEVER runs real OCR — it dispatches the synthetic
+  //     mock self-test from `ocr-provider-registry.js`.
+  var readinessCard = document.createElement('div');
+  readinessCard.className = 'adv-card ocr-readiness-card';
+  readinessCard.id = 'ocr-readiness-card';
+  c.appendChild(readinessCard);
+  renderOcrProviderReadiness(readinessCard);
+
   // 2. Screen preview status card.
   var screenCard = document.createElement('div');
   screenCard.className = 'adv-card ocr-screen-card';
@@ -657,6 +669,185 @@ function _ocrCreateSettingRow(label) {
     row.appendChild(lbl);
   }
   return row;
+}
+
+// =====================================================================
+// Step 38 — OCR provider readiness card.
+// =====================================================================
+//
+// Pure DOM rendering. Reads the OCR provider registry status, paints
+// a "Готовность OCR" / "OCR readiness" card, plus a Run-self-test
+// button. The button NEVER triggers real OCR — `runOcrProviderSelfTest`
+// only runs the mock engine against a synthetic preview.
+function renderOcrProviderReadiness(host) {
+  var card = host || document.getElementById('ocr-readiness-card');
+  if (!card) return;
+  // Clear previous content (the title is part of this card too —
+  // we redraw everything from scratch).
+  card.innerHTML = '';
+
+  var title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = _ocrT('ocrReadiness', 'OCR readiness');
+  card.appendChild(title);
+
+  var status = (typeof getOcrProviderRegistryStatus === 'function')
+    ? getOcrProviderRegistryStatus()
+    : null;
+  var providers = (typeof getOcrProviders === 'function') ? getOcrProviders() : [];
+
+  // Warning row — always visible at Step 38.
+  var warn = document.createElement('div');
+  warn.className = 'ocr-readiness-warning';
+  var warnBadge = document.createElement('span');
+  warnBadge.className = 'ocr-readiness-warning-badge';
+  warnBadge.textContent = _ocrT('realOcrUnavailable', 'Real OCR unavailable');
+  var warnText = document.createElement('span');
+  warnText.className = 'ocr-readiness-warning-text';
+  warnText.textContent =
+    _ocrT('realOcrNotConnectedYet', 'Real OCR is not connected yet.') +
+    ' ' +
+    _ocrT('mockProviderCurrentlyUsed', 'The mock provider is currently used.');
+  warn.appendChild(warnBadge);
+  warn.appendChild(warnText);
+  card.appendChild(warn);
+
+  // Status rows.
+  if (status) {
+    _ocrAddCardRow(card, _ocrT('mockOcrProvider', 'Mock OCR provider'),
+      status.mockProviderAvailable
+        ? _ocrT('flagAvailable', 'available')
+        : _ocrT('flagUnavailable', 'unavailable'));
+    _ocrAddCardRow(card, _ocrT('tesseractOcrProvider', 'Tesseract OCR provider'),
+      status.tesseractProviderAvailable
+        ? _ocrT('flagAvailable', 'available')
+        : (_ocrT('realOcrPlanned', 'Real OCR — planned') + ' / ' + _ocrT('flagUnavailable', 'unavailable')));
+    _ocrAddCardRow(card, _ocrT('realOcrEnabled', 'Real OCR enabled'),
+      status.realOcrEnabled ? _ocrT('flagYes', 'yes') : _ocrT('flagNo', 'no'));
+    _ocrAddCardRow(card, _ocrT('realOcrAllowed', 'Real OCR allowed'),
+      status.realOcrAllowed ? _ocrT('flagYes', 'yes') : _ocrT('flagNo', 'no'));
+    _ocrAddCardRow(card, _ocrT('supportedOcrLanguages', 'Supported OCR languages'),
+      Array.isArray(status.supportedLanguages) ? status.supportedLanguages.join(' / ') : '');
+    _ocrAddCardRow(card, _ocrT('activeOcrProvider', 'Active OCR provider'),
+      (status.activeProviderName || status.activeProviderId || '—'));
+    _ocrAddCardRow(card, _ocrT('ocrImagesNotStored', 'OCR images are not saved to disk.'),
+      _ocrT('flagYes', 'yes'));
+    _ocrAddCardRow(card, _ocrT('ocrRequiresUserAction', 'OCR requires user action.'),
+      _ocrT('flagYes', 'yes'));
+    _ocrAddCardRow(card, _ocrT('realClicks', 'Real clicks'),
+      _ocrT('disabled', 'disabled'));
+  }
+
+  // Provider list — one row per registered provider.
+  if (Array.isArray(providers) && providers.length > 0) {
+    var listTitle = document.createElement('div');
+    listTitle.className = 'ocr-readiness-list-title';
+    listTitle.textContent = _ocrT('ocrProviders', 'OCR providers') +
+      ' (' + providers.length + ')';
+    card.appendChild(listTitle);
+
+    var list = document.createElement('div');
+    list.className = 'ocr-readiness-list';
+    providers.forEach(function (p) {
+      var row = document.createElement('div');
+      row.className = 'ocr-readiness-provider-row';
+      if (p.active) row.classList.add('ocr-readiness-provider-row-active');
+      if (p.realOcr) row.classList.add('ocr-readiness-provider-row-real');
+
+      var nameEl = document.createElement('div');
+      nameEl.className = 'ocr-readiness-provider-name';
+      nameEl.textContent = p.name || p.id;
+      row.appendChild(nameEl);
+
+      var typeBadge = document.createElement('div');
+      typeBadge.className = 'ocr-readiness-provider-type ocr-readiness-provider-type-' + p.type;
+      typeBadge.textContent = p.type;
+      row.appendChild(typeBadge);
+
+      var statusBadge = document.createElement('div');
+      statusBadge.className = 'ocr-readiness-provider-status';
+      if (p.active) {
+        statusBadge.classList.add('ocr-readiness-provider-status-active');
+        statusBadge.textContent = _ocrT('flagActive', 'active');
+      } else if (p.available) {
+        statusBadge.classList.add('ocr-readiness-provider-status-available');
+        statusBadge.textContent = _ocrT('flagAvailable', 'available');
+      } else if (p.planned) {
+        statusBadge.classList.add('ocr-readiness-provider-status-planned');
+        statusBadge.textContent = _ocrT('realOcrPlanned', 'Real OCR — planned');
+      } else {
+        statusBadge.classList.add('ocr-readiness-provider-status-unavailable');
+        statusBadge.textContent = _ocrT('flagUnavailable', 'unavailable');
+      }
+      row.appendChild(statusBadge);
+
+      if (p.disabledReason) {
+        var reason = document.createElement('div');
+        reason.className = 'ocr-readiness-provider-reason';
+        reason.textContent = p.disabledReason;
+        row.appendChild(reason);
+      }
+
+      list.appendChild(row);
+    });
+    card.appendChild(list);
+  }
+
+  // Self-test row.
+  var selfTestRow = document.createElement('div');
+  selfTestRow.className = 'ocr-readiness-selftest-row';
+  var selfTestBtn = document.createElement('button');
+  selfTestBtn.type = 'button';
+  selfTestBtn.className = 'btn btn-secondary ocr-readiness-selftest-button';
+  selfTestBtn.id = 'ocr-readiness-selftest-button';
+  selfTestBtn.textContent = _ocrT('runProviderSelfTest', 'Run provider self-test');
+  selfTestBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    runOcrProviderSelfTestFromUi();
+  });
+  selfTestRow.appendChild(selfTestBtn);
+
+  // Last self-test result inline.
+  var last = status && status.lastProviderSelfTest ? status.lastProviderSelfTest : null;
+  var lastEl = document.createElement('span');
+  lastEl.className = 'ocr-readiness-selftest-status';
+  if (!last) {
+    lastEl.textContent = _ocrT('providerSelfTestNotRun', 'Self-test has not been run yet');
+  } else if (last.ok) {
+    lastEl.classList.add('ocr-readiness-selftest-status-ok');
+    lastEl.textContent = _ocrT('providerSelfTestPassed', 'Provider self-test passed') +
+      ' · ' + (last.durationMs | 0) + ' ms · blocks=' + ((last.details && last.details.blocksCount) | 0) +
+      ' · matched=' + String(last.details && last.details.matched);
+  } else {
+    lastEl.classList.add('ocr-readiness-selftest-status-fail');
+    lastEl.textContent = _ocrT('providerSelfTestFailed', 'Provider self-test failed') +
+      ' · ' + (Array.isArray(last.errors) ? last.errors.join(', ') : '');
+  }
+  selfTestRow.appendChild(lastEl);
+  card.appendChild(selfTestRow);
+}
+
+function runOcrProviderSelfTestFromUi() {
+  if (typeof runOcrProviderSelfTest !== 'function') return;
+  var report;
+  try {
+    report = runOcrProviderSelfTest();
+  } catch (e) {
+    report = { ok: false, providerId: 'mock', errors: ['exception'], durationMs: 0, details: null };
+  }
+  if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+    if (report && report.ok) {
+      addLogEntry(createLog('success',
+        _ocrT('providerSelfTestPassed', 'Provider self-test passed') +
+        ' · ' + (report.durationMs | 0) + ' ms'));
+    } else {
+      addLogEntry(createLog('warning',
+        _ocrT('providerSelfTestFailed', 'Provider self-test failed') +
+        (report && Array.isArray(report.errors) ? ' · ' + report.errors.join(', ') : '')));
+    }
+  }
+  // Re-render the readiness card so the inline status updates.
+  renderOcrProviderReadiness();
 }
 
 function _ocrAddCardRow(card, label, value) {

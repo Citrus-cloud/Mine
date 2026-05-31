@@ -7,6 +7,106 @@
 
 ## Текущий шаг
 
+**Шаг 38 завершён.** Real OCR Research + Safe Integration Plan.
+Проект остаётся в стадии `0.1.0-beta` (simulation-only desktop
+MVP). На этом шаге начата ветка A (Real OCR) — но как
+архитектура: добавлены два новых модуля
+[`src/ocr-provider-interface.js`](./src/ocr-provider-interface.js)
+(`createOcrProviderResult`, `validateOcrProviderInput`,
+`normalizeOcrProviderOptions`, `getOcrProviderContract`,
+`getSupportedOcrLanguages`, `isRealOcrAllowed` — всегда
+возвращает `false` на шаге 38, `createOcrProviderStatus`) и
+[`src/ocr-provider-registry.js`](./src/ocr-provider-registry.js)
+(реестр с двумя провайдерами: `mock` — активный, `tesseract`
+— planned/unavailable; `getOcrProviders`,
+`getOcrProviderById`, `getActiveOcrProvider`,
+`setActiveOcrProvider` — БЛОКИРУЕТ выбор `tesseract`,
+`getOcrProviderRegistryStatus`,
+`isRealOcrProviderRegistered`, `runOcrProviderSelfTest`,
+`runActiveOcrProvider`). В Advanced → OCR — новая карточка
+**OCR readiness / Готовность OCR**: список провайдеров (mock
+= active, tesseract = planned/unavailable), флаги
+`realOcrEnabled=no`, `realOcrAllowed=no`, поддерживаемые
+языки (ru / en / ru+en), `OCR images not stored: yes`,
+кнопка **Run provider self-test** (запускает mock-провайдер
+на синтетических метаданных preview без скриншота). В
+`src/feature-flags.js` — четыре новых safe-default флага:
+`realOcr: false`, `ocrProviderRegistry: true`,
+`ocrMockProvider: true`, `tesseractProvider: false`. В
+`src/audit-events.js` — 6 новых allowlisted типов
+(`ocr.provider.selftest.started`,
+`ocr.provider.selftest.completed`,
+`ocr.provider.selftest.failed`,
+`ocr.provider.selection.blocked`,
+`ocr.provider.mock.active`,
+`ocr.provider.real.unavailable`); payload содержит только
+provider ids, durations, counts, stable error IDs —
+**никогда** полный target text, **никогда** `imageDataUrl`,
+**никогда** PII. В `Copy diagnostics` — новая строка
+`OCR provider: activeProviderId=mock,
+mockProviderAvailable=true, tesseractProviderAvailable=false,
+realOcrEnabled=false, realOcrAllowed=false,
+tesseractAvailable=false, realOcr=false, realClick=false,
+providerRegistryReady=true, lastProviderSelfTestOk=…`.
+Добавлено ~26 новых i18n-ключей RU + EN, parity 771/771.
+Созданы документы
+[`docs/REAL_OCR_INTEGRATION_PLAN.md`](./docs/REAL_OCR_INTEGRATION_PLAN.md)
+(roadmap до Tesseract worker'а: библиотека, language packs,
+worker model, performance, privacy, security, UI progress,
+fallback, no real click) и
+[`docs/OCR_PROVIDER_INTERFACE.md`](./docs/OCR_PROVIDER_INTERFACE.md)
+(reference контракта: input/output shape, error IDs,
+registry, self-test, safety rules). Обновлены
+`docs/OCR_FOUNDATION.md` (provider architecture note),
+`docs/TEXT_CLICK_SCENARIO.md` (provider architecture note —
+text_click продолжает использовать mock provider),
+`docs/TEXT_CLICK_TEST_TOOLS.md` (Test OCR uses active
+provider, currently mock),
+`docs/NEXT_BRANCH_PLAN.md` (Branch A — progress note: ветка
+A начата как architecture, без real OCR runtime),
+`docs/SECURITY_CHECKLIST.md` (новый раздел OCR Provider
+Registry с поведенческими / audit / diagnostics /
+Electron-security инвариантами),
+`docs/KNOWN_LIMITATIONS.md` (новый раздел 18 — Real OCR
+planned, not connected),
+[`README.md`](./README.md),
+[`CHANGELOG.md`](./CHANGELOG.md). Smoke-check расширен
+Step-38-инвариантами (новые модули + новые доки + audit
+allowlist + i18n parity + нет prohibited dependencies).
+**Real OCR на шаге 38 НЕ запускается. `tesseract.js`,
+`tesseract`, `tesseract-ocr`, `node-tesseract-ocr`, OpenCV,
+sharp, jimp, pixelmatch, looks-same, robotjs, nut.js,
+iohook, uiohook-napi не подключены и не объявлены в
+`package.json`. `setActiveOcrProvider('tesseract')`
+возвращает `{ ok: false, error: { id: 'realOcrBlocked' } }`
+и эмитит `ocr.provider.selection.blocked` +
+`ocr.provider.real.unavailable`; активный провайдер
+остаётся `mock`. self-test использует только mock и
+синтетические метаданные `1280×720` без скриншота.
+text_click продолжает работать через mock OCR. Visual
+Builder продолжает работать. Реальных кликов нет.
+`isRealOcrAllowed(flags, settings) === false` всегда. Новых
+IPC-каналов нет. Сохранение в файлы не добавлено. CSP не
+ослаблен. На шаге 38 **специально не сделано**: установка
+`tesseract.js` / `tesseract`, реальный OCR engine, real
+desktop adapter, реальные клики, OpenCV, мобильная
+версия — это сознательные ограничения. ClickFlow остаётся
+**simulation-only desktop MVP**. **`realDesktopActions=false`,
+`simulationOnly=true`, `realOcr=false`,
+`tesseractProvider=false`, `ocrMockProvider=true`,
+`ocrProviderRegistry=true`, `ocrEngineImplemented=false`,
+`tesseractAvailable=false`, `ocrMockOnly=true`,
+`realOcrEnabled=false`, `realTextClickEnabled=false`,
+`realImageClickEnabled=false`, `autoSavesScenarios=false`,
+`autoRunsScenarios=false`, `contextIsolation: true`,
+`nodeIntegration: false`, CSP — без изменений.** Логичный
+следующий шаг (Step 39): подключить `tesseract.js` за
+`docs/REAL_OCR_GO_NO_GO.md`-чеклистом — отдельная PR с
+worker-shell, language packs, fallback path, и без real
+clicks.
+
+## Прошлый шаг
+
 **Шаги 36 и 37 завершены вместе.** Visual Builder UX Polish +
 Scenario Presets + Smart Features QA + Next Branch Preparation.
 Проект остаётся в стадии `0.1.0-beta` (simulation-only desktop
@@ -96,7 +196,7 @@ MVP**. **`realDesktopActions=false`, `simulationOnly=true`,
 изменений.** Следующая большая ветка по рекомендации Step 37
 — **Branch A (Real OCR Integration)** в отдельной ветке.
 
-## Прошлый шаг
+## Шаг 34 (компактно)
 
 **Шаг 34 завершён.** Text Click Test Tools + OCR UX Polish.
 Проект остаётся в стадии `0.1.0-beta` (simulation-only). На

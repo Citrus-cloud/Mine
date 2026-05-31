@@ -135,6 +135,16 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   OcrMockCompleted:                 'ocr.mock.completed',
   OcrMockFailed:                    'ocr.mock.failed',
   OcrMockCleared:                   'ocr.mock.cleared',
+  // Step 38 — OCR provider registry. Architecture-only events.
+  // Self-test, mock activation, and real-provider blocking. Payloads
+  // carry only ids, counts, durations, and stable error IDs — never
+  // pixel data, never the full target text, never PII.
+  OcrProviderSelfTestStarted:       'ocr.provider.selftest.started',
+  OcrProviderSelfTestCompleted:     'ocr.provider.selftest.completed',
+  OcrProviderSelfTestFailed:        'ocr.provider.selftest.failed',
+  OcrProviderSelectionBlocked:      'ocr.provider.selection.blocked',
+  OcrProviderMockActive:            'ocr.provider.mock.active',
+  OcrProviderRealUnavailable:       'ocr.provider.real.unavailable',
   TextClickPreviewCreated:          'text.click.preview.created',
   // Step 33: text_click scenario type. Payloads carry only ids,
   // numeric metadata (confidence, target X / Y, durationMs),

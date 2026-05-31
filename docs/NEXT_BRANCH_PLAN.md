@@ -150,3 +150,31 @@ in the wild), reconsider Branch B with a fresh
 `docs/REAL_ACTIONS_GO_NO_GO.md` review.
 
 Until Branch A merges, ClickFlow remains **simulation-only**.
+
+## Branch A — progress note (Step 38)
+
+Branch A has been **started** in `0.1.x` as architecture-only.
+Step 38 — Real OCR Research + Safe Integration Plan — landed:
+
+- the OCR provider contract
+  ([`docs/OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md));
+- the OCR provider registry with `mock` (active) and
+  `tesseract` (planned, unavailable);
+- the OCR readiness card in the Advanced → OCR tab;
+- six new allowlisted audit events
+  (`ocr.provider.selftest.started/.completed/.failed`,
+  `ocr.provider.selection.blocked`,
+  `ocr.provider.mock.active`,
+  `ocr.provider.real.unavailable`);
+- the diagnostics line `OCR provider: ...` with
+  `realOcrEnabled=false`, `realOcrAllowed=false`;
+- the integration roadmap
+  [`REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md)
+  with the step-by-step sequence to wire `tesseract.js`
+  behind a fresh `docs/REAL_OCR_GO_NO_GO.md` (planned
+  Step 39).
+
+Step 38 ships **no** real OCR runtime, **no** Tesseract
+dependency, **no** real cursor work. The umbrella safety
+flags — `simulationOnly: true`, `realOcr: false`,
+`tesseractProvider: false` — are unchanged.
