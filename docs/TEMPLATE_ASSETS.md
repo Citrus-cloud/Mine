@@ -285,3 +285,18 @@ in later behind the
 re-shaping the storage layer.
 
 See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md).
+
+
+
+---
+
+## Step 30 — templates can now drive an `image_click` scenario
+
+[Step 30](./IMAGE_CLICK_SCENARIO.md) introduces a new scenario
+type that references a template by `id` and runs the Step-29
+matcher on every iteration. Templates remain stored ASSETS
+only — the scenario carries the `templateId` and a small set
+of numeric settings, never an `imageDataUrl`, a thumbnail or a
+pixel buffer.
+
+See [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md).

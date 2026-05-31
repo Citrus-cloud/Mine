@@ -254,3 +254,19 @@ and dependency-free.
   contract that gates the matcher → click handoff.
 - [`ACTION_SCHEMA.md`](./ACTION_SCHEMA.md) — the planned
   `image_click` schema entry.
+
+
+
+---
+
+## Step 30 — engine is now used by the `image_click` scenario
+
+[Step 30](./IMAGE_CLICK_SCENARIO.md) introduces a new scenario
+type called `image_click` that runs this engine on every
+iteration. The engine itself is unchanged: it still analyses
+only the captured preview, never the live screen, and never
+executes a real click. The new scenario type just orchestrates
+the engine + the action-pipeline so the user can run a full
+"capture → match → simulated click" loop end-to-end.
+
+See [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md).

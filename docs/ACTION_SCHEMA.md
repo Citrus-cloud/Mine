@@ -422,3 +422,50 @@ The action preview is **still not executed** by the click engine,
 the action pipeline, the mock adapter, or the dry-run sandbox.
 Step 29 stops at producing the shape; flipping the click switch
 remains gated by [`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md).
+
+
+
+---
+
+## Step 30 — `image_click` is now an executable simulation-only action
+
+[Step 30](./IMAGE_CLICK_SCENARIO.md) promotes the
+`image_click` shape from a Step-28 preview to a real
+**simulation-only** action that the click engine and the
+action pipeline both understand.
+
+```json
+{
+  "type":        "image_click",
+  "templateId":  "template-1717000000000-abcd1234efef5678",
+  "targetPoint": { "x": 320, "y": 180 },
+  "boundingBox": { "x": 256, "y": 148, "width": 128, "height": 64 },
+  "confidence":  0.87,
+  "realClick":   false,
+  "simulated":   true
+}
+```
+
+| Field         | Type     | Description                                                                               |
+|---------------|----------|-------------------------------------------------------------------------------------------|
+| `type`        | string   | Always `"image_click"`.                                                                   |
+| `templateId`  | string   | Id of a stored template asset (Step 27).                                                  |
+| `targetPoint` | object   | `{ x, y }` — the center of the matched bounding box.                                      |
+| `boundingBox` | object   | `{ x, y, width, height }` produced by the matcher (Step 29).                              |
+| `confidence`  | number   | Real confidence score from the engine, in `[0, 1]`.                                       |
+| `realClick`   | boolean  | **MUST be `false`** at Step 30. `true` is rejected by the action-pipeline.                |
+| `simulated`   | boolean  | `true` — the action goes through the simulate path; the cursor does not move.             |
+| `status`      | string?  | Optional `"no_match"` for the on-screen "best candidate" result of a low-confidence run.  |
+
+The action-pipeline accepts `image_click` ONLY through the
+simulate path. The mock desktop adapter does not consume it
+(only `click` actions go through the adapter); `image_click`
+flows through the legacy simulate branch and emits
+`action.imageClick.simulated`. Any caller that asks for
+`executionMode: "real"` is rejected and emits
+`action.imageClick.realBlocked`. There is no real-click
+integration in `0.1.x`.
+
+| Action Type    | Status                                                                                          |
+|----------------|-------------------------------------------------------------------------------------------------|
+| `image_click`  | ✅ Simulation-only (Step 30). Real click integration gated behind `REAL_ACTIONS_GO_NO_GO.md`.   |

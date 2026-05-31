@@ -488,3 +488,78 @@ See [`docs/TEMPLATE_MATCHING_ENGINE.md`](./TEMPLATE_MATCHING_ENGINE.md)
 for the full description, the algorithm, the threshold / step
 controls, the region support, the performance limits, and the
 list of features that are **not** implemented at Step 29.
+
+
+
+## image_click scenario (Step 30)
+
+Step 30 introduces a new scenario type `image_click` that
+combines the Step-25 preview, the Step-26 region, the Step-27
+templates and the Step-29 matcher into a single executable
+scenario. The checks below confirm that the new scenario type
+does not weaken any of the beta-MVP safety invariants.
+
+### Scenario-level invariants
+- [x] **`image_click` is simulation only.** The click-engine's
+      `runImageClickScenario` produces an `image_click` action
+      with `realClick: false` and `simulated: true`. The action
+      flows through the action-pipeline's simulate path. The
+      cursor never moves, no key is pressed.
+- [x] **`realClick: true` is blocked outright.** Both
+      `validateAction` and `validateActionSafety` refuse an
+      `image_click` action with `realClick: true`. The audit
+      event `action.imageClick.realBlocked` records the
+      attempt.
+- [x] **No new IPC channel** is registered for image_click at
+      Step 30. The renderer does not gain any new privilege
+      over the OS.
+
+### Storage-level invariants
+- [x] **No `imageDataUrl` in scenario data.** Scenario JSON
+      carries only `templateId`, optional region (numbers
+      only), threshold, step, timeoutMs, intervalMs and
+      repeatCount. The exporter / importer are untouched —
+      they only ever see metadata.
+- [x] **No screenshot persisted.** `image_click` scenarios
+      never write the screen-capture preview to disk. The
+      preview lives in renderer memory exactly as it did at
+      Step 25; only the user's explicit Capture preview action
+      brings new pixel bytes into memory.
+
+### Pipeline-level invariants
+- [x] **The mock desktop adapter does not consume
+      `image_click`.** Only `click` actions go through the
+      adapter; `image_click` flows through the legacy
+      simulate branch which emits
+      `action.imageClick.simulated`.
+- [x] **No prohibited dependencies.** `package.json` declares
+      zero of `tesseract`, `tesseract.js`, `opencv4nodejs`,
+      `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`,
+      `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`,
+      `nutjs`, `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`. Verified by `npm run smoke`.
+
+### Audit invariants
+- [x] All nine new audit-event types
+      (`scenario.imageClick.started`,
+      `scenario.imageClick.stopped`,
+      `scenario.imageClick.match.started`,
+      `scenario.imageClick.match.completed`,
+      `scenario.imageClick.noMatch`,
+      `scenario.imageClick.simulated`,
+      `scenario.imageClick.failed`,
+      `action.imageClick.simulated`,
+      `action.imageClick.realBlocked`) are part of the frozen
+      `AUDIT_EVENT_TYPES` allowlist. Payloads carry only ids
+      and numeric metadata.
+
+### Electron-security invariants (re-checked at Step 30)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no
+      `unsafe-eval`, no remote sources.
+
+See [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md)
+for the full description, the data shape, the execution flow,
+and the list of features that are **not** implemented at Step 30.

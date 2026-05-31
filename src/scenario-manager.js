@@ -33,6 +33,11 @@ function createScenarioId() { return 'scenario-' + Date.now() + '-' + Math.rando
 
 
 function createScenario(input) {
+  // Step 30: dispatch on `type`. Default is `simple_click` for
+  // backward compatibility — old callers don't pass a `type`
+  // field and they keep working unchanged.
+  var t = (input && typeof input.type === 'string') ? input.type : 'simple_click';
+  if (t === 'image_click') return createImageClickScenario(input);
   const validation = validateScenario(input);
   if (!validation.valid) return { success: false, error: validation.error };
   const now = new Date().toISOString();
@@ -51,11 +56,19 @@ function createScenario(input) {
 function updateScenario(id, updates) {
   const index = scenarios.findIndex(s => s.id === id);
   if (index === -1) return { success: false, error: 'Сценарий не найден' };
+  // Step 30: route to the image_click branch when either the
+  // updates or the existing scenario is an image_click.
+  var existingType = scenarios[index] && scenarios[index].type;
+  var updatesType = (updates && typeof updates.type === 'string') ? updates.type : existingType;
+  if (updatesType === 'image_click' || existingType === 'image_click') {
+    return updateImageClickScenario(id, updates);
+  }
   const validation = validateScenario(updates);
   if (!validation.valid) return { success: false, error: validation.error };
   const existing = scenarios[index];
   scenarios[index] = {
     ...existing, name: updates.name.trim(), description: (updates.description || "").trim(),
+    type: 'simple_click',
     settings: { x: Number(updates.x), y: Number(updates.y), intervalMs: Number(updates.intervalMs), repeatCount: Number(updates.repeatCount), button: updates.button },
     meta: { ...existing.meta, updatedAt: new Date().toISOString() }
   };
@@ -239,4 +252,151 @@ function clearScenarioRegion(scenarioId) {
     }
   };
   return { success: true, scenario: scenarios[index] };
+}
+
+
+
+// =====================================================================
+// Step 30 — Image Click Scenario Type
+// ---------------------------------------------------------------------
+// New scenario type `image_click` that uses a Step-27 template and
+// (optionally) a Step-26 region as the click target. The full flow
+// (capture preview → match template → simulated click) is wired in
+// click-engine.js. Here we only own the data shape and validation.
+//
+// HARD GUARANTEES (Step 30):
+//   - `image_click` scenarios NEVER carry an `imageDataUrl` or any
+//     pixel buffer. Only the `templateId`, optional `region`
+//     (numbers only), `threshold`, `step`, `timeoutMs`,
+//     `intervalMs`, and `repeatCount` are persisted.
+//   - The shape is forward-compatible with the planned scenario
+//     action-type and the click-engine dispatcher.
+//   - simple_click scenarios are unchanged. `validateScenario`
+//     keeps its old single-type behaviour for callers that don't
+//     pass `type`. Polymorphic dispatch only happens in
+//     `createScenario` / `updateScenario`.
+// =====================================================================
+
+// Allowed `step` values match the engine UI (1 / 2 / 4 / 8).
+var IMAGE_CLICK_ALLOWED_STEPS = [1, 2, 4, 8];
+
+// Validation. Returns { valid: bool, error: string|null }. Mirrors
+// `validateScenario`'s contract so the form can render the error
+// straight to the user.
+function validateImageClickScenario(input) {
+  if (!input || typeof input !== 'object') {
+    return { valid: false, error: 'Ввод обязателен' };
+  }
+  if (!input.name || String(input.name).trim().length === 0) {
+    return { valid: false, error: 'Название обязательно' };
+  }
+  if (typeof input.templateId !== 'string' || input.templateId.length === 0) {
+    return { valid: false, error: 'Шаблон обязателен' };
+  }
+  var threshold = Number(input.threshold);
+  if (!isFinite(threshold) || threshold < 0 || threshold > 1) {
+    return { valid: false, error: 'Порог должен быть числом от 0 до 1' };
+  }
+  var step = Number(input.step) | 0;
+  if (IMAGE_CLICK_ALLOWED_STEPS.indexOf(step) === -1) {
+    return { valid: false, error: 'Шаг должен быть 1, 2, 4 или 8' };
+  }
+  var timeoutMs = Number(input.timeoutMs);
+  if (!isFinite(timeoutMs) || timeoutMs < 1000) {
+    return { valid: false, error: 'Таймаут должен быть >= 1000 мс' };
+  }
+  var intervalMs = Number(input.intervalMs);
+  if (!isFinite(intervalMs) || intervalMs < 100) {
+    return { valid: false, error: 'Интервал должен быть >= 100 мс' };
+  }
+  var repeatCount = Number(input.repeatCount);
+  if (!isFinite(repeatCount) || repeatCount < 1 || repeatCount > 1000) {
+    return { valid: false, error: 'Повторы: от 1 до 1000' };
+  }
+  // Region is optional; if present it must be a valid rectangle.
+  if (input.region !== null && input.region !== undefined) {
+    var rv = validateRegionSettings(input.region);
+    if (!rv.valid) return { valid: false, error: rv.error || 'Неверная область' };
+  }
+  return { valid: true, error: null };
+}
+
+// Build a fresh image_click scenario record. Pure helper — does
+// NOT mutate the scenarios array. `createImageClickScenario`
+// below takes care of the push + the meta timestamps.
+function _buildImageClickScenarioFromInput(input, baseId) {
+  var now = new Date().toISOString();
+  var region = null;
+  if (input.region && typeof input.region === 'object') {
+    region = {
+      x:      Math.round(Number(input.region.x)),
+      y:      Math.round(Number(input.region.y)),
+      width:  Math.round(Number(input.region.width)),
+      height: Math.round(Number(input.region.height))
+    };
+  }
+  return {
+    id:          baseId || createScenarioId(),
+    name:        String(input.name).trim(),
+    type:        'image_click',
+    description: input.description ? String(input.description).trim() : '',
+    settings: {
+      templateId:  String(input.templateId),
+      region:      region,
+      threshold:   Math.round(Number(input.threshold) * 100) / 100,
+      step:        Number(input.step) | 0,
+      timeoutMs:   Number(input.timeoutMs)   | 0,
+      intervalMs:  Number(input.intervalMs)  | 0,
+      repeatCount: Number(input.repeatCount) | 0
+    },
+    meta: { createdAt: now, updatedAt: now, isDefault: false }
+  };
+}
+
+function createImageClickScenario(input) {
+  var v = validateImageClickScenario(input);
+  if (!v.valid) return { success: false, error: v.error };
+  var fresh = _buildImageClickScenarioFromInput(input, null);
+  scenarios.push(fresh);
+  return { success: true, scenario: fresh };
+}
+
+// Update an existing image_click scenario by id. Refuses to flip
+// the type from simple_click → image_click without all the new
+// fields, and refuses to flip image_click → simple_click without
+// `x` / `y` / `button` (the simple_click branch in
+// `updateScenario` handles that case).
+function updateImageClickScenario(id, updates) {
+  if (typeof id !== 'string' || id.length === 0) {
+    return { success: false, error: 'scenarioId is required' };
+  }
+  var index = scenarios.findIndex(function (s) { return s.id === id; });
+  if (index === -1) return { success: false, error: 'Сценарий не найден' };
+  var v = validateImageClickScenario(updates);
+  if (!v.valid) return { success: false, error: v.error };
+  var existing = scenarios[index];
+  var nextSettings = _buildImageClickScenarioFromInput(updates, existing.id).settings;
+  scenarios[index] = {
+    ...existing,
+    name:        String(updates.name).trim(),
+    type:        'image_click',
+    description: updates.description ? String(updates.description).trim() : '',
+    settings:    nextSettings,
+    meta: {
+      ...(existing.meta || {}),
+      updatedAt: new Date().toISOString()
+    }
+  };
+  return { success: true, scenario: scenarios[index] };
+}
+
+// Helper — `getScenariosByType('image_click')` etc. Treats the
+// missing-type case as `simple_click` for backward compatibility,
+// matching the click-engine's dispatch rule.
+function getScenariosByType(type) {
+  if (typeof type !== 'string' || type.length === 0) return [];
+  return scenarios.filter(function (s) {
+    var st = (s && typeof s.type === 'string') ? s.type : 'simple_click';
+    return st === type;
+  });
 }

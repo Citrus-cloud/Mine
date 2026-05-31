@@ -39,6 +39,22 @@ const inputButton = document.getElementById('input-button');
 const btnSaveScenario = document.getElementById('btn-save-scenario');
 const btnFormCancel = document.getElementById('btn-form-cancel');
 
+// Step 30: image_click form fields.
+const inputScenarioType       = document.getElementById('input-scenario-type');
+const formSectionSimple       = document.getElementById('form-section-simple-click');
+const formSectionImage        = document.getElementById('form-section-image-click');
+const inputTemplateId         = document.getElementById('input-template-id');
+const inputImageThreshold     = document.getElementById('input-image-threshold');
+const inputImageStep          = document.getElementById('input-image-step');
+const inputImageTimeout       = document.getElementById('input-image-timeout');
+const inputImageInterval      = document.getElementById('input-image-interval');
+const inputImageRepeat        = document.getElementById('input-image-repeat');
+const imageClickRegionSummary = document.getElementById('image-click-region-summary');
+const imageClickNoTemplates   = document.getElementById('image-click-no-templates');
+const btnImageClickUseRegion  = document.getElementById('btn-image-click-use-region');
+const btnImageClickClearRegion= document.getElementById('btn-image-click-clear-region');
+let _imageClickFormRegion = null;
+
 // DOM — настройки
 const settingsLanguage = document.getElementById('settings-language');
 const settingsTheme = document.getElementById('settings-theme');
@@ -108,9 +124,23 @@ function renderExecutionProgress(ex) {
   progressMeta.textContent = `${ex.progressCurrent} / ${ex.progressTotal} · ${ex.progressPercent}%`;
   progressBarFill.style.width = ex.progressPercent + '%';
   progressBarFill.classList.toggle('complete', ex.progressPercent >= 100);
-  lastActionEl.textContent = ex.lastAction
-    ? `${t('lastAction')}: click x=${ex.lastAction.x} y=${ex.lastAction.y} ${ex.lastAction.button}`
-    : `${t('lastAction')}: ${t('none')}`;
+  lastActionEl.textContent = `${t('lastAction')}: ${formatLastAction(ex.lastAction)}`;
+}
+
+// Step 30 — render either simple_click or image_click last action.
+// Returns a short text fragment (no HTML).
+function formatLastAction(action) {
+  if (!action) return t('none');
+  if (action.type === 'image_click') {
+    var tplId = action.templateId || '';
+    var tp = action.targetPoint || { x: 0, y: 0 };
+    var conf = (typeof action.confidence === 'number') ? Math.round(action.confidence * 100) + '%' : '?';
+    if (action.status === 'no_match') {
+      return 'image_click ' + t('imageClickNoMatch') + ' template=' + tplId + ' confidence=' + conf;
+    }
+    return 'image_click template=' + tplId + ' x=' + (tp.x | 0) + ' y=' + (tp.y | 0) + ' confidence=' + conf + ' (simulated)';
+  }
+  return 'click x=' + action.x + ' y=' + action.y + ' ' + action.button;
 }
 
 function shouldLogAction(c, total) { return c <= 3 || c === total || c % 10 === 0; }
@@ -155,9 +185,15 @@ function renderScenarioList() {
     const header = document.createElement('div'); header.className = 'scenario-card-header';
     const name = document.createElement('span'); name.className = 'scenario-card-name'; name.textContent = sc.name; header.appendChild(name);
     if (sc.meta && sc.meta.isDefault) { const badge = document.createElement('span'); badge.className = 'scenario-card-badge'; badge.textContent = t('defaultBadge'); header.appendChild(badge); }
+    if (sc.type === 'image_click') {
+      const typeBadge = document.createElement('span');
+      typeBadge.className = 'scenario-card-badge scenario-card-badge-image-click';
+      typeBadge.textContent = t('imageClick') || 'image_click';
+      header.appendChild(typeBadge);
+    }
     card.appendChild(header);
     const info = document.createElement('div'); info.className = 'scenario-card-settings';
-    info.textContent = `x:${sc.settings.x} y:${sc.settings.y} · ${sc.settings.intervalMs}ms · ${sc.settings.repeatCount}× · ${sc.settings.button}`;
+    info.textContent = formatScenarioSettingsLine(sc);
     card.appendChild(info);
     const actions = document.createElement('div'); actions.className = 'scenario-card-actions';
     const bSel = document.createElement('button'); bSel.className = 'btn-sm btn-sm-select'; bSel.textContent = t('select'); bSel.addEventListener('click', () => selectScenarioById(sc.id)); actions.appendChild(bSel);
@@ -190,9 +226,77 @@ async function deleteScenarioById(id) {
   await saveScenarios(); addLogEntry(createLog('info', `${t('delete')}: ${sc.name}`)); renderScenarioList(); renderState();
 }
 
-function getScenarioFormData() { return { name: inputName.value, description: inputDescription.value, x: inputX.value, y: inputY.value, intervalMs: inputInterval.value, repeatCount: inputRepeat.value, button: inputButton.value }; }
-function fillScenarioForm(sc) { inputName.value = sc.name; inputDescription.value = sc.description || ''; inputX.value = sc.settings.x; inputY.value = sc.settings.y; inputInterval.value = sc.settings.intervalMs; inputRepeat.value = sc.settings.repeatCount; inputButton.value = sc.settings.button; }
-function clearScenarioForm() { inputName.value = ''; inputDescription.value = ''; inputX.value = '500'; inputY.value = '400'; inputInterval.value = '500'; inputRepeat.value = '100'; inputButton.value = 'left'; }
+function getScenarioFormData() {
+  // Step 30: dispatch on the type selector. simple_click keeps
+  // its old shape (so old callers / tests stay happy); image_click
+  // returns the full new shape including templateId / region /
+  // threshold / step / timeoutMs.
+  var type = (inputScenarioType && inputScenarioType.value) ? inputScenarioType.value : 'simple_click';
+  if (type === 'image_click') {
+    return {
+      type: 'image_click',
+      name: inputName.value,
+      description: inputDescription.value,
+      templateId: inputTemplateId ? inputTemplateId.value : '',
+      region: _imageClickFormRegion ? { ..._imageClickFormRegion } : null,
+      threshold: inputImageThreshold ? Number(inputImageThreshold.value) : 0.75,
+      step:      inputImageStep      ? Number(inputImageStep.value)      : 4,
+      timeoutMs: inputImageTimeout   ? Number(inputImageTimeout.value)   : 10000,
+      intervalMs:inputImageInterval  ? Number(inputImageInterval.value)  : 1000,
+      repeatCount:inputImageRepeat   ? Number(inputImageRepeat.value)    : 1
+    };
+  }
+  return {
+    type: 'simple_click',
+    name: inputName.value,
+    description: inputDescription.value,
+    x: inputX.value, y: inputY.value,
+    intervalMs: inputInterval.value, repeatCount: inputRepeat.value,
+    button: inputButton.value
+  };
+}
+
+function fillScenarioForm(sc) {
+  inputName.value = sc.name; inputDescription.value = sc.description || '';
+  // Step 30: render either branch depending on the loaded scenario.
+  var type = (sc.type === 'image_click') ? 'image_click' : 'simple_click';
+  if (inputScenarioType) inputScenarioType.value = type;
+  if (type === 'image_click') {
+    var s = sc.settings || {};
+    populateTemplateSelect(s.templateId || '');
+    _imageClickFormRegion = (s.region && typeof s.region === 'object') ? { ...s.region } : null;
+    if (inputImageThreshold) inputImageThreshold.value = (typeof s.threshold === 'number') ? s.threshold : 0.75;
+    if (inputImageStep)      inputImageStep.value      = String((typeof s.step === 'number') ? s.step : 4);
+    if (inputImageTimeout)   inputImageTimeout.value   = (typeof s.timeoutMs === 'number') ? s.timeoutMs : 10000;
+    if (inputImageInterval)  inputImageInterval.value  = (typeof s.intervalMs === 'number') ? s.intervalMs : 1000;
+    if (inputImageRepeat)    inputImageRepeat.value    = (typeof s.repeatCount === 'number') ? s.repeatCount : 1;
+    refreshImageClickRegionSummary();
+    syncScenarioFormSections();
+    return;
+  }
+  // simple_click branch.
+  inputX.value = sc.settings.x; inputY.value = sc.settings.y;
+  inputInterval.value = sc.settings.intervalMs; inputRepeat.value = sc.settings.repeatCount;
+  inputButton.value = sc.settings.button;
+  syncScenarioFormSections();
+}
+
+function clearScenarioForm() {
+  inputName.value = ''; inputDescription.value = '';
+  inputX.value = '500'; inputY.value = '400';
+  inputInterval.value = '500'; inputRepeat.value = '100'; inputButton.value = 'left';
+  if (inputScenarioType) inputScenarioType.value = 'simple_click';
+  // Reset image_click defaults.
+  _imageClickFormRegion = null;
+  populateTemplateSelect('');
+  if (inputImageThreshold) inputImageThreshold.value = '0.75';
+  if (inputImageStep)      inputImageStep.value      = '4';
+  if (inputImageTimeout)   inputImageTimeout.value   = '10000';
+  if (inputImageInterval)  inputImageInterval.value  = '1000';
+  if (inputImageRepeat)    inputImageRepeat.value    = '1';
+  refreshImageClickRegionSummary();
+  syncScenarioFormSections();
+}
 function showFormError(msg) { formError.textContent = msg; formError.classList.add('visible'); }
 function clearFormError() { formError.textContent = ''; formError.classList.remove('visible'); }
 
@@ -236,7 +340,24 @@ function startScenario() {
   }
   runScenario(sc, {
     onStart: () => { setRunning(true); setExecutionRunning(true); setExecutionProgress(0, sc.settings.repeatCount); setExecutionStartedAt(new Date().toISOString()); setExecutionFinishedAt(null); setExecutionLastAction(null); addLogEntry(createLog('success', `${t('logScenarioStarted')}: ${sc.name}`)); window.clickflow.system.setExecutionRunning(true); if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.start.approved', { scenarioId: sc.id }); renderState(); },
-    onAction: (action, c, total) => { setExecutionLastAction(action); if (shouldLogAction(c, total)) addLogEntry(createLog('info', `${c}/${total}: click x=${action.x} y=${action.y}`)); },
+    onAction: (action, c, total) => {
+      setExecutionLastAction(action);
+      // Step 30: log either type. For image_click we always log
+      // (no_match included) because the user benefits from seeing
+      // every match cycle; for simple_click we keep the rate
+      // limit so 100k iterations don't flood the log.
+      if (action && action.type === 'image_click') {
+        var tplId = action.templateId || '';
+        if (action.status === 'no_match') {
+          addLogEntry(createLog('warning', `${c}/${total}: ${t('imageClickNoMatch')} template=${tplId} confidence=${(typeof action.confidence === 'number') ? Math.round(action.confidence * 100) + '%' : '?'}`));
+        } else {
+          var tp = action.targetPoint || { x: 0, y: 0 };
+          addLogEntry(createLog('info', `${c}/${total}: ${t('imageClickSimulated')} x=${tp.x | 0} y=${tp.y | 0} confidence=${(typeof action.confidence === 'number') ? Math.round(action.confidence * 100) + '%' : '?'}`));
+        }
+      } else if (shouldLogAction(c, total)) {
+        addLogEntry(createLog('info', `${c}/${total}: click x=${action.x} y=${action.y}`));
+      }
+    },
     onProgress: (c, total) => { setExecutionProgress(c, total); renderState(); },
     onStop: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('warning', t('logScenarioStopped'))); window.clickflow.system.setExecutionRunning(false); renderState(); },
     onComplete: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('success', t('logScenarioComplete'))); window.clickflow.system.setExecutionRunning(false); if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.completed', { scenarioId: sc.id }); renderState(); },
@@ -420,7 +541,7 @@ function renderAdvancedExecution() {
   addCardRow(card, t('status'), state.isRunning ? t('running') : t('stopped'));
   addCardRow(card, t('executionMode'), t('simulationMode'));
   addCardRow(card, t('progress'), `${state.execution.progressCurrent} / ${state.execution.progressTotal} · ${state.execution.progressPercent}%`);
-  addCardRow(card, t('lastAction'), state.execution.lastAction ? `click x=${state.execution.lastAction.x} y=${state.execution.lastAction.y}` : t('none'));
+  addCardRow(card, t('lastAction'), formatLastAction(state.execution.lastAction));
   addCardRow(card, t('startedAt'), state.execution.startedAt || t('none'));
   addCardRow(card, t('finishedAt'), state.execution.finishedAt || t('none'));
   const bar = document.createElement('div'); bar.className = 'adv-progress-bar';
@@ -796,11 +917,40 @@ function renderAdvancedSafety() {
   addCardRow(tmCard, t('realMatchingDisabled'),     t('flagEnabled'));
   addCardRow(tmCard, t('realClickDisabled'),        t('flagEnabled'));
   addCardRow(tmCard, t('realImageRecognitionNotImplemented'), t('flagDisabled'));
-  addCardRow(tmCard, t('imageClickScenarioPlanned'),          t('planned'));
+  // Step 30 — `image_click` is now a real scenario type (still
+  // simulation-only). Surface that here as `enabled`.
+  addCardRow(tmCard, t('imageClickScenarioPlanned'),          t('flagEnabled'));
   if (tmState.lastError) {
     addCardRow(tmCard, 'lastError', tmState.lastError);
   }
   c.appendChild(tmCard);
+
+  // --- Step 30: Image Click Scenario diagnostics card ---
+  const icCard = document.createElement('div'); icCard.className = 'adv-card';
+  const icTitle = document.createElement('div'); icTitle.className = 'adv-card-title';
+  icTitle.textContent = t('imageClickScenario');
+  icCard.appendChild(icTitle);
+  // Count image_click scenarios via the Step-30 helper.
+  let icCount = 0;
+  if (typeof getScenariosByType === 'function') {
+    icCount = getScenariosByType('image_click').length;
+  }
+  addCardRow(icCard, t('imageClickScenariosCount'), String(icCount));
+  // Last image_click action — read from execution.lastAction.
+  const lastIc = (state.execution && state.execution.lastAction && state.execution.lastAction.type === 'image_click')
+    ? state.execution.lastAction : null;
+  addCardRow(icCard, t('lastImageClickResult'),
+    lastIc ? (lastIc.status === 'no_match' ? t('imageClickNoMatch') : t('imageClickSimulated'))
+           : t('none2'));
+  addCardRow(icCard, t('confidence'),
+    (lastIc && typeof lastIc.confidence === 'number') ? Math.round(lastIc.confidence * 1000) / 10 + '%' : t('none2'));
+  addCardRow(icCard, t('imageClickTarget'),
+    (lastIc && lastIc.targetPoint) ? ((lastIc.targetPoint.x | 0) + ', ' + (lastIc.targetPoint.y | 0)) : t('none2'));
+  // Hard "always-on" simulation flags so the user always sees the
+  // contract on this card.
+  addCardRow(icCard, t('imageClickSimulationOnly'), t('flagEnabled'));
+  addCardRow(icCard, t('realImageClickDisabled'),   t('flagEnabled'));
+  c.appendChild(icCard);
 
   // --- Step 18: Desktop adapter status ---
   const adCard = document.createElement('div'); adCard.className = 'adv-card';
@@ -1045,8 +1195,19 @@ async function copyDiagnostics() {
   const tmDuration = (tmResultForDiag && typeof tmResultForDiag.durationMs === 'number') ? tmResultForDiag.durationMs : 'none';
   const tmEngineAvail = (typeof runTemplateMatch === 'function');
   const tmLastResultMode = tmResultForDiag ? (tmResultForDiag.mode || 'mock') : 'none';
-  const tmLine = `Template matching: lastRunAt=${tm.lastRunAt || 'none'}, lastResult=${!!tmResultForDiag}, lastMode=${tmLastResultMode}, lastConfidence=${tmConfidence}, lastDurationMs=${tmDuration}, lastTargetPoint=${tmTargetX},${tmTargetY}, mode=${tmMode}, threshold=${tmThreshold}, step=${tmStep}, engineAvailable=${tmEngineAvail}, activeTemplateId=${tmActiveTplDiag}, screenPreviewAvailable=${tmPreviewAvailDiag}, searchRegionUsed=${tmRegionAvailDiag}, lastError=${tm.lastError || 'none'}, realMatching=false, realClick=false, ocrImplemented=false, opencvAvailable=false, matcherImplemented=true, imageClickScenarioImplemented=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  const tmLine = `Template matching: lastRunAt=${tm.lastRunAt || 'none'}, lastResult=${!!tmResultForDiag}, lastMode=${tmLastResultMode}, lastConfidence=${tmConfidence}, lastDurationMs=${tmDuration}, lastTargetPoint=${tmTargetX},${tmTargetY}, mode=${tmMode}, threshold=${tmThreshold}, step=${tmStep}, engineAvailable=${tmEngineAvail}, activeTemplateId=${tmActiveTplDiag}, screenPreviewAvailable=${tmPreviewAvailDiag}, searchRegionUsed=${tmRegionAvailDiag}, lastError=${tm.lastError || 'none'}, realMatching=false, realClick=false, ocrImplemented=false, opencvAvailable=false, matcherImplemented=true, imageClickScenarioImplemented=true`;
+  // Step 30: Image Click Scenario line. Numbers and ids only —
+  // never base64, never imageDataUrl, never pixel data.
+  let icCountDiag = 0;
+  try { if (typeof getScenariosByType === 'function') icCountDiag = getScenariosByType('image_click').length; } catch (e) {}
+  const lastIcDiag = (state.execution && state.execution.lastAction && state.execution.lastAction.type === 'image_click')
+    ? state.execution.lastAction : null;
+  const lastIcConfidence = (lastIcDiag && typeof lastIcDiag.confidence === 'number') ? lastIcDiag.confidence : 'none';
+  const lastIcStatus = lastIcDiag ? (lastIcDiag.status === 'no_match' ? 'no_match' : 'simulated') : 'none';
+  const lastIcTargetX = (lastIcDiag && lastIcDiag.targetPoint) ? (lastIcDiag.targetPoint.x | 0) : 'none';
+  const lastIcTargetY = (lastIcDiag && lastIcDiag.targetPoint) ? (lastIcDiag.targetPoint.y | 0) : 'none';
+  const icLine = `Image click scenario: imageClickScenariosCount=${icCountDiag}, lastImageClickStatus=${lastIcStatus}, lastImageClickConfidence=${lastIcConfidence}, lastImageClickTargetPoint=${lastIcTargetX},${lastIcTargetY}, imageClickSimulationOnly=true, realImageClickEnabled=false, ocrImplemented=false`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
@@ -1392,3 +1553,121 @@ async function init() {
   showView('main'); renderState();
 }
 init();
+
+
+
+// =====================================================================
+// Step 30 — image_click form helpers
+// =====================================================================
+
+// Toggle the simple_click vs image_click section based on the
+// type selector. Idempotent — safe to call repeatedly.
+function syncScenarioFormSections() {
+  var type = (inputScenarioType && inputScenarioType.value) ? inputScenarioType.value : 'simple_click';
+  if (formSectionSimple) formSectionSimple.classList.toggle('view-hidden', type !== 'simple_click');
+  if (formSectionImage)  formSectionImage.classList.toggle('view-hidden',  type !== 'image_click');
+}
+
+// Populate the <select id="input-template-id"> with the current
+// templates from app-state. If there are no templates, surface
+// the warning banner and disable the select.
+function populateTemplateSelect(activeId) {
+  if (!inputTemplateId) return;
+  // Clear via element removal — never user data via innerHTML.
+  while (inputTemplateId.firstChild) inputTemplateId.removeChild(inputTemplateId.firstChild);
+  var items = (typeof getTemplates === 'function') ? getTemplates() : [];
+  if (imageClickNoTemplates) {
+    imageClickNoTemplates.classList.toggle('view-hidden', items.length > 0);
+  }
+  if (items.length === 0) {
+    inputTemplateId.disabled = true;
+    var opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = t('noTemplatesImportFirst') || 'No templates yet';
+    inputTemplateId.appendChild(opt);
+    return;
+  }
+  inputTemplateId.disabled = false;
+  items.forEach(function (item) {
+    if (!item || typeof item.id !== 'string') return;
+    var opt = document.createElement('option');
+    opt.value = item.id;
+    opt.textContent = item.name || item.originalFileName || item.id;
+    if (activeId && item.id === activeId) opt.selected = true;
+    inputTemplateId.appendChild(opt);
+  });
+  // If the previously-selected template is gone but the form
+  // tried to keep it, fall back to the first one.
+  if (!inputTemplateId.value && items[0] && items[0].id) {
+    inputTemplateId.value = items[0].id;
+  }
+}
+
+// Render the region summary line — text only, never HTML.
+function refreshImageClickRegionSummary() {
+  if (!imageClickRegionSummary) return;
+  if (_imageClickFormRegion && typeof _imageClickFormRegion === 'object') {
+    var r = _imageClickFormRegion;
+    imageClickRegionSummary.textContent = (r.x | 0) + ', ' + (r.y | 0) + ' · ' + (r.width | 0) + '×' + (r.height | 0);
+    imageClickRegionSummary.classList.add('image-click-region-summary-active');
+  } else {
+    imageClickRegionSummary.textContent = t('noRegionSelected') || 'No region selected';
+    imageClickRegionSummary.classList.remove('image-click-region-summary-active');
+  }
+}
+
+// "Use selected region" — copies the current region-selector
+// state into the form. Numbers only — never an imageDataUrl.
+function applySelectedRegionToImageClickForm() {
+  if (typeof getState !== 'function') return;
+  var st = getState();
+  var r = st.regionSelector ? st.regionSelector.normalizedRegion : null;
+  if (!r) {
+    addLogEntry(createLog('warning', t('noRegionSelected') || 'No region selected'));
+    return;
+  }
+  _imageClickFormRegion = {
+    x: r.x | 0, y: r.y | 0, width: r.width | 0, height: r.height | 0
+  };
+  refreshImageClickRegionSummary();
+}
+
+function clearImageClickFormRegion() {
+  _imageClickFormRegion = null;
+  refreshImageClickRegionSummary();
+}
+
+// Wire up the Step-30 form controls. Called from the bottom of
+// renderer.js (where the rest of the listeners live).
+function bindScenarioFormImageClickHandlers() {
+  if (inputScenarioType) {
+    inputScenarioType.addEventListener('change', function () {
+      syncScenarioFormSections();
+      // Refresh the template list so a freshly-imported template
+      // shows up if the user just switched to image_click.
+      if (inputScenarioType.value === 'image_click') populateTemplateSelect(inputTemplateId ? inputTemplateId.value : '');
+    });
+  }
+  if (btnImageClickUseRegion) {
+    btnImageClickUseRegion.addEventListener('click', applySelectedRegionToImageClickForm);
+  }
+  if (btnImageClickClearRegion) {
+    btnImageClickClearRegion.addEventListener('click', clearImageClickFormRegion);
+  }
+}
+bindScenarioFormImageClickHandlers();
+
+
+
+// Step 30 — short text summary of a scenario's settings for the
+// scenario list. Both types render via textContent only.
+function formatScenarioSettingsLine(sc) {
+  if (!sc || !sc.settings) return '';
+  if (sc.type === 'image_click') {
+    var s = sc.settings;
+    var thr = (typeof s.threshold === 'number') ? Math.round(s.threshold * 100) + '%' : '?';
+    var hasRegion = !!s.region ? '·region' : '·full';
+    return 'image_click ' + (s.templateId || '?') + ' · ' + thr + ' · step ' + (s.step | 0) + ' ' + hasRegion + ' · ' + (s.intervalMs | 0) + 'ms · ' + (s.repeatCount | 0) + '×';
+  }
+  return 'x:' + sc.settings.x + ' y:' + sc.settings.y + ' · ' + sc.settings.intervalMs + 'ms · ' + sc.settings.repeatCount + '× · ' + sc.settings.button;
+}

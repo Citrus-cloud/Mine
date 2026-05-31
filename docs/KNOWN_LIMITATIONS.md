@@ -494,3 +494,53 @@ Canvas / `ImageData`) so `0.1.x` does not pull in OpenCV.
   between `Mock` and `Real preview` from the new Match mode
   selector. The result shapes are identical so the renderer
   renders both through the same code.
+
+
+
+---
+
+## 14. image_click does not perform a real click (Step 30)
+
+[Step 30](./IMAGE_CLICK_SCENARIO.md) ships a new scenario type
+called `image_click` that orchestrates the screen-capture
+preview, the region selector, the template assets and the
+real preview matching engine into a single executable
+scenario. Despite the name, **the scenario never performs a
+real click**.
+
+### 14.1 What `image_click` does
+- Captures: re-uses whatever preview the user already pinned
+  via Screen Capture.
+- Matches: runs the Step-29 engine on the preview; never
+  on the live screen.
+- Simulates: emits an `image_click` action through the
+  action-pipeline simulate path. The cursor does not move.
+- Reports: writes `progress`, `lastAction`, log entries and
+  audit events the same way `simple_click` does.
+
+### 14.2 What `image_click` does NOT do
+- Does **not** move the cursor.
+- Does **not** click anywhere on the OS.
+- Does **not** run OCR / text detection.
+- Does **not** load OpenCV / opencv.js / opencv-js / sharp /
+  jimp / pixelmatch / looks-same / robotjs / nut.js / iohook
+  / uiohook-napi.
+- Does **not** auto-recapture the preview between iterations
+  — the user is responsible for refreshing the preview
+  manually if the screen has changed.
+
+### 14.3 simple_click coexistence
+- The existing `simple_click` scenarios are unchanged.
+  `validateScenario`, `createScenario`, and `updateScenario`
+  dispatch on `type` so old scenarios keep their old shape.
+- A scenario without a `type` field is treated as
+  `simple_click` for backward compatibility.
+
+### 14.4 No real-click escape hatch
+- Both `validateAction` and `validateActionSafety` refuse an
+  `image_click` action that carries `realClick: true`. The
+  action-pipeline's `executeAction` rejects it with
+  `blocked: true` and emits
+  `action.imageClick.realBlocked`. Any future real
+  integration will require explicit code changes behind
+  [`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md).

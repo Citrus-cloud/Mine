@@ -400,3 +400,33 @@ renderer-side matching engine.
 | 257  | No OCR / OpenCV                       | DevTools console: `package.json` still declares zero of `tesseract`, `tesseract.js`, `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`, `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`, `iohook`, `uiohook-napi`. `getTemplateMatchEngineStatus().opencvAvailable === false`, `.ocrImplemented === false`. |
 | 258  | Switch language                       | Settings → English → Save. Walk #240–#254. All Real preview strings appear in English. Switch back to Russian. |
 | 259  | Hard guarantees                       | DevTools console: `getState().templateMatching.lastResult.realMatching === false`, `.realClick === false`. `setActiveAdapter('real-desktop')` still returns `{ success: false, blocked: true, ... }` — Step 29 did not flip any safety flag. |
+
+
+
+## Step 30 — Image Click Scenario Type smoke checks
+
+These manual checks verify the new `image_click` scenario type
+end-to-end. They never expect a real click, real cursor
+movement, OCR, or OpenCV — Step 30 only orchestrates the
+existing simulation primitives.
+
+| #    | Step                                  | Expected                                                                                                          |
+|------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| 260  | Open the scenario form                | Scenarios → New scenario. The form has a new **Scenario type** select with two options: **Coordinate click** (default) and **Image click**. The default selection keeps the old simple_click fields visible. |
+| 261  | Switch to image_click                 | Pick **Image click** in the type selector. The X / Y / Mouse button rows are hidden; the image_click section appears with: template select, region summary + Use selected region / Clear region buttons, threshold input (default `0.75`), step select (`1 / 2 / 4 / 8`, default `4`), timeout (default `10000`), interval (default `1000`), repeat (default `1`). |
+| 262  | No templates yet → warning            | Without any imported templates, the image_click section shows the warning **"No templates yet. Import a template first."** and the template select is disabled. |
+| 263  | Import a template                     | Templates → Import template → pick a PNG/JPG/WebP. Switch back to the scenario form → Image click. The warning disappears, the template select lists the imported template, and Save is enabled. |
+| 264  | Save without templateId               | Manually clear the template select (DevTools) and click Save. The form refuses with **"Шаблон обязателен"** / **"Template is required"**. No scenario is created. |
+| 265  | Save valid image_click                | Pick a template, leave defaults, give the scenario a name, and Save. Scenarios list shows the new scenario with an **image_click** badge and a settings line `image_click <id> · 75% · step 4 · ·full · 1000ms · 1×`. |
+| 266  | Use selected region                   | Screen Capture → Refresh → Select → Capture preview → Enable region selection → drag → Save region. Scenario form → Edit the image_click scenario → click **Use selected region**. The summary line updates to `x, y · w × h` of the saved region. Save. The scenario list line switches to `…·region` instead of `·full`. |
+| 267  | Run image_click — match found         | Make sure the preview is captured AND the active template is one that exists in the preview. Select the image_click scenario as active → Start. Logs show: `Сценарий запущен`, `1/1: image_click симулирован x=… y=… confidence=…%`, `Сценарий завершён`. The progress bar reaches 100%. **The cursor never moves.** |
+| 268  | Run image_click — no match            | Lower threshold to e.g. 0.95 with a template that does not exist on screen. Save. Run. Log: `1/1: Шаблон не найден template=… confidence=…%`. Progress reaches 100%. The audit timeline shows `scenario.imageClick.noMatch`. **No real click.** |
+| 269  | Run image_click — missing preview     | Clear the screen-capture preview (Screen Capture → Clear preview). Run an image_click scenario. The scenario fails fast with **"Сначала получите screenshot preview."** / **"Capture a screen preview first."**. Audit shows `scenario.imageClick.failed` with `reason: missing-preview`. |
+| 270  | Run image_click — missing template    | Edit the scenario via DevTools to point at a non-existent template id, save, run. The scenario fails with **"Шаблон не найден. Импортируйте шаблон."** and `scenario.imageClick.failed` `reason: missing-template`. |
+| 271  | Stop image_click                      | Run a scenario with `repeatCount > 5`. Click Stop. The current iteration finishes its match call and the engine stops. Logs show `Сценарий остановлен`. Audit shows `scenario.imageClick.stopped`. |
+| 272  | simple_click still works              | Open a simple_click scenario, edit it, save, run. The form fields are unchanged; runtime behaviour is unchanged. The scenario card shows the old `x:… y:… · …ms · …× · left` line, no image_click badge. |
+| 273  | Diagnostics card                      | Advanced → Safety. The new **image_click scenario** card shows: `image_click scenarios count`, `Last image_click`, `Confidence`, `image_click target`, `image_click is simulation-only = on`, `Real image_click is disabled = on`. |
+| 274  | Copy diagnostics                      | Advanced → Safety → Copy diagnostics → paste. The output contains a `Image click scenario: imageClickScenariosCount=…, lastImageClickStatus=…, lastImageClickConfidence=…, lastImageClickTargetPoint=…, imageClickSimulationOnly=true, realImageClickEnabled=false, ocrImplemented=false` line. |
+| 275  | No real click verification            | While running an image_click scenario for 30 s, watch the cursor and a focused text editor. Cursor unchanged, editor receives no input. **The simulated action is never executed by the OS.** |
+| 276  | No OCR / OpenCV                       | DevTools console: `package.json` still declares zero of `tesseract`, `tesseract.js`, `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`, `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`, `iohook`, `uiohook-napi`. |
+| 277  | Hard guarantees                       | DevTools console: `getState().execution.lastAction.realClick === false`. `executeAction({ type: 'image_click', templateId: 't', targetPoint: { x: 1, y: 1 }, realClick: true }, { executionMode: 'real' })` returns `{ ok: false, blocked: true }`. `setActiveAdapter('real-desktop')` still returns `{ success: false, blocked: true, ... }` — Step 30 did not flip any safety flag. |

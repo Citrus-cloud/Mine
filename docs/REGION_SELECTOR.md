@@ -318,3 +318,18 @@ Scenarios that already have a region attached via
 ignores the field, exactly like in Step 26.
 
 See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md).
+
+
+
+---
+
+## Step 30 — region can scope an `image_click` scenario
+
+[Step 30](./IMAGE_CLICK_SCENARIO.md) introduces a new
+scenario type that accepts an optional region in
+`settings.region`. The form has a **"Use selected region"**
+button that copies the current Step-26 normalized region into
+the scenario. The region remains preview-anchored numbers
+only — never an `imageDataUrl`, never a screenshot.
+
+See [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md).

@@ -8,7 +8,7 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
-## [Unreleased] — Steps 15-29
+## [Unreleased] — Steps 15-30
 
 Final stabilization of the simulation-only beta, design-only handoff
 to the future real-input release line, the Step 17 architectural
@@ -19,11 +19,151 @@ pass, the Step 22 GitHub beta release finalization, the Step 23
 post-pack QA and release blocker pass, the Step 24 final beta
 release preparation, the Step 25 Screen Capture Foundation, the
 Step 26 Region Selector Foundation, the Step 27 Template Asset
-Manager, the Step 28 Template Matching Mock / Dry-run, and the
-**Step 29 Real Template Matching Engine Foundation** (renderer-
-side plain-JS template matching producing a real confidence
-score against the captured preview — not the live screen, not a
-real click). **Still simulation-only.**
+Manager, the Step 28 Template Matching Mock / Dry-run, the
+Step 29 Real Template Matching Engine Foundation, and the
+**Step 30 Image Click Scenario Type Foundation** (new
+simulation-only scenario type that orchestrates the previous
+five foundations end-to-end — the matcher runs on every
+iteration, the action-pipeline emits `action.imageClick.simulated`
+through the simulate path, the cursor never moves, no key is
+pressed). **Still simulation-only.**
+
+### Added (Step 30 — Image Click Scenario Type Foundation)
+
+- `src/scenario-manager.js`:
+  - `validateImageClickScenario(input)` — name required,
+    templateId required, threshold in `[0, 1]`, step in
+    `{1, 2, 4, 8}`, `timeoutMs >= 1000`,
+    `intervalMs >= 100`, `repeatCount in [1, 1000]`, region
+    optional but valid via `validateRegionSettings`.
+  - `createImageClickScenario(input)` /
+    `updateImageClickScenario(id, updates)` — owners of
+    the new scenario shape.
+  - `getScenariosByType(type)` — convenience selector;
+    treats missing `type` as `simple_click`.
+  - `createScenario` / `updateScenario` dispatch on `type`.
+    `simple_click` keeps its old shape and old behaviour.
+- `src/click-engine.js`:
+  - `runImageClickScenario(scenario, callbacks, options)`
+    — capture → match → simulated `image_click` action.
+    Honors `stopEngine()`, the user-configured
+    `safetySettings.minIntervalMs` /
+    `safetySettings.maxRepeatCount`, and updates
+    `progress` / `lastAction` exactly like the
+    `simple_click` branch. Audit events:
+    `scenario.imageClick.started / stopped /
+    match.started / match.completed / noMatch /
+    simulated / failed`.
+  - `runScenario` dispatches on `scenario.type`. The
+    `simple_click` branch is unchanged.
+  - `validateRunnableScenario` now branches on type and
+    delegates to `validateImageClickScenario` for
+    `image_click`. Safe-mode bounds still apply.
+- `src/action-pipeline.js`:
+  - `validateAction` accepts the `image_click` action
+    shape: `{ type: 'image_click', templateId, targetPoint,
+    boundingBox?, confidence?, realClick: false }`.
+  - `executeAction` routes `image_click` through the
+    legacy simulate path (the mock adapter only knows
+    `click`). Emits `action.imageClick.simulated`.
+  - `realClick: true` is rejected by `validateAction`.
+    Even if a caller bypassed the schema and asked for
+    `executionMode: 'real'`, `blockRealAction` would
+    refuse and emit `action.imageClick.realBlocked`.
+- `src/safety-gates.js`:
+  - `validateActionSafety` accepts the `image_click`
+    shape with the same hard `realClick: true` rejection.
+- `src/audit-events.js` — 9 new allowlisted event types:
+  `scenario.imageClick.started`,
+  `scenario.imageClick.stopped`,
+  `scenario.imageClick.match.started`,
+  `scenario.imageClick.match.completed`,
+  `scenario.imageClick.noMatch`,
+  `scenario.imageClick.simulated`,
+  `scenario.imageClick.failed`,
+  `action.imageClick.simulated`,
+  `action.imageClick.realBlocked`. Payloads carry only
+  ids and numeric metadata.
+- `src/index.html` — scenario form gains a `Scenario type`
+  select (Coordinate click / Image click) plus an
+  `image_click`-only section with: template select,
+  region summary + Use selected region / Clear region
+  buttons, threshold, step, timeout, interval, repeat,
+  and a "No templates yet" warning.
+- `src/renderer.js`:
+  - `getScenarioFormData` / `fillScenarioForm` /
+    `clearScenarioForm` understand both types.
+  - `populateTemplateSelect`,
+    `applySelectedRegionToImageClickForm`,
+    `clearImageClickFormRegion`,
+    `refreshImageClickRegionSummary`,
+    `syncScenarioFormSections`,
+    `bindScenarioFormImageClickHandlers`.
+  - `formatLastAction(action)` renders both `simple_click`
+    and `image_click` consistently. The Advanced
+    Overview's "Last action" row uses it.
+  - `startScenario`'s `onAction` callback formats logs
+    for both types (no-match, simulated).
+  - `renderAdvancedSafety` adds the **image_click
+    scenario** card (count, last status / confidence /
+    target, simulation-only flags).
+  - `copyDiagnostics` carries a new `Image click
+    scenario: …` line; the existing `Template matching:
+    …` line flips `imageClickScenarioImplemented` from
+    `false` to `true`. Both lines stay numeric / metadata
+    only — never base64 / pixel data.
+  - Scenario cards show an `image_click` badge and a
+    type-aware settings line.
+- `src/styles.css` — new section "Step 30 — Image Click
+  Scenario Type": `.form-section`, `.form-warning`,
+  `.image-click-region-summary`,
+  `.image-click-region-summary-active`,
+  `.form-group-region`,
+  `.scenario-card-badge-image-click`. Dark-theme tweaks
+  via `[data-theme="dark"]`. Mobile fallback at
+  `max-width: 760px`.
+- `src/i18n.js` — 26 new keys per language (RU + EN).
+- `docs/IMAGE_CLICK_SCENARIO.md` — new doc covering
+  purpose, current status, scenario format, required
+  template, optional region, threshold / step,
+  execution flow, simulation-only behaviour, what is
+  not implemented, future real click integration.
+- `docs/ACTION_SCHEMA.md` / `docs/TEMPLATE_MATCHING_ENGINE.md`
+  / `docs/TEMPLATE_ASSETS.md` / `docs/REGION_SELECTOR.md`
+  cross-link to the new doc; `docs/SECURITY_CHECKLIST.md`
+  adds the **image_click scenario (Step 30)** section;
+  `docs/KNOWN_LIMITATIONS.md` adds section 14
+  **image_click does not perform a real click**;
+  `docs/SMOKE_TESTS.md` adds Step 30 smoke checks
+  (#260–#277).
+- `scripts/smoke-check.js` — Step 30 invariants (see below).
+
+### Safety invariants kept (Step 30)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `realMatching: false`, `realClick: false`,
+  `ocrImplemented: false`, `opencvAvailable: false`,
+  `matcherImplemented: true` (Step 29 engine exists),
+  `imageClickScenarioImplemented: true` (Step 30 scenario
+  type exists), `imageClickSimulationOnly: true`,
+  `realImageClickEnabled: false` in every status response,
+  audit event, and diagnostics line.
+- `image_click` scenarios persist `templateId`, optional
+  region (numbers), threshold, step, timeoutMs,
+  intervalMs, repeatCount **only**. No `imageDataUrl`,
+  no thumbnails, no pixel data is written into a
+  scenario.
+- Screen-capture preview is still never written to disk.
+  The matcher only sees the in-memory data URL the user
+  explicitly captured.
+- The mock desktop adapter does not consume
+  `image_click`. The action flows through the legacy
+  simulate path.
+- Both `validateAction` and `validateActionSafety` refuse
+  any `image_click` action with `realClick: true`.
+- No new IPC channel, no new dependency.
 
 ### Added (Step 29 — Real Template Matching Engine Foundation)
 

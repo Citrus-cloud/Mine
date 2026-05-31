@@ -154,24 +154,46 @@ function validateScenarioSafety(scenario, settings) {
 }
 
 // --- Action-level safety ---
-// For 0.1.x this is intentionally narrow: a click action with valid
-// coordinates and button is OK. The pipeline stays simulation-only.
+// For 0.1.x this is narrow: a `click` action with valid coordinates
+// and button is OK. Step 30 also accepts the new `image_click`
+// action type (target derived from a real preview matcher) but
+// keeps the simulation-only invariant — `realClick: true` is
+// always rejected and there is no real-input adapter anywhere.
 function validateActionSafety(action /*, settings */) {
   if (!action || typeof action !== 'object') {
     return _fail(['Action is missing']);
   }
-  if (action.type !== 'click') {
-    return _fail(['Unsupported action type: ' + action.type]);
+  if (action.type === 'click') {
+    if (typeof action.x !== 'number' || action.x < 0) {
+      return _fail(['Invalid x coordinate']);
+    }
+    if (typeof action.y !== 'number' || action.y < 0) {
+      return _fail(['Invalid y coordinate']);
+    }
+    var validButtons = ['left', 'right', 'middle'];
+    if (validButtons.indexOf(action.button) === -1) {
+      return _fail(['Invalid mouse button: ' + action.button]);
+    }
+    return _ok();
   }
-  if (typeof action.x !== 'number' || action.x < 0) {
-    return _fail(['Invalid x coordinate']);
+  if (action.type === 'image_click') {
+    if (action.realClick === true) {
+      return _fail(['image_click never carries realClick=true at this step']);
+    }
+    if (typeof action.templateId !== 'string' || action.templateId.length === 0) {
+      return _fail(['image_click requires templateId']);
+    }
+    var tp = action.targetPoint;
+    if (!tp || typeof tp !== 'object') {
+      return _fail(['image_click requires targetPoint']);
+    }
+    if (typeof tp.x !== 'number' || tp.x < 0) {
+      return _fail(['Invalid image_click target x']);
+    }
+    if (typeof tp.y !== 'number' || tp.y < 0) {
+      return _fail(['Invalid image_click target y']);
+    }
+    return _ok();
   }
-  if (typeof action.y !== 'number' || action.y < 0) {
-    return _fail(['Invalid y coordinate']);
-  }
-  var validButtons = ['left', 'right', 'middle'];
-  if (validButtons.indexOf(action.button) === -1) {
-    return _fail(['Invalid mouse button: ' + action.button]);
-  }
-  return _ok();
+  return _fail(['Unsupported action type: ' + action.type]);
 }

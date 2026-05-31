@@ -588,7 +588,34 @@ const translations = {
     engineAvailable: "Движок доступен",
     searchRegionUsed: "Использована область поиска",
     matchScore: "Score",
-    matchThreshold: "Порог"
+    matchThreshold: "Порог",
+
+    // Step 30: image_click scenario type
+    scenarioType: "Тип сценария",
+    coordinateClick: "Клик по координатам",
+    imageClick: "Клик по изображению",
+    imageClickScenario: "Сценарий image_click",
+    createImageClickScenario: "Создать сценарий image_click",
+    editImageClickScenario: "Изменить сценарий image_click",
+    templateRequired: "Шаблон обязателен",
+    selectTemplate: "Шаблон",
+    noTemplatesImportFirst: "Шаблонов пока нет. Сначала импортируйте шаблон.",
+    useSelectedRegion: "Использовать выбранную область",
+    imageClickSettings: "Настройки image_click",
+    matchingSettings: "Настройки поиска",
+    timeoutMs: "Таймаут, мс",
+    imageClickSimulated: "image_click симулирован",
+    imageClickNoMatch: "Шаблон не найден",
+    imageClickMissingPreview: "Сначала получите screenshot preview.",
+    imageClickMissingTemplate: "Шаблон не найден. Импортируйте шаблон.",
+    templateMatchingStarted: "Поиск шаблона начат",
+    templateFound: "Шаблон найден",
+    imageClickTarget: "Цель image_click",
+    confidence: "Достоверность",
+    imageClickSimulationOnly: "image_click только симуляция",
+    realImageClickDisabled: "Реальный image_click отключён",
+    lastImageClickResult: "Последний image_click",
+    imageClickScenariosCount: "Сценариев image_click"
   },
   en: {
     // Main screen
@@ -1177,7 +1204,34 @@ const translations = {
     engineAvailable: "Engine available",
     searchRegionUsed: "Search region used",
     matchScore: "Score",
-    matchThreshold: "Threshold"
+    matchThreshold: "Threshold",
+
+    // Step 30: image_click scenario type
+    scenarioType: "Scenario type",
+    coordinateClick: "Coordinate click",
+    imageClick: "Image click",
+    imageClickScenario: "image_click scenario",
+    createImageClickScenario: "Create image_click scenario",
+    editImageClickScenario: "Edit image_click scenario",
+    templateRequired: "Template is required",
+    selectTemplate: "Template",
+    noTemplatesImportFirst: "No templates yet. Import a template first.",
+    useSelectedRegion: "Use selected region",
+    imageClickSettings: "image_click settings",
+    matchingSettings: "Matching settings",
+    timeoutMs: "Timeout, ms",
+    imageClickSimulated: "image_click simulated",
+    imageClickNoMatch: "Template not found",
+    imageClickMissingPreview: "Capture a screen preview first.",
+    imageClickMissingTemplate: "Template not found. Import a template first.",
+    templateMatchingStarted: "Template matching started",
+    templateFound: "Template found",
+    imageClickTarget: "image_click target",
+    confidence: "Confidence",
+    imageClickSimulationOnly: "image_click is simulation-only",
+    realImageClickDisabled: "Real image_click is disabled",
+    lastImageClickResult: "Last image_click",
+    imageClickScenariosCount: "image_click scenarios count"
   }
 };
 
