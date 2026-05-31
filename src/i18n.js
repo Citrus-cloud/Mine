@@ -563,7 +563,32 @@ const translations = {
     imageClickScenarioPlanned: "Сценарный action image_click запланирован",
     templateMatchingDiagnostics: "Поиск шаблона (mock)",
     lastRunAt: "Последний запуск",
-    lastResult: "Последний результат"
+    lastResult: "Последний результат",
+
+    // Step 29: real preview-only matching engine
+    realPreviewMatch: "Реальный preview-поиск",
+    realPreviewMatching: "Реальный preview-поиск",
+    matchMode: "Режим поиска",
+    threshold: "Порог достоверности",
+    step: "Шаг",
+    runRealPreviewMatch: "Запустить реальный preview-поиск",
+    matchingInProgress: "Идёт поиск...",
+    matchFound: "Шаблон найден",
+    matchNotFound: "Шаблон не найден",
+    lowConfidence: "Низкая достоверность",
+    bestCandidate: "Лучший кандидат",
+    durationMs: "Длительность",
+    realPreviewMatchNotice: "Реальный preview-поиск анализирует только изображение preview. Он не выполняет клики и не управляет устройством.",
+    analyzesPreviewOnly: "Анализирует только preview",
+    doesNotControlDevice: "Не управляет устройством",
+    templateImageMissing: "Изображение шаблона недоступно",
+    screenPreviewMissing: "Screenshot preview недоступен",
+    templateTooLarge: "Шаблон слишком большой",
+    searchAreaTooLarge: "Область поиска слишком большая",
+    engineAvailable: "Движок доступен",
+    searchRegionUsed: "Использована область поиска",
+    matchScore: "Score",
+    matchThreshold: "Порог"
   },
   en: {
     // Main screen
@@ -1127,7 +1152,32 @@ const translations = {
     imageClickScenarioPlanned: "image_click scenario action is planned",
     templateMatchingDiagnostics: "Template matching (mock)",
     lastRunAt: "Last run at",
-    lastResult: "Last result"
+    lastResult: "Last result",
+
+    // Step 29: real preview-only matching engine
+    realPreviewMatch: "Real preview match",
+    realPreviewMatching: "Real preview matching",
+    matchMode: "Match mode",
+    threshold: "Threshold",
+    step: "Step",
+    runRealPreviewMatch: "Run real preview match",
+    matchingInProgress: "Matching in progress...",
+    matchFound: "Match found",
+    matchNotFound: "No match",
+    lowConfidence: "Low confidence",
+    bestCandidate: "Best candidate",
+    durationMs: "Duration",
+    realPreviewMatchNotice: "Real preview matching analyzes the preview image only. It does not click or control the device.",
+    analyzesPreviewOnly: "Analyzes preview only",
+    doesNotControlDevice: "Does not control device",
+    templateImageMissing: "Template image is missing",
+    screenPreviewMissing: "Screen preview is missing",
+    templateTooLarge: "Template is too large",
+    searchAreaTooLarge: "Search area is too large",
+    engineAvailable: "Engine available",
+    searchRegionUsed: "Search region used",
+    matchScore: "Score",
+    matchThreshold: "Threshold"
   }
 };
 

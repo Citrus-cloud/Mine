@@ -8,7 +8,7 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
-## [Unreleased] — Steps 15-28
+## [Unreleased] — Steps 15-29
 
 Final stabilization of the simulation-only beta, design-only handoff
 to the future real-input release line, the Step 17 architectural
@@ -19,11 +19,186 @@ pass, the Step 22 GitHub beta release finalization, the Step 23
 post-pack QA and release blocker pass, the Step 24 final beta
 release preparation, the Step 25 Screen Capture Foundation, the
 Step 26 Region Selector Foundation, the Step 27 Template Asset
-Manager, and the **Step 28 Template Matching Mock / Dry-run**
-(mock-only pipeline that wires the previous three foundations
-into a deterministic bounding-box / target-point preview without
-ever decoding a pixel — the matcher itself is still not
-implemented). **Still simulation-only.**
+Manager, the Step 28 Template Matching Mock / Dry-run, and the
+**Step 29 Real Template Matching Engine Foundation** (renderer-
+side plain-JS template matching producing a real confidence
+score against the captured preview — not the live screen, not a
+real click). **Still simulation-only.**
+
+### Added (Step 29 — Real Template Matching Engine Foundation)
+
+- `src/template-matching-engine.js` — new pure-renderer module:
+  `loadImageFromDataUrl(dataUrl)`,
+  `imageToCanvas(image, optWidth?, optHeight?)`,
+  `getImageDataFromDataUrl(dataUrl, optWidth?, optHeight?)`,
+  `cropImageData(imageData, region)` (sub-rect copy via
+  `putImageData` dirty-rect arguments),
+  `resizeImageDataIfNeeded(imageData, maxWidth, maxHeight)`
+  (returns `{ imageData, scaleX, scaleY }`),
+  `runTemplateMatch(screenDataUrl, templateDataUrl, options)`
+  (top-level entry point; returns
+  `{ success, match, error?, warnings: [] }`),
+  `findBestMatch(screenImageData, templateImageData, options)`
+  (regular-grid scan over candidate positions),
+  `calculatePatchScore(screenData, templateData, screenWidth,
+  templateWidth, startX, startY, options)` (mean RGB absolute
+  difference, per-template sub-step `1 / 2 / 3 / 4` based on
+  template area),
+  `createTemplateMatchResult(match, input)` (renderer-shared
+  result shape — same shape Step 28 returns from the mock so
+  the existing UI / audit / diagnostics code renders both),
+  `getTemplateMatchEngineStatus()` (stamps
+  `realClick: false`, `ocrImplemented: false`,
+  `opencvAvailable: false`, `nativeMatchingAvailable: false`,
+  `analyzesPreviewOnly: true`),
+  `estimateSearchCost(screenSize, templateSize, region)`. Pure
+  logic — never imports `electron` / `ipcRenderer` / `fs`,
+  never decodes the live screen, never opens a new IPC
+  channel.
+- Mock mode from Step 28 is **kept**. The Template Matching
+  tab gains a Match-mode `<select>` with two options
+  (`Mock` / `Real preview`), a Threshold number `<input>`
+  (default `0.75`), and a Step `<select>` with `1 / 2 / 4 /
+  8 / 16` (default `4`). Switching modes re-renders the tab
+  but does not re-run the matcher.
+- `src/template-matching-ui.js` —
+  - new `renderTemplateMatchingControls()` (mode / threshold
+    / step controls + the real-preview safety notice);
+  - new `runTemplateMatchingDispatch()` (picks Mock or
+    Real preview based on `appState.templateMatching.mode`);
+  - new `runTemplateMatchingRealPreview()` (pulls the
+    `imageDataUrl` from `screenCapture.preview` and the
+    `previewDataUrl` from the active template, calls
+    `runTemplateMatch`, audits warnings, audits
+    `template.match.realPreview.completed` /
+    `template.match.lowConfidence` on the score outcome,
+    audits `image.click.preview.created`);
+  - new `_activeTemplateHasPreview(state)` and
+    `_activePreviewHasPixels(state)` helpers that gate the
+    Run button and add explicit hints to the requirements
+    checklist when the user picks Real preview without
+    pixel data;
+  - `renderTemplateMatchingResult` adds a `Match found` /
+    `Low confidence — showing best candidate` headline,
+    threshold / duration / step / pixelStep /
+    downscaledSearch / downscaledTemplate rows, and a
+    distinct real-preview badge;
+  - `renderTemplateMatchingOverlay` renders solid green for
+    matches and dashed for low-confidence "best candidate"
+    runs, with the badge text switching between
+    `mock` / `real preview` / `… · low`.
+- `src/app-state.js` — `appState.templateMatching` gains
+  `mode` (`"mock" | "real-preview"`, default `"mock"`),
+  `threshold` (default `0.75`), `step` (default `4`); three
+  setters (`setTemplateMatchingMode`,
+  `setTemplateMatchingThreshold`, `setTemplateMatchingStep`)
+  with input validation. `_cloneTemplateMatchResult` carries
+  the new `threshold / durationMs / step / requestedStep /
+  pixelStep / scannedPositions / downscaledSearch /
+  downscaledTemplate` fields so the result survives a
+  deep-copy round trip.
+- `src/audit-events.js` — five new allowlisted event types:
+  `template.match.realPreview.requested`,
+  `template.match.realPreview.completed`,
+  `template.match.realPreview.failed`,
+  `template.match.lowConfidence`,
+  `template.match.engine.warning`. Payloads carry only ids
+  and numeric metadata.
+- `src/index.html` — loads `template-matching-engine.js`
+  between `template-matching-mock.js` and
+  `template-matching-ui.js`. Tab list, CSP, and contentSandbox
+  flags unchanged.
+- `src/renderer.js` — `renderAdvancedSafety()` adds
+  `Match mode`, `Threshold`, `Step`, `Duration`,
+  `Engine available`, `Search region used` rows to the
+  Template matching diagnostics card. `copyDiagnostics()`
+  broadens the line to `Template matching: …, mode=…,
+  threshold=…, step=…, engineAvailable=…, lastDurationMs=…,
+  lastMode=…, …, realMatching=false, realClick=false,
+  ocrImplemented=false, opencvAvailable=false,
+  matcherImplemented=true, imageClickScenarioImplemented=false`
+  (numeric / metadata only — never base64).
+- `src/styles.css` — new section "Step 29 — Real Template
+  Matching Engine Foundation": `.template-matching-controls-
+  card`, `.template-matching-control-row`,
+  `.template-matching-mode-select`,
+  `.template-matching-threshold-input`,
+  `.template-matching-step-select`,
+  `.template-matching-real-preview-notice`,
+  `.template-matching-real-preview-badge` (green badge
+  variant), `.template-matching-headline` (ok / low),
+  `.template-matching-overlay-bbox-real` (solid green
+  border + faint fill),
+  `.template-matching-overlay-bbox-candidate` (dashed,
+  no fill). Dark-theme tweaks via `[data-theme="dark"]`.
+  Mobile fallback at `max-width: 760px`.
+- `src/i18n.js` — 27 new keys per language (RU + EN):
+  `realPreviewMatch`, `realPreviewMatching`, `matchMode`,
+  `threshold`, `step`, `runRealPreviewMatch`,
+  `matchingInProgress`, `matchFound`, `matchNotFound`,
+  `lowConfidence`, `bestCandidate`, `durationMs`,
+  `realPreviewMatchNotice`, `analyzesPreviewOnly`,
+  `doesNotControlDevice`, `templateImageMissing`,
+  `screenPreviewMissing`, `templateTooLarge`,
+  `searchAreaTooLarge`, `engineAvailable`,
+  `searchRegionUsed`, `matchScore`, `matchThreshold`.
+- `docs/TEMPLATE_MATCHING_ENGINE.md` — new doc covering
+  purpose, current status, real preview matching vs real
+  clicks, algorithm, threshold, step, region support,
+  performance limitations, what is not implemented, future
+  OpenCV option, safety notes.
+- `docs/TEMPLATE_MATCHING_MOCK.md`, `docs/SCREEN_CAPTURE.md`,
+  `docs/REGION_SELECTOR.md`, `docs/TEMPLATE_ASSETS.md`
+  cross-link to the new engine doc.
+- `docs/SECURITY_CHECKLIST.md` — adds **Real preview matching
+  engine (Step 29)** section.
+- `docs/KNOWN_LIMITATIONS.md` — adds section 13 **Real
+  preview matching has plain-JS limits (Step 29)**.
+- `docs/SMOKE_TESTS.md` — adds **Step 29 — Real Template
+  Matching Engine** smoke checks (#240–#259).
+- `docs/ACTION_SCHEMA.md` — notes that the `image_click`
+  action preview now carries real-engine numbers (still not
+  executed).
+- `scripts/smoke-check.js` — adds Step-29 invariants:
+  `src/template-matching-engine.js` exists,
+  `docs/TEMPLATE_MATCHING_ENGINE.md` exists, all documented
+  function names declared, the engine never imports
+  `electron` / `ipcRenderer` / `fs` / `localStorage`, the
+  engine stamps `realClick: false` and `realMatching: false`
+  on every result, the action preview is rendered through
+  `<pre>.textContent`, the renderer-side modules never
+  require `tesseract`, `tesseract.js`, `opencv4nodejs`,
+  `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`,
+  `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut.js`,
+  `iohook`, `uiohook-napi`, the diagnostics card and the
+  `Copy diagnostics` line surface the new fields, and
+  `package.json` STILL declares zero of the same set.
+  The Step-28 line check was broadened to accept the new
+  `Template matching:` prefix as well.
+
+### Safety invariants kept (Step 29)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `realMatching: false`, `realClick: false`,
+  `ocrImplemented: false`, `opencvAvailable: false`,
+  `imageClickScenarioImplemented: false` in every status
+  response, audit event, and diagnostics line.
+- The engine analyses the **captured preview** — the
+  `imageDataUrl` of the screenshot the user explicitly
+  captured in Step 25 — never the live screen.
+- The match result lives only in
+  `appState.templateMatching.lastResult` (renderer memory).
+  It is never written to `templates.json`, `settings.json`,
+  `scenarios.json`, `profiles.json`, or `localStorage`.
+- The action preview is rendered through `<pre>.textContent`.
+  No HTML interpolation. The click engine, the action
+  pipeline, the mock adapter, and the dry-run sandbox do
+  not recognise the `image_click` action type.
+- No new IPC channel is registered for matching at Step 29.
+  The renderer does not gain any new privilege over the OS.
+- Audit payloads carry only ids and numeric metadata.
 
 ### Added (Step 28 — Template Matching Mock / Dry-run)
 

@@ -780,11 +780,19 @@ function renderAdvancedSafety() {
   const tmRegionAvailable  = !!(state.regionSelector && state.regionSelector.normalizedRegion);
   addCardRow(tmCard, t('lastRunAt'),                tmState.lastRunAt || t('none2'));
   addCardRow(tmCard, t('lastResult'),               tmResult ? t('yes') : t('no'));
+  // Step 29 — match mode + algorithm parameters.
+  addCardRow(tmCard, t('matchMode'),                (tmState.mode === 'real-preview') ? t('realPreviewMatching') : t('mockTemplateMatching'));
+  addCardRow(tmCard, t('matchThreshold'),           (typeof tmState.threshold === 'number') ? ((tmState.threshold * 100).toFixed(0) + '%') : t('none2'));
+  addCardRow(tmCard, t('step'),                     (typeof tmState.step === 'number') ? String(tmState.step) : t('none2'));
   addCardRow(tmCard, t('matchConfidence'),          tmResult ? ((Math.round(tmResult.confidence * 1000) / 10).toFixed(1) + '%') : t('none2'));
+  if (tmResult && typeof tmResult.durationMs === 'number') {
+    addCardRow(tmCard, t('durationMs'),             tmResult.durationMs + ' ms');
+  }
   addCardRow(tmCard, t('targetPoint'),              tmResult && tmResult.targetPoint ? ((tmResult.targetPoint.x | 0) + ', ' + (tmResult.targetPoint.y | 0)) : t('none2'));
   addCardRow(tmCard, 'activeTemplateId',            tmActiveTplId || t('none2'));
   addCardRow(tmCard, t('previewAvailable'),         tmPreviewAvailable ? t('yes') : t('no'));
-  addCardRow(tmCard, 'regionAvailable',             tmRegionAvailable ? t('yes') : t('no'));
+  addCardRow(tmCard, t('searchRegionUsed'),         tmRegionAvailable ? t('yes') : t('no'));
+  addCardRow(tmCard, t('engineAvailable'),          (typeof runTemplateMatch === 'function') ? t('yes') : t('no'));
   addCardRow(tmCard, t('realMatchingDisabled'),     t('flagEnabled'));
   addCardRow(tmCard, t('realClickDisabled'),        t('flagEnabled'));
   addCardRow(tmCard, t('realImageRecognitionNotImplemented'), t('flagDisabled'));
@@ -1028,7 +1036,16 @@ async function copyDiagnostics() {
   const tmActiveTplDiag = state.templates ? (state.templates.activeTemplateId || 'none') : 'none';
   const tmPreviewAvailDiag = !!(state.screenCapture && state.screenCapture.preview);
   const tmRegionAvailDiag = !!(state.regionSelector && state.regionSelector.normalizedRegion);
-  const tmLine = `Template matching mock: lastRunAt=${tm.lastRunAt || 'none'}, lastResult=${!!tmResultForDiag}, lastConfidence=${tmConfidence}, lastTargetPoint=${tmTargetX},${tmTargetY}, activeTemplateId=${tmActiveTplDiag}, screenPreviewAvailable=${tmPreviewAvailDiag}, regionAvailable=${tmRegionAvailDiag}, lastError=${tm.lastError || 'none'}, realMatching=false, realClick=false, matcherImplemented=false, imageClickScenarioImplemented=false`;
+  // Step 29 — current match mode + algorithm parameters + the
+  // boolean engine availability. Numbers and short strings only —
+  // never base64, never imageDataUrl, never pixel data.
+  const tmMode = (tm.mode === 'real-preview') ? 'real-preview' : 'mock';
+  const tmThreshold = (typeof tm.threshold === 'number') ? tm.threshold : 0.75;
+  const tmStep = (typeof tm.step === 'number') ? tm.step : 4;
+  const tmDuration = (tmResultForDiag && typeof tmResultForDiag.durationMs === 'number') ? tmResultForDiag.durationMs : 'none';
+  const tmEngineAvail = (typeof runTemplateMatch === 'function');
+  const tmLastResultMode = tmResultForDiag ? (tmResultForDiag.mode || 'mock') : 'none';
+  const tmLine = `Template matching: lastRunAt=${tm.lastRunAt || 'none'}, lastResult=${!!tmResultForDiag}, lastMode=${tmLastResultMode}, lastConfidence=${tmConfidence}, lastDurationMs=${tmDuration}, lastTargetPoint=${tmTargetX},${tmTargetY}, mode=${tmMode}, threshold=${tmThreshold}, step=${tmStep}, engineAvailable=${tmEngineAvail}, activeTemplateId=${tmActiveTplDiag}, screenPreviewAvailable=${tmPreviewAvailDiag}, searchRegionUsed=${tmRegionAvailDiag}, lastError=${tm.lastError || 'none'}, realMatching=false, realClick=false, ocrImplemented=false, opencvAvailable=false, matcherImplemented=true, imageClickScenarioImplemented=false`;
   const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }

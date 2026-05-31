@@ -2261,7 +2261,10 @@ record(
 );
 record(
   'renderer.js Copy diagnostics has Template matching mock line',
-  /Template matching mock: lastRunAt=[\s\S]{0,500}matcherImplemented=false/.test(rendTxt)
+  // Step 28 introduced this line; Step 29 broadened the prefix to
+  // cover both `mock` and `real-preview` modes. Either prefix is
+  // accepted here; the safety stamps must still be present.
+  /Template matching(?: mock)?: lastRunAt=[\s\S]{0,800}realMatching=false[\s\S]{0,200}realClick=false/.test(rendTxt)
 );
 
 // 117. README / PROJECT_CONTEXT mention step 28 / template matching mock.
@@ -2423,6 +2426,309 @@ record(
   'preload.js does not expose any template.match.* API at step 28',
   preloadTxt.indexOf("'template.match.") === -1 &&
   preloadTxt.indexOf('"template.match.') === -1
+);
+
+// --- Step 29: Real Template Matching Engine Foundation ---
+
+// 126. New source / doc files exist.
+record(
+  'Step 29 file exists: src/template-matching-engine.js',
+  fileExists('src/template-matching-engine.js')
+);
+record(
+  'Step 29 doc exists: docs/TEMPLATE_MATCHING_ENGINE.md',
+  fileExists('docs/TEMPLATE_MATCHING_ENGINE.md')
+);
+
+// 127. template-matching-engine.js declares the documented surface
+//     and stays renderer-pure (no electron, no ipcRenderer, no fs).
+var tmEngine = readText('src/template-matching-engine.js');
+[
+  'function loadImageFromDataUrl',
+  'function imageToCanvas',
+  'function getImageDataFromDataUrl',
+  'function cropImageData',
+  'function resizeImageDataIfNeeded',
+  'function runTemplateMatch',
+  'function findBestMatch',
+  'function calculatePatchScore',
+  'function createTemplateMatchResult',
+  'function getTemplateMatchEngineStatus',
+  'function estimateSearchCost'
+].forEach(function (needle) {
+  record(
+    'template-matching-engine.js declares ' + needle,
+    tmEngine.indexOf(needle) !== -1
+  );
+});
+record(
+  'template-matching-engine.js does not require electron or ipcRenderer',
+  tmEngine.indexOf("require('electron')") === -1 &&
+  tmEngine.indexOf("require('ipcRenderer')") === -1 &&
+  tmEngine.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'template-matching-engine.js does not require fs',
+  tmEngine.indexOf("require('fs')") === -1
+);
+record(
+  'template-matching-engine.js never persists results via localStorage',
+  (function () {
+    var stripped = tmEngine
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map(function (ln) { return ln.replace(/\/\/.*$/, ''); })
+      .join('\n');
+    return stripped.indexOf('localStorage') === -1;
+  })()
+);
+record(
+  'template-matching-engine.js stamps realClick=false / realMatching=false / opencvAvailable=false',
+  /realClick\s*:\s*false/.test(tmEngine) &&
+  /realMatching\s*:\s*false/.test(tmEngine) &&
+  /opencvAvailable\s*:\s*false/.test(tmEngine)
+);
+record(
+  'template-matching-engine.js does not import OCR / OpenCV / sharp / jimp at step 29',
+  tmEngine.indexOf("require('tesseract.js')") === -1 &&
+  tmEngine.indexOf("require('tesseract')") === -1 &&
+  tmEngine.indexOf("require('opencv4nodejs')") === -1 &&
+  tmEngine.indexOf("require('@u4/opencv4nodejs')") === -1 &&
+  tmEngine.indexOf("require('opencv.js')") === -1 &&
+  tmEngine.indexOf("require('opencv-js')") === -1 &&
+  tmEngine.indexOf("require('sharp')") === -1 &&
+  tmEngine.indexOf("require('jimp')") === -1 &&
+  tmEngine.indexOf("require('pixelmatch')") === -1 &&
+  tmEngine.indexOf("require('looks-same')") === -1
+);
+
+// 128. app-state.js declares the Step 29 mode/threshold/step
+//     fields and the three setters.
+record(
+  'app-state.js declares mode/threshold/step on the templateMatching slice',
+  /templateMatching\s*:\s*\{[\s\S]{0,800}mode\s*:\s*['"]mock['"][\s\S]{0,200}threshold[\s\S]{0,80}step/.test(appStateTxt)
+);
+[
+  'function setTemplateMatchingMode',
+  'function setTemplateMatchingThreshold',
+  'function setTemplateMatchingStep'
+].forEach(function (needle) {
+  record(
+    'app-state.js declares ' + needle,
+    appStateTxt.indexOf(needle) !== -1
+  );
+});
+
+// 129. audit-events.js allowlist contains the five new types.
+[
+  "'template.match.realPreview.requested'",
+  "'template.match.realPreview.completed'",
+  "'template.match.realPreview.failed'",
+  "'template.match.lowConfidence'",
+  "'template.match.engine.warning'"
+].forEach(function (needle) {
+  record(
+    'audit allowlist includes ' + needle.replace(/'/g, ''),
+    auditTxt.indexOf(needle) !== -1
+  );
+});
+
+// 130. index.html loads the engine before the matching UI.
+record(
+  'index.html loads template-matching-engine.js',
+  /src=['"]template-matching-engine\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads template-matching-engine.js BEFORE template-matching-ui.js',
+  htmlTxt3.indexOf('template-matching-engine.js') !== -1 &&
+  htmlTxt3.indexOf('template-matching-ui.js') !== -1 &&
+  htmlTxt3.indexOf('template-matching-engine.js') < htmlTxt3.indexOf('template-matching-ui.js')
+);
+
+// 131. template-matching-ui.js wires the new mode controls + the
+//     real-preview run path.
+var tmUiStep29 = readText('src/template-matching-ui.js');
+[
+  'function renderTemplateMatchingControls',
+  'function runTemplateMatchingDispatch',
+  'function runTemplateMatchingRealPreview'
+].forEach(function (needle) {
+  record(
+    'template-matching-ui.js declares ' + needle,
+    tmUiStep29.indexOf(needle) !== -1
+  );
+});
+record(
+  'template-matching-ui.js wires the run dispatcher',
+  tmUiStep29.indexOf('runTemplateMatchingDispatch') !== -1 &&
+  tmUiStep29.indexOf("runTemplateMatch(preview.imageDataUrl") !== -1
+);
+
+// 132. renderer.js diagnostics card surfaces the new fields.
+record(
+  'renderer.js diagnostics shows Match mode / Threshold / Step / Engine available',
+  rendTxt.indexOf("t('matchMode')") !== -1 &&
+  rendTxt.indexOf("t('matchThreshold')") !== -1 &&
+  rendTxt.indexOf("t('step')") !== -1 &&
+  rendTxt.indexOf("t('engineAvailable')") !== -1
+);
+record(
+  'renderer.js Copy diagnostics line surfaces engineAvailable / mode / threshold / step',
+  // Order-agnostic check — all four substrings must appear somewhere
+  // on the new Step-29 line.
+  /Template matching:[\s\S]{0,1500}engineAvailable=/.test(rendTxt) &&
+  /Template matching:[\s\S]{0,1500}\bmode=/.test(rendTxt) &&
+  /Template matching:[\s\S]{0,1500}\bthreshold=/.test(rendTxt) &&
+  /Template matching:[\s\S]{0,1500}\bstep=/.test(rendTxt)
+);
+
+// 133. README / PROJECT_CONTEXT mention step 29 / real preview matching.
+record(
+  'README or PROJECT_CONTEXT mentions step 29',
+  /step\s*29|шаг\s*29|Step 29|Шаг 29/.test(readText('README.md')) ||
+  /step\s*29|шаг\s*29|Step 29|Шаг 29/.test(readText('PROJECT_CONTEXT.md'))
+);
+record(
+  'README or PROJECT_CONTEXT mentions real preview matching / template matching engine',
+  /real[\s-]preview[\s-]matching|template[\s-]matching\s*engine|Real Template Matching|Real preview/i.test(readText('README.md')) ||
+  /real[\s-]preview[\s-]matching|template[\s-]matching\s*engine|Real Template Matching|Real preview/i.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 134. docs/TEMPLATE_MATCHING_ENGINE.md asserts simulation-only / no real clicks.
+var tmDoc29 = readText('docs/TEMPLATE_MATCHING_ENGINE.md');
+record(
+  'docs/TEMPLATE_MATCHING_ENGINE.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(tmDoc29)
+);
+record(
+  'docs/TEMPLATE_MATCHING_ENGINE.md asserts no real clicks / no OCR / no OpenCV at step 29',
+  /(no real clicks|never\s+executes\s+a\s+real\s+click|never\s+moves\s+the\s+cursor|does\s+not\s+click)/i.test(tmDoc29) &&
+  /(no\s+OCR|no ocr)/i.test(tmDoc29) &&
+  /(no\s+OpenCV|no opencv)/i.test(tmDoc29)
+);
+record(
+  'docs/TEMPLATE_MATCHING_ENGINE.md describes the algorithm + threshold + step + region',
+  /algorithm/i.test(tmDoc29) && /threshold/i.test(tmDoc29) && /step/i.test(tmDoc29) && /region/i.test(tmDoc29)
+);
+
+// 135. SECURITY_CHECKLIST has a Real preview matching engine
+//     (Step 29) section.
+var tmSec29 = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has Real preview matching engine (Step 29) section',
+  /real\s+preview\s+matching\s+engine\s*\(?step\s*29/i.test(tmSec29) ||
+  /## Real preview matching engine/i.test(tmSec29)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts matching analyses preview only / no real click / no OCR at step 29',
+  /preview\s+only/i.test(tmSec29) &&
+  /no real clicks?/i.test(tmSec29) &&
+  /no\s+OCR/i.test(tmSec29)
+);
+
+// 136. KNOWN_LIMITATIONS / SMOKE_TESTS reference step 29.
+var klTxt29 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has a Real preview matching (Step 29) section',
+  /##\s*13\.\s*Real preview matching|real preview matching has plain-JS limits/i.test(klTxt29)
+);
+var stTxt29 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 29 real template matching engine block',
+  /Step\s*29\s*[—-]\s*Real Template Matching Engine/i.test(stTxt29) ||
+  /Step 29.*Real Template Matching Engine/i.test(stTxt29)
+);
+
+// 137. CHANGELOG mentions Step 29 / Real Template Matching Engine.
+var chTxt29 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 29 — Real Template Matching Engine',
+  /Step\s*29.*Real Template Matching Engine/i.test(chTxt29) ||
+  /Шаг\s*29.*Real Template Matching/i.test(chTxt29) ||
+  /Real Template Matching Engine Foundation/i.test(chTxt29)
+);
+
+// 138. package.json must STILL NOT pull in OCR / OpenCV / robotjs /
+//     nut.js / image-recognition / sharp / jimp / pixelmatch /
+//     looks-same / opencv.js / opencv-js at step 29.
+if (pkg) {
+  var allDeps29 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step29Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps29, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 29',
+    step29Forbidden.length === 0,
+    step29Forbidden.length ? step29Forbidden.join(', ') : ''
+  );
+}
+
+// 139. Source files don't import OCR / OpenCV / image-recognition at step 29.
+var step29SourceFiles = [
+  'main.js', 'preload.js',
+  'src/template-matching-engine.js',
+  'src/template-matching-ui.js',
+  'src/template-matching-mock.js'
+];
+var step29Imports = [
+  'tesseract.js', 'tesseract', 'opencv4nodejs', '@u4/opencv4nodejs',
+  'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep29Imports = [];
+step29SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step29Imports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep29Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 29 source files',
+  foundStep29Imports.length === 0,
+  foundStep29Imports.length ? foundStep29Imports.join(', ') : ''
+);
+
+// 140. main.js still does not flip the simulation-only safety flags at step 29.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 29)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 29)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 29 (no unsafe-inline / unsafe-eval)',
+  htmlTxt3.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt3.indexOf('unsafe-inline') === -1 &&
+  htmlTxt3.indexOf('unsafe-eval') === -1
+);
+
+// 141. Step 29 introduces no new IPC channel (renderer-only).
+record(
+  'main.js does not register any template.match.engine.* IPC handler at step 29',
+  !/ipcMain\.handle\(['"]template\.match\.engine/.test(mainTxt)
+);
+record(
+  'preload.js does not expose any template.match.engine.* API at step 29',
+  preloadTxt.indexOf("'template.match.engine.") === -1 &&
+  preloadTxt.indexOf('"template.match.engine.') === -1
 );
 
 // --- Report ---

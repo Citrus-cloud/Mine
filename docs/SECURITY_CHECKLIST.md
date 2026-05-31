@@ -401,3 +401,90 @@ code does not weaken any of the beta-MVP safety invariants.
 See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md)
 for the full description, the input / output contracts, and the
 list of features that are **not** implemented at Step 28.
+
+
+
+## Real preview matching engine (Step 29)
+
+Step 29 introduces a renderer-side real template matching engine.
+The checks below confirm that the engine does not weaken any of
+the beta-MVP safety invariants.
+
+### Engine-level invariants
+- [x] **Matching analyses preview only.** The engine consumes
+      only the `imageDataUrl` of the preview the user explicitly
+      captured in Step 25 and the `previewDataUrl` of the active
+      Step-27 template. It never reads pixels from the live
+      screen, never polls a window, never opens a new IPC
+      channel.
+- [x] **No real click.** The engine never moves the cursor,
+      never enqueues a click, never types. The `image_click`
+      action preview is rendered through `<pre>.textContent`
+      and is not consumed by the click engine, the action
+      pipeline, the mock adapter, or the dry-run sandbox.
+- [x] **No OCR.** No Tesseract, no tesseract.js, no custom
+      OCR. `getTemplateMatchEngineStatus().ocrImplemented ===
+      false`.
+- [x] **No OpenCV.** `package.json` declares zero of
+      `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`,
+      `opencv-js`, `sharp`, `jimp`, `pixelmatch`,
+      `looks-same` at Step 29. `getTemplateMatchEngineStatus()
+      .opencvAvailable === false`. Verified by `npm run smoke`.
+- [x] **No prohibited dependencies.** `package.json` still
+      declares zero of `robotjs`, `nut-js`, `nutjs`,
+      `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`, `tesseract`, `tesseract.js`. Verified
+      by `npm run smoke`.
+
+### Renderer-level invariants
+- [x] The engine and the matching UI never `require('electron')`
+      or `ipcRenderer.invoke`. They live entirely in the
+      renderer.
+- [x] All user-visible strings render via `textContent`.
+      `innerHTML` is used only as `= ''` (container clear).
+- [x] The visual overlay uses `<img>.src` for the preview
+      backdrop and absolutely-positioned `<div>` elements for
+      the bounding box, the target point, and the region.
+- [x] The action preview JSON is rendered through
+      `<pre>.textContent`. No HTML interpolation.
+
+### Storage-level invariants
+- [x] The match result lives ONLY in
+      `appState.templateMatching.lastResult` (renderer memory).
+      Never persisted to `templates.json`, `settings.json`,
+      `scenarios.json`, `profiles.json`, or `localStorage`.
+- [x] The slice carries metadata only — no `imageDataUrl`, no
+      thumbnails, no pixel buffers.
+      `_cloneTemplateMatchInput` / `_cloneTemplateMatchResult`
+      strip any unexpected pixel-bearing fields a buggy caller
+      might pass.
+- [x] No new IPC channel is registered for matching at Step 29.
+      The renderer does not gain any new privilege over the OS.
+
+### Audit invariants
+- [x] All five new audit-event types
+      (`template.match.realPreview.requested`,
+      `template.match.realPreview.completed`,
+      `template.match.realPreview.failed`,
+      `template.match.lowConfidence`,
+      `template.match.engine.warning`) are part of the frozen
+      `AUDIT_EVENT_TYPES` allowlist.
+- [x] Payloads carry only ids and numeric metadata
+      (confidence, threshold, target X / Y, bbox W / H,
+      durationMs, step, scannedPositions, `usedRegion: bool`,
+      `realClick: false`, `realMatching: false`). Never an
+      `imageDataUrl`, never a thumbnail, never a screenshot.
+
+### Electron-security invariants (re-checked at Step 29)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no
+      `unsafe-eval`, no remote sources.
+- [x] `preload.js` does not gain any new namespace at Step 29
+      (matching is renderer-only).
+
+See [`docs/TEMPLATE_MATCHING_ENGINE.md`](./TEMPLATE_MATCHING_ENGINE.md)
+for the full description, the algorithm, the threshold / step
+controls, the region support, the performance limits, and the
+list of features that are **not** implemented at Step 29.

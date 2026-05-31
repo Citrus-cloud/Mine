@@ -437,3 +437,60 @@ occurrences" are out of scope for `0.1.x`.
 The mock pipeline is identical on Windows / macOS / Linux. There
 is no per-OS code path; every platform receives the same
 deterministic result for the same input.
+
+
+
+---
+
+## 13. Real preview matching has plain-JS limits (Step 29)
+
+Step 29 introduces a [Real Template Matching Engine](./TEMPLATE_MATCHING_ENGINE.md)
+that produces a **real** confidence score against the captured
+preview. The engine is intentionally lightweight (plain JS over
+Canvas / `ImageData`) so `0.1.x` does not pull in OpenCV.
+
+### 13.1 What "real preview matching" means
+- The engine analyses the **screen-capture preview** the user
+  captured (Step 25) and the active template (Step 27). It
+  does **not** analyse the live screen, the cursor position,
+  or the keyboard.
+- ClickFlow still does **not** click anywhere. The
+  `image_click` action preview is text only.
+- `realMatching = false` and `realClick = false` invariants
+  hold because the engine analyses the captured preview, not
+  the OS screen, and because no click is ever submitted.
+
+### 13.2 Algorithmic limits
+- Plain-JS algorithm (mean RGB absolute difference). Runs at
+  ~ 8–16 million pixel comparisons per second on a typical
+  laptop. Fine for small previews and small templates;
+  noticeably slower on very large inputs.
+- Big previews are **downscaled** to ≤ 1200×800 before
+  matching. Big templates are **downscaled** to ≤ 320×320.
+  The bounding box returned to the UI is mapped back to the
+  original preview coordinates.
+- The cost guard may raise the effective step when the
+  estimated comparison count exceeds 16 M. The result's
+  `step` shows the actual step used; `requestedStep` shows
+  what the user asked for.
+- The algorithm is **not** rotation-, scale-, or
+  illumination-invariant. It compares pixels at the requested
+  position only.
+- The engine runs synchronously inside one tick; the renderer
+  becomes briefly unresponsive on very large previews. The
+  cost guard is the bound on that delay.
+
+### 13.3 No OpenCV yet
+- `package.json` declares zero of `opencv4nodejs`,
+  `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`,
+  `jimp`, `pixelmatch`, `looks-same`. The smoke check
+  enforces this. A future step may add a native /
+  main-process matcher behind the existing
+  `runTemplateMatch` signature; until then the renderer-side
+  engine is the only matcher.
+
+### 13.4 Mode coexistence with the Step 28 mock
+- The Mock mode from Step 28 is **kept**. Users can switch
+  between `Mock` and `Real preview` from the new Match mode
+  selector. The result shapes are identical so the renderer
+  renders both through the same code.
