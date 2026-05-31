@@ -68,7 +68,16 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   TemplateMetadataUpdated:          'template.metadata.updated',
   TemplateSelected:                 'template.selected',
   TemplateDeleted:                  'template.deleted',
-  TemplateReset:                    'template.reset'
+  TemplateReset:                    'template.reset',
+  // Step 28: template matching mock / dry-run events.
+  // Payloads carry only ids, numeric metadata (confidence, target
+  // point, bounding box dimensions) and short reasons — never an
+  // imageDataUrl, never a thumbnail, never a screenshot.
+  TemplateMatchMockRequested:       'template.match.mock.requested',
+  TemplateMatchMockCompleted:       'template.match.mock.completed',
+  TemplateMatchMockFailed:          'template.match.mock.failed',
+  TemplateMatchMockCleared:         'template.match.mock.cleared',
+  ImageClickPreviewCreated:         'image.click.preview.created'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

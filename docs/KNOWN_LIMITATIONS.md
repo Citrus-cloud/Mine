@@ -377,3 +377,63 @@ anchored clicks. The MVP intentionally stops at storage.
 ### 11.9 No mobile platforms
 - Templates remain a desktop-only feature, in line with the
   rest of the app.
+
+
+
+---
+
+## 12. Template matching is mock only (Step 28)
+
+Step 28 introduces a [Template Matching Mock / Dry-run](./TEMPLATE_MATCHING_MOCK.md)
+pipeline. Despite the name, **no real image matching happens** in
+`0.1.x`. The pipeline:
+
+- consumes the screen-capture preview (Step 25), the active
+  template (Step 27), and an optional region (Step 26);
+- produces a deterministic mock match record + a planned
+  `image_click` action preview;
+- renders a bounding box and a target point on top of the preview.
+
+It does **not**:
+
+- decode any pixel of the screenshot or of the template;
+- compare any pixel against any other pixel;
+- run any image-recognition / template-matching / OCR backend;
+- execute any cursor movement or click on the matched location;
+- accept the `image_click` action type in scenarios.
+
+### 12.1 Why it is "mock only"
+
+ClickFlow's safety contract gates **all** real matchers and real
+input through [`docs/REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md).
+Until that gate opens, the matcher remains mock. Smoke check
+enforces that `package.json` declares zero of `tesseract`,
+`tesseract.js`, `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`,
+`sharp`, `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`,
+`nutjs`, `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+`node-key-sender`.
+
+### 12.2 The action preview is text-only
+
+The `image_click` action preview is rendered through
+`<pre>.textContent`. It is **not** submitted to the click engine,
+the action pipeline, the mock adapter, or the dry-run sandbox.
+Step 28 stops at the visual representation of the future shape.
+
+### 12.3 No persistence
+
+The mock result lives only in `appState.templateMatching.lastResult`
+(renderer memory). It does **not** survive an app restart, and it
+is **never** written to disk.
+
+### 12.4 No multi-match, no top-N candidates
+
+The mock returns exactly one bounding box per run.
+Top-N candidate matches, multi-match search, and "find all
+occurrences" are out of scope for `0.1.x`.
+
+### 12.5 No cross-platform divergence
+
+The mock pipeline is identical on Windows / macOS / Linux. There
+is no per-OS code path; every platform receives the same
+deterministic result for the same input.

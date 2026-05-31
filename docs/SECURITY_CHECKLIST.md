@@ -319,3 +319,85 @@ beta-MVP safety invariants.
 See [`docs/TEMPLATE_ASSETS.md`](./TEMPLATE_ASSETS.md) for the full
 description, the storage model, and the list of features that are
 **not** implemented in Step 27.
+
+
+
+## Template matching mock (Step 28)
+
+Step 28 introduces a mock / dry-run pipeline that wires the Step
+25 preview, the Step 26 region, and the Step 27 templates into a
+deterministic mock match. The checks below confirm that the new
+code does not weaken any of the beta-MVP safety invariants.
+
+### Pipeline-level invariants
+- [x] **Mock matching only.** `src/template-matching-mock.js` is
+      pure logic. It never decodes a single pixel and never
+      reads any image bytes. `runMockTemplateMatch` consumes
+      only widths, heights, ids, and rectangles.
+- [x] **No OpenCV / opencv.js / opencv4nodejs / @u4/opencv4nodejs.**
+      `package.json` declares zero of these dependencies at Step
+      28. Verified by `npm run smoke`.
+- [x] **No OCR / Tesseract / tesseract.js.** Same.
+- [x] **No real clicks.** The action preview produced by
+      `createImageClickActionPreview` is rendered as text only.
+      The click engine, the action pipeline, the mock adapter,
+      and the dry-run sandbox do not recognise the
+      `image_click` action type.
+- [x] **`image_click` scenario action is not executed.**
+      `realActionsImplemented=false`,
+      `realActionsAllowed=false`,
+      `imageClickScenarioImplemented=false` hold across every
+      status response and audit event at Step 28.
+
+### Renderer-level invariants
+- [x] The matcher and the matching UI never `require('electron')`
+      or `ipcRenderer.invoke`. They live entirely in the renderer.
+- [x] All user-visible strings render via `textContent`.
+      `innerHTML` is used only as `= ''` (container clear).
+- [x] The visual overlay uses `<img>.src` for the preview
+      backdrop and absolutely-positioned `<div>` elements for
+      the bounding box, the target point, and the region. No
+      SVG, no canvas, no inline `<script>` injection.
+- [x] The action preview JSON is rendered through
+      `<pre>.textContent`. No `JSON.parse` of user-controlled
+      input ever feeds back into the DOM as HTML.
+
+### Storage-level invariants
+- [x] The mock match result lives ONLY in
+      `appState.templateMatching.lastResult`. Renderer process
+      memory only; never persisted to `templates.json`,
+      `settings.json`, `scenarios.json`, `profiles.json`, or
+      `localStorage`.
+- [x] The slice carries metadata only — no `imageDataUrl`, no
+      thumbnails, no pixel buffers. `_cloneTemplateMatchInput`
+      / `_cloneTemplateMatchResult` strip any unexpected
+      pixel-bearing fields a buggy caller might pass.
+- [x] No new IPC channel is registered for matching at Step 28.
+      The renderer does not gain any new privilege over the
+      operating system.
+
+### Audit invariants
+- [x] All five new audit-event types
+      (`template.match.mock.requested`,
+      `template.match.mock.completed`,
+      `template.match.mock.failed`,
+      `template.match.mock.cleared`,
+      `image.click.preview.created`) are part of the frozen
+      `AUDIT_EVENT_TYPES` allowlist.
+- [x] Payloads carry only ids and numeric metadata
+      (confidence, target X / Y, bounding-box width / height,
+      `usedRegion: bool`). Never an `imageDataUrl`, never a
+      thumbnail, never a screenshot.
+
+### Electron-security invariants (re-checked at Step 28)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no
+      `unsafe-eval`, no remote sources.
+- [x] `preload.js` does not gain any new namespace at Step 28
+      (matching is renderer-only).
+
+See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md)
+for the full description, the input / output contracts, and the
+list of features that are **not** implemented at Step 28.

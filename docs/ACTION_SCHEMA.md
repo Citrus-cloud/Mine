@@ -346,3 +346,56 @@ When the gate opens, the matcher will:
 | Action Type   | Status                                                                                  |
 |---------------|------------------------------------------------------------------------------------------|
 | `image_click` | ❌ Planned (requires template matcher + Step 27 storage). Stored ASSETS already exist.   |
+
+
+
+---
+
+## Step 28 — `image_click` action preview (still mock / not executed)
+
+[Step 28](./TEMPLATE_MATCHING_MOCK.md) materialises the **shape**
+of the planned `image_click` action through
+`createImageClickActionPreview(match)`. The result is rendered in
+the new Advanced → **Template Matching** tab as a JSON-like text
+block, never as HTML. The click engine, the action pipeline, the
+mock adapter, and the dry-run sandbox **still do not understand
+`image_click`** — Step 28 stops at the preview.
+
+```json
+{
+  "type":         "image_click",
+  "mode":         "preview",
+  "templateId":   "template-<unix-ms>-<8 hex bytes>",
+  "templateName": "Submit button",
+  "targetPoint":  { "x": 320, "y": 180 },
+  "boundingBox":  { "x": 256, "y": 148, "width": 128, "height": 64 },
+  "confidence":   0.87,
+  "usedRegion":   null,
+  "realClick":    false,
+  "realMatching": false,
+  "note":         "Preview only. Not executed by the click engine."
+}
+```
+
+| Field          | Type     | Description                                                                |
+|----------------|----------|----------------------------------------------------------------------------|
+| `type`         | string   | Always `"image_click"`. Recognised only as a preview at Step 28.           |
+| `mode`         | string   | Always `"preview"` at Step 28. Real execution requires the future matcher. |
+| `templateId`   | string   | Id of a stored template asset (Step 27).                                   |
+| `templateName` | string   | Display name copied from the template asset.                               |
+| `targetPoint`  | object   | `{ x, y }` — the center of the mock bounding box.                          |
+| `boundingBox`  | object   | `{ x, y, width, height }` produced by the mock pipeline.                   |
+| `confidence`   | number   | Mock confidence, deterministic from the input metadata, in `[0, 1]`.       |
+| `usedRegion`   | object?  | Optional Step-26 region used to scope the search.                          |
+| `realClick`    | boolean  | Always `false` at Step 28. The click engine does not consume this preview. |
+| `realMatching` | boolean  | Always `false` at Step 28.                                                 |
+| `note`         | string   | Human-readable reminder that this is a preview, not an action.             |
+
+When the [real-actions go/no-go](./REAL_ACTIONS_GO_NO_GO.md) gate
+opens, the same shape will be promoted to a real
+`scenario.actions[i]` entry validated by `click-engine` /
+`action-pipeline`. Step 28's preview defines the wire format.
+
+| Action Type    | Status                                                                                        |
+|----------------|------------------------------------------------------------------------------------------------|
+| `image_click`  | ❌ Planned. Step 27 storage + Step 28 mock match preview. Real matcher and execution still gated. |

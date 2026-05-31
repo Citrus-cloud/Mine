@@ -59,6 +59,21 @@ const appState = {
     isLoading: false,
     lastError: null
   },
+  // Step 28 — Template Matching Mock / Dry-run. Renderer-side
+  // memory only. `lastInput` carries plain-data references to the
+  // current preview (sourceId / size only — never imageDataUrl)
+  // and active template (id / name / size only — never
+  // previewDataUrl). `lastResult` is a mock match record produced
+  // by `runMockTemplateMatch` in `template-matching-mock.js` —
+  // numbers and ids only, no pixel buffers. Nothing here ever
+  // crosses an IPC boundary or hits the disk.
+  templateMatching: {
+    lastInput: null,
+    lastResult: null,
+    isRunning: false,
+    lastError: null,
+    lastRunAt: null
+  },
   settings: {
     language: "ru",
     theme: "system",
@@ -103,6 +118,13 @@ function getState() {
       activeTemplateId: appState.templates.activeTemplateId,
       isLoading:        appState.templates.isLoading,
       lastError:        appState.templates.lastError
+    },
+    templateMatching: {
+      lastInput:  appState.templateMatching.lastInput  ? _cloneTemplateMatchInput(appState.templateMatching.lastInput)   : null,
+      lastResult: appState.templateMatching.lastResult ? _cloneTemplateMatchResult(appState.templateMatching.lastResult) : null,
+      isRunning:  appState.templateMatching.isRunning,
+      lastError:  appState.templateMatching.lastError,
+      lastRunAt:  appState.templateMatching.lastRunAt
     },
     settings: {
       ...appState.settings,
@@ -319,4 +341,118 @@ function resetTemplatesState() {
   appState.templates.activeTemplateId = null;
   appState.templates.isLoading = false;
   appState.templates.lastError = null;
+}
+
+
+
+// --- Step 28: Template matching mock / dry-run state (renderer memory only) ---
+// All mutators accept loose / null inputs and never throw; invalid
+// values collapse to safe defaults. The renderer is the only writer
+// and it goes through these helpers (it never touches
+// appState.templateMatching directly) so the slice stays
+// serialisable.
+//
+// IMPORTANT: nothing in this slice ever holds a screenshot, a
+// thumbnail, or any pixel buffer. The shapes that are accepted
+// here are limited to plain-data metadata. If a buggy caller
+// passes an `imageDataUrl` field we strip it via the cloning
+// helpers below so the slice stays clean.
+function setTemplateMatchingInput(input) {
+  if (input && typeof input === 'object') {
+    appState.templateMatching.lastInput = _cloneTemplateMatchInput(input);
+  } else {
+    appState.templateMatching.lastInput = null;
+  }
+}
+function setTemplateMatchingResult(result) {
+  if (result && typeof result === 'object') {
+    appState.templateMatching.lastResult = _cloneTemplateMatchResult(result);
+    if (typeof result.createdAt === 'string') {
+      appState.templateMatching.lastRunAt = result.createdAt;
+    } else {
+      appState.templateMatching.lastRunAt = new Date().toISOString();
+    }
+  } else {
+    appState.templateMatching.lastResult = null;
+  }
+}
+function setTemplateMatchingRunning(isRunning) {
+  appState.templateMatching.isRunning = !!isRunning;
+}
+function setTemplateMatchingError(error) {
+  appState.templateMatching.lastError = (typeof error === 'string' && error.length > 0) ? error : null;
+}
+function clearTemplateMatchingResult() {
+  appState.templateMatching.lastResult = null;
+  appState.templateMatching.lastError  = null;
+}
+function resetTemplateMatchingState() {
+  appState.templateMatching.lastInput  = null;
+  appState.templateMatching.lastResult = null;
+  appState.templateMatching.isRunning  = false;
+  appState.templateMatching.lastError  = null;
+  appState.templateMatching.lastRunAt  = null;
+}
+
+// Strip pixel-bearing fields and return a plain-data clone. Defence
+// in depth — the matching mock already drops `imageDataUrl` /
+// `previewDataUrl`, but if a buggy caller passes them we never let
+// them reach the slice or the diagnostics output.
+function _cloneTemplateMatchInput(input) {
+  if (!input || typeof input !== 'object') return null;
+  var out = {};
+  if (input.screenPreview && typeof input.screenPreview === 'object') {
+    out.screenPreview = {
+      sourceId:   typeof input.screenPreview.sourceId === 'string' ? input.screenPreview.sourceId : '',
+      name:       typeof input.screenPreview.name === 'string' ? input.screenPreview.name : '',
+      type:       typeof input.screenPreview.type === 'string' ? input.screenPreview.type : 'screen',
+      width:      Number(input.screenPreview.width)  || 0,
+      height:     Number(input.screenPreview.height) || 0,
+      capturedAt: typeof input.screenPreview.capturedAt === 'string' ? input.screenPreview.capturedAt : ''
+    };
+  } else {
+    out.screenPreview = null;
+  }
+  if (input.template && typeof input.template === 'object') {
+    out.template = {
+      id:     typeof input.template.id === 'string' ? input.template.id : '',
+      name:   typeof input.template.name === 'string' ? input.template.name : '',
+      width:  Number(input.template.width)  || 0,
+      height: Number(input.template.height) || 0
+    };
+  } else {
+    out.template = null;
+  }
+  if (input.region && typeof input.region === 'object') {
+    out.region = {
+      x:      Number(input.region.x)      || 0,
+      y:      Number(input.region.y)      || 0,
+      width:  Number(input.region.width)  || 0,
+      height: Number(input.region.height) || 0
+    };
+  } else {
+    out.region = null;
+  }
+  return out;
+}
+
+function _cloneTemplateMatchResult(result) {
+  if (!result || typeof result !== 'object') return null;
+  return {
+    id:           typeof result.id === 'string' ? result.id : '',
+    mode:         typeof result.mode === 'string' ? result.mode : 'mock',
+    matched:      !!result.matched,
+    confidence:   typeof result.confidence === 'number' ? result.confidence : 0,
+    boundingBox:  result.boundingBox ? { ...result.boundingBox } : null,
+    targetPoint:  result.targetPoint ? { ...result.targetPoint } : null,
+    usedRegion:   result.usedRegion  ? { ...result.usedRegion }  : null,
+    templateId:   typeof result.templateId === 'string' ? result.templateId : '',
+    templateName: typeof result.templateName === 'string' ? result.templateName : '',
+    sourceId:     typeof result.sourceId === 'string' ? result.sourceId : '',
+    sourceName:   typeof result.sourceName === 'string' ? result.sourceName : '',
+    previewSize:  result.previewSize ? { ...result.previewSize } : null,
+    createdAt:    typeof result.createdAt === 'string' ? result.createdAt : '',
+    realMatching: false,
+    realClick:    false
+  };
 }

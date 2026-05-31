@@ -291,3 +291,30 @@ Until then, the region selector is read-only and inert.
   `docs/SMOKE_TESTS.md` — Step 26 entries.
 - `README.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md` — Step 26 entries.
 - `scripts/smoke-check.js` — Step 26 invariants.
+
+
+
+---
+
+## Step 28 — Region scopes the mock matcher
+
+Step 28 introduces a [Template Matching Mock / Dry-run](./TEMPLATE_MATCHING_MOCK.md)
+that consumes the optional region from
+`appState.regionSelector.normalizedRegion`. When a region is
+present:
+
+- the mock bounding box is constructed **inside** the region
+  (centered, capped to half the region's width / height on each
+  axis so it always fits visibly);
+- the mock target point is the center of that bounding box;
+- the visual overlay renders the region as a dashed rectangle
+  underneath the (solid) match rectangle so the user can tell
+  the search area apart from the match.
+
+The region is still preview-anchored: clearing the screen-capture
+preview clears the region selector AND the matching result.
+Scenarios that already have a region attached via
+`scenario.settings.region` remain untouched — the click engine
+ignores the field, exactly like in Step 26.
+
+See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md).

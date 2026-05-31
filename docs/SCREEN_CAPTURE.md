@@ -226,3 +226,26 @@ spaces, and how regions are attached (optionally) to scenarios as
 `settings.region`. Step 26 still ships **no real clicks, no OCR,
 no image matching, and no on-disk screenshot persistence** — those
 remain blocked by the existing safety contract.
+
+
+
+---
+
+## Step 28 — Preview is reused by the mock matcher
+
+Step 28 introduces a [Template Matching Mock / Dry-run](./TEMPLATE_MATCHING_MOCK.md)
+tab that **reads** the latest screen-capture preview (size +
+sourceId only — never the imageDataUrl) and produces a mock
+match result on top of it. The contract from Step 25 is unchanged:
+
+- screenshots are still preview-only and **never** written to disk;
+- the mock matcher does NOT decode the imageDataUrl — it only uses
+  `preview.width / height / sourceId` to clamp the bounding box;
+- the renderer reuses the preview backdrop (`<img>.src` only) so
+  the user sees the bounding box and target point overlaid on the
+  same picture they captured.
+
+Clearing the preview clears the matching result too — preview-
+space coordinates are no longer meaningful without an image.
+
+See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md).

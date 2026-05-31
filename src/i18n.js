@@ -533,7 +533,37 @@ const translations = {
     templateNameTooLong: "Название шаблона слишком длинное",
     templateDescriptionTooLong: "Описание слишком длинное",
     screenMatchingNotImplemented: "Поиск шаблона на скриншоте не реализован",
-    templateMatchingPlanned: "Поиск шаблона запланирован"
+    templateMatchingPlanned: "Поиск шаблона запланирован",
+
+    // Step 28: template matching mock / dry-run
+    templateMatching: "Поиск шаблона",
+    mockTemplateMatching: "Mock / dry-run",
+    runMockMatch: "Запустить mock-поиск",
+    clearMatchResult: "Очистить результат",
+    matchResult: "Результат поиска",
+    matchConfidence: "Достоверность",
+    boundingBox: "Bounding box",
+    targetPoint: "Target point",
+    usedRegion: "Использованная область",
+    actionPreview: "Предпросмотр действия",
+    imageClickPreview: "Предпросмотр image_click",
+    realMatchingDisabled: "Настоящий поиск отключён",
+    realClickDisabled: "Настоящий клик отключён",
+    mockMatchNotice: "Это mock/dry-run. Настоящее распознавание изображений и клики пока не выполняются.",
+    screenPreviewRequired: "Требуется screenshot preview",
+    activeTemplateRequired: "Требуется активный шаблон",
+    regionOptional: "Регион (опционально)",
+    matchInputSummary: "Текущие входные данные",
+    noMatchResult: "Результата ещё нет.",
+    mockMatchCompleted: "Mock-поиск завершён",
+    mockMatchFailed: "Mock-поиск не удался",
+    mockMatchCleared: "Результат очищен",
+    visualMatchOverlay: "Визуальный overlay",
+    realImageRecognitionNotImplemented: "Настоящее image recognition не реализовано",
+    imageClickScenarioPlanned: "Сценарный action image_click запланирован",
+    templateMatchingDiagnostics: "Поиск шаблона (mock)",
+    lastRunAt: "Последний запуск",
+    lastResult: "Последний результат"
   },
   en: {
     // Main screen
@@ -1067,7 +1097,37 @@ const translations = {
     templateNameTooLong: "Template name is too long",
     templateDescriptionTooLong: "Template description is too long",
     screenMatchingNotImplemented: "Screen matching not implemented",
-    templateMatchingPlanned: "Template matching planned"
+    templateMatchingPlanned: "Template matching planned",
+
+    // Step 28: template matching mock / dry-run
+    templateMatching: "Template Matching",
+    mockTemplateMatching: "Mock / dry-run",
+    runMockMatch: "Run mock match",
+    clearMatchResult: "Clear result",
+    matchResult: "Match result",
+    matchConfidence: "Confidence",
+    boundingBox: "Bounding box",
+    targetPoint: "Target point",
+    usedRegion: "Used region",
+    actionPreview: "Action preview",
+    imageClickPreview: "image_click preview",
+    realMatchingDisabled: "Real matching disabled",
+    realClickDisabled: "Real click disabled",
+    mockMatchNotice: "This is a mock/dry-run. Real image recognition and clicks are not performed yet.",
+    screenPreviewRequired: "Screen preview required",
+    activeTemplateRequired: "Active template required",
+    regionOptional: "Region (optional)",
+    matchInputSummary: "Current input",
+    noMatchResult: "No match result yet.",
+    mockMatchCompleted: "Mock match completed",
+    mockMatchFailed: "Mock match failed",
+    mockMatchCleared: "Mock result cleared",
+    visualMatchOverlay: "Visual overlay",
+    realImageRecognitionNotImplemented: "Real image recognition is not implemented",
+    imageClickScenarioPlanned: "image_click scenario action is planned",
+    templateMatchingDiagnostics: "Template matching (mock)",
+    lastRunAt: "Last run at",
+    lastResult: "Last result"
   }
 };
 
