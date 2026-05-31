@@ -145,6 +145,18 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   OcrProviderSelectionBlocked:      'ocr.provider.selection.blocked',
   OcrProviderMockActive:            'ocr.provider.mock.active',
   OcrProviderRealUnavailable:       'ocr.provider.real.unavailable',
+  // Step 39 — Real OCR Provider Integration Phase 1.
+  // Tesseract readiness check + selection events. Payloads carry
+  // only flag booleans, error counts, stable reason ids, and timing
+  // — never the full target text, never an `imageDataUrl`, never
+  // PII. Real OCR never auto-runs. Real OCR is hard-stopped by
+  // the feature flag.
+  OcrTesseractReadinessRequested:   'ocr.tesseract.readiness.requested',
+  OcrTesseractReadinessCompleted:   'ocr.tesseract.readiness.completed',
+  OcrTesseractReadinessFailed:      'ocr.tesseract.readiness.failed',
+  OcrTesseractBlockedByFeatureFlag: 'ocr.tesseract.blockedByFeatureFlag',
+  OcrProviderTesseractDetected:     'ocr.provider.tesseract.detected',
+  OcrProviderTesseractUnavailable:  'ocr.provider.tesseract.unavailable',
   TextClickPreviewCreated:          'text.click.preview.created',
   // Step 33: text_click scenario type. Payloads carry only ids,
   // numeric metadata (confidence, target X / Y, durationMs),

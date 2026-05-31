@@ -1,22 +1,25 @@
 // =====================================================================
-// ClickFlow — src/ocr-provider-registry.js (Step 38)
+// ClickFlow — src/ocr-provider-registry.js (Step 38, extended at Step 39)
 // ---------------------------------------------------------------------
 // Pure-renderer module that holds the OCR provider registry.
 //
-// At Step 38 the registry knows two providers:
-//   1. `mock`      — implemented (Step 32). Always active.
-//   2. `tesseract` — PLANNED. Marked unavailable. Selecting it via
-//                    `setActiveOcrProvider('tesseract')` is BLOCKED
-//                    and emits an audit event.
+// At Step 39 the registry knows two providers:
+//   1. `mock`      — implemented (Step 32). Always active by default.
+//   2. `tesseract` — Phase-1 shell (Step 39). The dependency is
+//                    declared in `package.json` and the provider
+//                    module ships in `src/tesseract-ocr-provider.js`,
+//                    but selection stays BLOCKED unless BOTH the
+//                    `realOcr` AND `tesseractProvider` feature flags
+//                    are true. Both flags are hard-coded `false` in
+//                    `src/feature-flags.js`.
 //
-// SAFETY (Step 38):
-//   - This module NEVER runs OCR. It does not import the mock engine
-//     directly — it only references it indirectly via the global
-//     `runMockOcr` symbol the renderer already loads.
+// SAFETY (Step 39):
+//   - This module NEVER runs OCR.
 //   - This module NEVER imports `tesseract`, `tesseract.js`,
 //     `tesseract-ocr`, `node-tesseract-ocr`, OpenCV, sharp, jimp,
 //     pixelmatch, looks-same, robotjs, nut.js, iohook, uiohook-napi,
-//     or any other prohibited module.
+//     or any other prohibited module. It dispatches via the renderer
+//     globals exposed by `src/tesseract-ocr-provider.js`.
 //   - This module NEVER opens a new IPC channel.
 //   - Self-test runs the mock provider only and uses pre-cooked
 //     metadata. No screenshot is captured during the self-test.
@@ -27,6 +30,7 @@
 //   - getActiveOcrProvider()
 //   - setActiveOcrProvider(id)
 //   - getOcrProviderRegistryStatus()
+//   - getTesseractProviderStatus()           // Step 39
 //   - isRealOcrProviderRegistered()
 //   - runOcrProviderSelfTest()
 //   - runActiveOcrProvider(input)            // thin dispatcher
@@ -34,8 +38,9 @@
 
 'use strict';
 
-// Frozen provider definitions. Mutating these is impossible by
-// design — `getOcrProviders()` returns deep copies.
+// Frozen base provider definitions. The dynamic state — whether the
+// tesseract entry is currently selectable — is computed at read-time
+// from the feature flags + the Step-39 provider shell.
 var _PROVIDERS = Object.freeze([
   Object.freeze({
     id: 'mock',
@@ -45,17 +50,22 @@ var _PROVIDERS = Object.freeze([
     realOcr: false,
     active: true,
     planned: false,
+    enabledByFeatureFlag: true,
     disabledReason: null
   }),
   Object.freeze({
     id: 'tesseract',
     name: 'Tesseract OCR Provider',
     type: 'real',
+    // Base availability is `false`; the real value is computed by
+    // `_isTesseractSelectable()` from the feature flags + the
+    // Step-39 provider shell.
     available: false,
     realOcr: true,
     active: false,
-    planned: true,
-    disabledReason: 'Real OCR is not connected in this build'
+    planned: false,
+    enabledByFeatureFlag: false,
+    disabledReason: 'Tesseract OCR provider is installed but disabled by feature flag'
   })
 ]);
 
@@ -75,15 +85,67 @@ function getOcrProviders() {
 }
 
 function _cloneProvider(p) {
+  // Compute Step-39 dynamic fields. The base entry holds the safe
+  // defaults; here we project the runtime view used by the UI.
+  var available, enabledByFeatureFlag, disabledReason;
+  if (p.id === 'tesseract') {
+    var sel = _evaluateTesseractSelectability();
+    available = sel.selectable;
+    enabledByFeatureFlag = sel.flagsAllow;
+    disabledReason = sel.reasonText || p.disabledReason;
+  } else {
+    available = !!p.available;
+    enabledByFeatureFlag = !!p.enabledByFeatureFlag;
+    disabledReason = p.disabledReason || null;
+  }
   return {
     id: p.id,
     name: p.name,
     type: p.type,
-    available: !!p.available,
+    available: available,
     realOcr: !!p.realOcr,
-    active: p.id === _activeProviderId && !!p.available,
+    active: p.id === _activeProviderId && available,
     planned: !!p.planned,
-    disabledReason: p.disabledReason || null
+    enabledByFeatureFlag: enabledByFeatureFlag,
+    disabledReason: disabledReason
+  };
+}
+
+// Step 39 helper. Tesseract is selectable only when:
+//   - `realOcr` flag is true,
+//   - `tesseractProvider` flag is true,
+//   - the provider shell reports the engine as loadable.
+// Returns:
+//   {
+//     selectable: boolean,
+//     flagsAllow: boolean,
+//     engineLoadable: boolean,
+//     reason: stableId | null,
+//     reasonText: string | null
+//   }
+function _evaluateTesseractSelectability() {
+  var status = (typeof getOcrFeatureStatus === 'function')
+    ? getOcrFeatureStatus()
+    : { realOcr: false, tesseractProvider: false, simulationOnly: true };
+  var flagsAllow = !!status.realOcr && !!status.tesseractProvider && status.simulationOnly !== true;
+  var engineLoadable = (typeof isTesseractProviderAvailable === 'function')
+    ? !!isTesseractProviderAvailable() : false;
+  var selectable = flagsAllow && engineLoadable;
+  var reason = null;
+  var reasonText = null;
+  if (!flagsAllow) {
+    reason = 'realOcrBlockedByFeatureFlag';
+    reasonText = 'Tesseract OCR provider is installed but disabled by feature flag';
+  } else if (!engineLoadable) {
+    reason = 'tesseractEngineNotLoadable';
+    reasonText = 'Tesseract OCR provider is enabled but the engine is not loadable in this build';
+  }
+  return {
+    selectable: selectable,
+    flagsAllow: flagsAllow,
+    engineLoadable: engineLoadable,
+    reason: reason,
+    reasonText: reasonText
   };
 }
 
@@ -128,23 +190,46 @@ function setActiveOcrProvider(id) {
     _emitAudit('ocr.provider.selection.blocked', { requestedId: String(id || ''), reason: 'providerNotFound' });
     return { ok: false, error: { id: 'providerNotFound', message: 'Unknown OCR provider id.' } };
   }
-  // Hard-stop: any "real" provider is blocked at Step 38.
+  // Step 39: real providers are gated by both the umbrella `realOcr`
+  // flag and the per-provider `tesseractProvider` flag. Without both
+  // the selection is BLOCKED. The active provider stays `mock`.
   if (target.realOcr || target.type === 'real') {
-    _emitAudit('ocr.provider.selection.blocked', {
-      requestedId: target.id, reason: 'realOcrBlocked', planned: !!target.planned
-    });
-    _emitAudit('ocr.provider.real.unavailable', {
-      requestedId: target.id, planned: !!target.planned
-    });
-    return {
-      ok: false,
-      error: {
-        id: 'realOcrBlocked',
-        message: 'Real OCR providers are not connected in this build. Mock provider remains active.'
-      }
-    };
+    var sel = (target.id === 'tesseract')
+      ? _evaluateTesseractSelectability()
+      : { selectable: false, flagsAllow: false, engineLoadable: false, reason: 'realOcrBlocked' };
+    if (!sel.selectable) {
+      var blockReason = sel.reason === 'tesseractEngineNotLoadable'
+        ? 'tesseractEngineNotLoadable'
+        : 'realOcrBlockedByFeatureFlag';
+      _emitAudit('ocr.provider.selection.blocked', {
+        requestedId: target.id,
+        reason: blockReason,
+        flagsAllow: !!sel.flagsAllow,
+        engineLoadable: !!sel.engineLoadable
+      });
+      _emitAudit('ocr.provider.real.unavailable', {
+        requestedId: target.id,
+        flagsAllow: !!sel.flagsAllow,
+        engineLoadable: !!sel.engineLoadable
+      });
+      // Backwards-compat: keep the historical `realOcrBlocked`
+      // error id for tests / callers that already check it.
+      return {
+        ok: false,
+        error: {
+          id: 'realOcrBlocked',
+          reason: blockReason,
+          message: blockReason === 'tesseractEngineNotLoadable'
+            ? 'Tesseract OCR provider is enabled but the engine is not loadable in this build.'
+            : 'Real OCR providers are disabled by feature flag. Mock provider remains active.'
+        }
+      };
+    }
+    // Flags + engine both allow it — accept the switch. Step 40+
+    // will exercise this branch; at Step 39 the flags refuse, so
+    // we never reach here in production.
   }
-  if (!target.available) {
+  if (target.id !== 'tesseract' && !target.available) {
     _emitAudit('ocr.provider.selection.blocked', { requestedId: target.id, reason: 'providerUnavailable' });
     return {
       ok: false,
@@ -176,7 +261,8 @@ function getOcrProviderRegistryStatus() {
     activeProviderName:         active ? active.name : null,
     mockProviderAvailable:      !!(mock && mock.available),
     tesseractProviderAvailable: !!(tess && tess.available),
-    realOcrEnabled:             false,                // hard-coded false at Step 38
+    tesseractProviderEnabled:   !!(tess && tess.enabledByFeatureFlag),
+    realOcrEnabled:             _isRealOcrAllowedFromFlags(),
     realOcrAllowed:             _isRealOcrAllowedFromFlags(),
     supportedLanguages:         contract ? contract.supportedLanguages.slice() : ['ru', 'en', 'ru+en'],
     supportedProviders:         contract ? contract.supportedProviders.slice() : ['mock'],
@@ -186,6 +272,46 @@ function getOcrProviderRegistryStatus() {
     storesImages:               false,
     requiresUserAction:         true,
     realClick:                  false
+  };
+}
+
+// Step 39 — Tesseract-specific status for the OCR readiness card +
+// diagnostics line. Combines the registry view of the provider with
+// the live shell readiness.
+function getTesseractProviderStatus() {
+  var entry = null;
+  for (var i = 0; i < _PROVIDERS.length; i++) {
+    if (_PROVIDERS[i].id === 'tesseract') { entry = _PROVIDERS[i]; break; }
+  }
+  if (!entry) {
+    return {
+      registered: false,
+      available: false,
+      enabledByFeatureFlag: false,
+      realOcr: true,
+      disabledReason: 'Tesseract entry not registered'
+    };
+  }
+  var sel = _evaluateTesseractSelectability();
+  var diag = (typeof getTesseractProviderDiagnostics === 'function')
+    ? getTesseractProviderDiagnostics() : null;
+  return {
+    registered: true,
+    available: sel.selectable,
+    enabledByFeatureFlag: sel.flagsAllow,
+    engineLoadable: sel.engineLoadable,
+    realOcr: true,
+    name: entry.name,
+    type: entry.type,
+    disabledReason: sel.reasonText || entry.disabledReason,
+    dependencyDeclared: diag ? !!diag.tesseractDependencyPresent : true,
+    realOcrFeatureFlag: diag ? !!diag.realOcrFeatureFlag : false,
+    tesseractProviderFlag: diag ? !!diag.tesseractProviderEnabled : false,
+    realOcrAutoRun: false,
+    activeProviderId: _activeProviderId,
+    lastReadinessCheck: diag ? diag.lastTesseractReadinessCheck : null,
+    lastError: diag ? diag.lastTesseractError : null,
+    realClick: false
   };
 }
 
@@ -203,11 +329,15 @@ function _isRealOcrAllowedFromFlags() {
 // 6. isRealOcrProviderRegistered()
 // =====================================================================
 
-// True iff a real provider is BOTH registered AND available. At
-// Step 38 this is ALWAYS false (the tesseract entry is unavailable).
+// True iff a real provider is BOTH registered AND currently available
+// per the runtime feature flags. At Step 39 this is `true` only when
+// the flags are flipped AND the engine is loadable, which by design
+// never happens in the production build.
 function isRealOcrProviderRegistered() {
   for (var i = 0; i < _PROVIDERS.length; i++) {
-    if (_PROVIDERS[i].realOcr && _PROVIDERS[i].available) return true;
+    if (!_PROVIDERS[i].realOcr) continue;
+    var clone = _cloneProvider(_PROVIDERS[i]);
+    if (clone.available) return true;
   }
   return false;
 }

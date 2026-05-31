@@ -1251,7 +1251,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step25Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -1599,7 +1599,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step26Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -2027,7 +2027,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step27Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -2357,7 +2357,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step28Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -2659,7 +2659,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step29Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -2944,7 +2944,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step30Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -3358,7 +3358,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step31Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -3792,7 +3792,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step32Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -4195,7 +4195,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step33Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -4628,7 +4628,7 @@ if (pkg) {
     pkg.optionalDependencies || {}
   );
   var step34Forbidden = [
-    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'tesseract-ocr', 'node-tesseract-ocr',
     'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
     'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
     'iohook', 'uiohook-napi', 'node-key-sender',
@@ -4908,6 +4908,10 @@ record(
 // 260. package.json still declares zero of the prohibited modules
 //      (re-checked at step 36 — adding Visual Builder must NOT
 //      pull in any new dependency).
+//      Step 39 update: `tesseract.js` / `tesseract` are now
+//      legitimately declared in package.json (Real OCR Phase 1
+//      dependency). Source-file imports of tesseract.js still
+//      stay banned in Visual Builder modules — see check #259.
 if (pkg) {
   var allDeps36 = Object.assign(
     {},
@@ -4915,9 +4919,11 @@ if (pkg) {
     pkg.devDependencies || {},
     pkg.optionalDependencies || {}
   );
-  var pkgForbidden36 = step36ForbiddenModules.filter(function (m) {
-    return Object.prototype.hasOwnProperty.call(allDeps36, m);
-  });
+  var pkgForbidden36 = step36ForbiddenModules
+    .filter(function (m) { return m !== 'tesseract.js' && m !== 'tesseract' && m !== 'tesseract-ocr' && m !== 'node-tesseract-ocr'; })
+    .filter(function (m) {
+      return Object.prototype.hasOwnProperty.call(allDeps36, m);
+    });
   record(
     'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 36',
     pkgForbidden36.length === 0,
@@ -5314,9 +5320,9 @@ record(
   regTxt.indexOf("id: 'mock'") !== -1
 );
 record(
-  "ocr-provider-registry.js declares the 'tesseract' provider as planned/unavailable",
+  "ocr-provider-registry.js declares the 'tesseract' provider with realOcr: true",
   regTxt.indexOf("id: 'tesseract'") !== -1 &&
-  /id:\s*'tesseract'[\s\S]*?available:\s*false[\s\S]*?planned:\s*true/.test(regTxt)
+  /id:\s*'tesseract'[\s\S]*?realOcr:\s*true/.test(regTxt)
 );
 record(
   'ocr-provider-registry.js setActiveOcrProvider blocks real providers with realOcrBlocked',
@@ -5363,6 +5369,10 @@ record(
 //      (re-checked at step 38 — adding the OCR provider registry
 //      must NOT pull in any new dependency, in particular
 //      tesseract / tesseract.js / opencv*).
+//      Step 39 update: `tesseract.js` / `tesseract` are now
+//      legitimately declared in package.json (Real OCR Phase 1
+//      dependency). Source-file imports of tesseract.js still
+//      stay banned in Step-38 modules — see check #281.
 if (pkg) {
   var allDeps38 = Object.assign(
     {},
@@ -5370,9 +5380,11 @@ if (pkg) {
     pkg.devDependencies || {},
     pkg.optionalDependencies || {}
   );
-  var pkgForbidden38 = step38ForbiddenModules.filter(function (m) {
-    return Object.prototype.hasOwnProperty.call(allDeps38, m);
-  });
+  var pkgForbidden38 = step38ForbiddenModules
+    .filter(function (m) { return m !== 'tesseract.js' && m !== 'tesseract' && m !== 'tesseract-ocr' && m !== 'node-tesseract-ocr'; })
+    .filter(function (m) {
+      return Object.prototype.hasOwnProperty.call(allDeps38, m);
+    });
   record(
     'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 38',
     pkgForbidden38.length === 0,
@@ -5573,6 +5585,324 @@ var nbpTxt38 = readText('docs/NEXT_BRANCH_PLAN.md');
 record(
   'docs/NEXT_BRANCH_PLAN.md notes Branch A progress at Step 38',
   /Step 38|Branch A.*progress/i.test(nbpTxt38)
+);
+
+// =====================================================================
+// Step 39 — Real OCR Provider Integration Phase 1
+// =====================================================================
+
+// 295. New Step 39 module exists on disk.
+record('Step 39 file exists: src/tesseract-ocr-provider.js',
+  fileExists('src/tesseract-ocr-provider.js'));
+
+// 296. New Step 39 doc exists on disk.
+record('Step 39 doc exists: docs/TESSERACT_PROVIDER.md',
+  fileExists('docs/TESSERACT_PROVIDER.md'));
+
+// 297. index.html loads the new <script src="…"> tag, between the
+//      OCR provider interface and the OCR provider registry, so the
+//      registry can call into the Tesseract shell.
+var htmlTxt39 = readText('src/index.html');
+var idx39Iface  = htmlTxt39.indexOf('ocr-provider-interface.js');
+var idx39Tess   = htmlTxt39.indexOf('tesseract-ocr-provider.js');
+var idx39Reg    = htmlTxt39.indexOf('ocr-provider-registry.js');
+var idx39OcrUi  = htmlTxt39.indexOf('ocr-ui.js');
+record('index.html loads tesseract-ocr-provider.js', idx39Tess !== -1);
+record(
+  'index.html loads tesseract-ocr-provider.js between the interface and the registry',
+  idx39Iface !== -1 && idx39Tess !== -1 && idx39Reg !== -1 &&
+  idx39Iface < idx39Tess && idx39Tess < idx39Reg
+);
+record(
+  'index.html loads tesseract-ocr-provider.js before ocr-ui.js',
+  idx39Tess !== -1 && idx39OcrUi !== -1 && idx39Tess < idx39OcrUi
+);
+
+// 298. tesseract-ocr-provider.js declares the public surface.
+var tessTxt = readText('src/tesseract-ocr-provider.js');
+[
+  'getTesseractProviderInfo',
+  'isTesseractProviderAvailable',
+  'checkTesseractProviderReadiness',
+  'runTesseractSelfTest',
+  'recognizeTextWithTesseract',
+  'normalizeTesseractResult',
+  'mapTesseractBlocks',
+  'terminateTesseractWorker',
+  'getTesseractProviderDiagnostics'
+].forEach(function (fn) {
+  record(
+    'tesseract-ocr-provider.js exports ' + fn,
+    new RegExp('function\\s+' + fn + '\\s*\\(').test(tessTxt)
+  );
+});
+record(
+  "tesseract-ocr-provider.js refuses recognise when realOcr/tesseractProvider are off",
+  /Real OCR provider is disabled by feature flag/.test(tessTxt) &&
+  /blocked:\s*true/.test(tessTxt)
+);
+record(
+  "tesseract-ocr-provider.js never returns realOcr: true unless OCR actually ran",
+  /realOcr:\s*false/.test(tessTxt)
+);
+
+// 299. The Step-39 provider module never imports any prohibited
+//      package directly. It MAY reference `tesseract.js` only via
+//      a defensive `require('tesseract.js')` wrapped in try/catch.
+//      All other prohibited modules are forbidden.
+var step39ForbiddenImports = [
+  'tesseract-ocr', 'node-tesseract-ocr',
+  'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi', 'node-key-sender'
+];
+var step39Found = [];
+step39ForbiddenImports.forEach(function (mod) {
+  var n1 = "require('" + mod + "')";
+  var n2 = 'require("' + mod + '")';
+  if (tessTxt.indexOf(n1) !== -1 || tessTxt.indexOf(n2) !== -1) step39Found.push(mod);
+});
+record(
+  'tesseract-ocr-provider.js does not require any forbidden module',
+  step39Found.length === 0,
+  step39Found.join(', ')
+);
+
+// 300. package.json declares tesseract.js (the only newly allowed
+//      dependency at Step 39) and still declares zero of the
+//      forbidden modules.
+if (pkg) {
+  var allDeps39 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  record(
+    'package.json declares tesseract.js as a dependency at Step 39',
+    Object.prototype.hasOwnProperty.call(allDeps39, 'tesseract.js')
+  );
+  var step39Forbidden = [
+    'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender'
+  ];
+  var pkgForbidden39 = step39Forbidden.filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps39, m);
+  });
+  record(
+    'package.json declares no OCR-engine / OpenCV / image-matching / real-input modules at step 39',
+    pkgForbidden39.length === 0,
+    pkgForbidden39.join(', ')
+  );
+}
+
+// 301. main.js / preload.js do not expose any ocr.tesseract.* IPC
+//      handler / API at step 39.
+var mainTxt39 = readText('main.js');
+record(
+  'main.js does not register any ocr.tesseract.* IPC handler at step 39',
+  !/'ocr\.tesseract\./.test(mainTxt39) && !/"ocr\.tesseract\./.test(mainTxt39)
+);
+record(
+  'main.js does not register any ocr.provider.* IPC handler at step 39',
+  !/'ocr\.provider\./.test(mainTxt39) && !/"ocr\.provider\./.test(mainTxt39)
+);
+var preloadTxt39 = readText('preload.js');
+record(
+  'preload.js does not expose any ocrTesseract* / tesseractProvider* API at step 39',
+  !/ocrTesseract[A-Z]/.test(preloadTxt39) && !/tesseractProvider[A-Z]/.test(preloadTxt39)
+);
+
+// 302. Electron security flags re-checked at step 39.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 39)',
+  /contextIsolation\s*:\s*true/.test(mainTxt39)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 39)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt39)
+);
+record(
+  'src/index.html CSP unchanged at step 39 (no unsafe-inline / unsafe-eval)',
+  htmlTxt39.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt39.indexOf('unsafe-inline') === -1 &&
+  htmlTxt39.indexOf('unsafe-eval') === -1
+);
+
+// 303. Audit allowlist contains the 6 new Step 39 types.
+var auditTxt39 = readText('src/audit-events.js');
+[
+  'ocr.tesseract.readiness.requested',
+  'ocr.tesseract.readiness.completed',
+  'ocr.tesseract.readiness.failed',
+  'ocr.tesseract.blockedByFeatureFlag',
+  'ocr.provider.tesseract.detected',
+  'ocr.provider.tesseract.unavailable'
+].forEach(function (eventType) {
+  record(
+    'audit allowlist includes ' + eventType,
+    auditTxt39.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 304. feature-flags.js keeps Step 39 safe defaults.
+var ffTxt39 = readText('src/feature-flags.js');
+record(
+  'feature-flags.js still declares realOcr: false at Step 39',
+  /realOcr:\s*false/.test(ffTxt39)
+);
+record(
+  'feature-flags.js still declares tesseractProvider: false at Step 39',
+  /tesseractProvider:\s*false/.test(ffTxt39)
+);
+record(
+  'feature-flags.js still declares ocrMockProvider: true at Step 39',
+  /ocrMockProvider:\s*true/.test(ffTxt39)
+);
+record(
+  'feature-flags.js still declares simulationOnly: true at Step 39',
+  /simulationOnly:\s*true/.test(ffTxt39)
+);
+record(
+  'feature-flags.js exports getOcrFeatureStatus',
+  /function\s+getOcrFeatureStatus\s*\(/.test(ffTxt39)
+);
+
+// 305. Registry honours Step 39 selection rule.
+record(
+  "ocr-provider-registry.js gates tesseract selection by both flags",
+  /_evaluateTesseractSelectability/.test(regTxt) &&
+  /flagsAllow/.test(regTxt) &&
+  /engineLoadable/.test(regTxt)
+);
+record(
+  "ocr-provider-registry.js exports getTesseractProviderStatus",
+  /function\s+getTesseractProviderStatus\s*\(/.test(regTxt)
+);
+
+// 306. ocr-ui.js renders the Step 39 provider status card and the
+//      Check Tesseract readiness button.
+var ocrUiTxt39 = readText('src/ocr-ui.js');
+record(
+  'ocr-ui.js renders the OCR provider status card',
+  ocrUiTxt39.indexOf('renderOcrProviderStatusCard') !== -1 &&
+  ocrUiTxt39.indexOf('ocr-provider-status-card') !== -1
+);
+record(
+  'ocr-ui.js wires Check Tesseract readiness to runTesseractReadinessCheckFromUi',
+  ocrUiTxt39.indexOf('runTesseractReadinessCheckFromUi') !== -1 &&
+  ocrUiTxt39.indexOf("checkTesseractProviderReadiness") !== -1
+);
+record(
+  'ocr-ui.js does NOT add an Enable real OCR toggle at step 39',
+  ocrUiTxt39.indexOf('enableRealOcr') === -1 &&
+  ocrUiTxt39.indexOf('Enable real OCR') === -1 &&
+  ocrUiTxt39.indexOf('Включить реальный OCR') === -1
+);
+
+// 307. renderer.js wires the Real OCR diagnostics line.
+var rendererTxt39 = readText('src/renderer.js');
+record(
+  'renderer.js Copy diagnostics has a `Real OCR:` line',
+  rendererTxt39.indexOf('Real OCR:') !== -1 &&
+  rendererTxt39.indexOf('tesseractDependencyPresent=') !== -1 &&
+  rendererTxt39.indexOf('tesseractProviderEnabled=') !== -1 &&
+  rendererTxt39.indexOf('realOcrAutoRun=false') !== -1
+);
+
+// 308. i18n parity is preserved AND the new Step 39 keys exist.
+var i18nTxt39 = readText('src/i18n.js');
+[
+  'tesseractProvider',
+  'tesseractInstalled',
+  'tesseractEnabled',
+  'checkTesseractReadiness',
+  'tesseractReadiness',
+  'tesseractReady',
+  'tesseractUnavailable',
+  'tesseractBlockedByFeatureFlag',
+  'realOcrFeatureFlag',
+  'realOcrAutoRunDisabled',
+  'realOcrProviderDisabled',
+  'realOcrWillBeEnabledLater',
+  'activeProviderMock',
+  'activeProviderTesseract',
+  'ocrProviderStatus',
+  'tesseractDependencyPresent',
+  'tesseractReadinessCheckCompleted',
+  'tesseractReadinessCheckFailed'
+].forEach(function (key) {
+  record(
+    'i18n declares Step 39 key ' + key,
+    new RegExp('\\b' + key + ':\\s*"').test(i18nTxt39)
+  );
+});
+
+// 309. README / PROJECT_CONTEXT mention Step 39, Tesseract provider,
+//      and that real OCR is disabled by default.
+var readme39 = readText('README.md');
+var ctx39 = readText('PROJECT_CONTEXT.md');
+record(
+  'README or PROJECT_CONTEXT mentions step 39',
+  /step\s*39|шаг\s*39|Step 39|Шаг 39/.test(readme39) ||
+  /step\s*39|шаг\s*39|Step 39|Шаг 39/.test(ctx39)
+);
+record(
+  'README or PROJECT_CONTEXT mentions Tesseract provider',
+  /Tesseract\s+provider|Tesseract\s+OCR\s+provider|Tesseract\-провайдер|Tesseract OCR\-провайдер/i.test(readme39) ||
+  /Tesseract\s+provider|Tesseract\s+OCR\s+provider|Tesseract\-провайдер|Tesseract OCR\-провайдер/i.test(ctx39)
+);
+record(
+  'README or PROJECT_CONTEXT asserts real OCR is disabled by default',
+  /real OCR.*disabled|real OCR.*off by default|real OCR.*not enabled|real OCR.*по умолчанию.*выключ|real OCR.*disabled by default|настоящий OCR.*выключен|реальный OCR.*выключен|tesseractProvider:\s*false|tesseractProvider=false|disabled by feature flag/i.test(readme39) ||
+  /real OCR.*disabled|real OCR.*off by default|real OCR.*not enabled|настоящий OCR.*выключен|реальный OCR.*выключен|tesseractProvider:\s*false|tesseractProvider=false|disabled by feature flag/i.test(ctx39)
+);
+
+// 310. Step 39 docs sanity.
+var tessDocTxt = readText('docs/TESSERACT_PROVIDER.md');
+record(
+  'docs/TESSERACT_PROVIDER.md asserts the provider is disabled by default',
+  /disabled by default|disabled by feature flag|off by default/i.test(tessDocTxt)
+);
+record(
+  'docs/TESSERACT_PROVIDER.md describes the dependency and feature flag',
+  /tesseract\.js/i.test(tessDocTxt) &&
+  /feature flag|feature\-флаг/i.test(tessDocTxt)
+);
+record(
+  'docs/TESSERACT_PROVIDER.md preserves the no-real-click invariant',
+  /no real click|never click|simulation\-only/i.test(tessDocTxt)
+);
+
+// 311. CHANGELOG mentions Step 39.
+record(
+  'CHANGELOG.md mentions Step 39 — Real OCR Provider Integration Phase 1',
+  readText('CHANGELOG.md').indexOf('Step 39 — Real OCR Provider Integration Phase 1') !== -1
+);
+
+// 312. SECURITY_CHECKLIST + KNOWN_LIMITATIONS reference Step 39.
+var secTxt39 = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md adds a Step 39 / Tesseract provider section',
+  /Step 39|Tesseract provider|Tesseract OCR provider/i.test(secTxt39) &&
+  /disabled by default|disabled by feature flag|off by default/i.test(secTxt39)
+);
+var klTxt39 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md adds the Step 39 Tesseract limitation',
+  /Step 39|Tesseract provider/i.test(klTxt39) &&
+  /disabled by feature flag|disabled by default/i.test(klTxt39)
+);
+
+// 313. REAL_OCR_INTEGRATION_PLAN mentions Step 39 phase 1.
+var planTxt39 = readText('docs/REAL_OCR_INTEGRATION_PLAN.md');
+record(
+  'docs/REAL_OCR_INTEGRATION_PLAN.md mentions Step 39 phase 1',
+  /Step 39|Phase 1|phase 1/.test(planTxt39)
 );
 
 // --- Report ---

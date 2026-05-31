@@ -415,3 +415,39 @@ For the full integration roadmap see
 [`REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md).
 For the contract reference see
 [`OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md).
+
+
+
+## Tesseract provider — prepared but disabled (Step 39)
+
+Step 39 declared `tesseract.js` as a runtime dependency in
+[`package.json`](../package.json) and shipped
+[`src/tesseract-ocr-provider.js`](../src/tesseract-ocr-provider.js)
+as a defensive shell. The mock engine documented above stays
+the **only active provider** for the OCR tab, the Step-34 Test
+OCR panel, the `text_click` scenario type, and the Visual
+Builder.
+
+Phase 1 deliberately keeps real OCR off by default:
+
+- `realOcr: false` (umbrella safety flag) and
+  `tesseractProvider: false` (per-provider flag) in
+  [`src/feature-flags.js`](../src/feature-flags.js).
+- `setActiveOcrProvider('tesseract')` returns
+  `{ ok: false, error: { id: 'realOcrBlocked', reason: '…' } }`
+  when either flag is off.
+- `recognizeTextWithTesseract(input)` always returns a blocked
+  envelope at Step 39 — even with the flags flipped — because
+  the actual `Tesseract.recognize` call is intentionally
+  unimplemented in this phase.
+
+The Advanced → OCR tab now renders an **OCR provider status**
+card alongside the Step-38 readiness card. The new card
+surfaces the dependency state, the feature-flag state, and a
+**Check Tesseract readiness** button that calls
+`checkTesseractProviderReadiness` without running real OCR.
+
+For the full reference see
+[`TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md). For the
+step-by-step path to a real backend see
+[`REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md).

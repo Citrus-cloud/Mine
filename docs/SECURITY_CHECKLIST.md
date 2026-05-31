@@ -1109,3 +1109,110 @@ See [`docs/OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md)
 for the contract reference and
 [`docs/REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md)
 for the future-integration roadmap.
+
+
+
+## Tesseract OCR Provider (Step 39 — Phase 1)
+
+Step 39 declares `tesseract.js` as a runtime dependency and
+ships [`src/tesseract-ocr-provider.js`](./../src/tesseract-ocr-provider.js)
+as the **disabled-by-default** real OCR provider shell. The
+mock provider remains the only active provider; selecting the
+Tesseract provider is BLOCKED unless every safety flag is
+flipped in source.
+
+### Behavioural invariants
+- [x] **Real OCR provider disabled by default.**
+      `feature-flags.js` keeps `realOcr: false` and
+      `tesseractProvider: false`. There is no UI to toggle
+      either flag at Step 39.
+- [x] **No automatic OCR.** `recognizeTextWithTesseract`
+      re-checks `getOcrFeatureStatus()` at every call.
+      When any flag is off it returns
+      `{ success: false, blocked: true, error: 'Real OCR
+      provider is disabled by feature flag' }`. The provider
+      is NEVER invoked at startup.
+- [x] **No real click.** The provider's response shape carries
+      `realClick: false` regardless of input. The action
+      pipeline still rejects every `realClick: true`
+      outright.
+- [x] **Hard-stopped recognition path.** Even with the flags
+      flipped, `recognizeTextWithTesseract` returns a
+      defensive blocked envelope at Step 39 because the actual
+      `Tesseract.recognize` call is intentionally
+      unimplemented. Step 40+ lands the call site behind a
+      fresh `docs/REAL_OCR_GO_NO_GO.md` review.
+- [x] **Mock provider stays active.** The OCR provider
+      registry honours the new selection rule:
+      `setActiveOcrProvider('tesseract')` returns
+      `{ ok: false, error: { id: 'realOcrBlocked' } }` when
+      either flag is off, OR the engine resolver reports
+      `engineLoadable: false`. The active provider stays
+      `mock`.
+- [x] **`text_click` unchanged.** The scenario type continues
+      to use the mock engine. The `getActiveOcrProvider()`
+      result stays `mock` across the entire Step 39 surface.
+- [x] **Provider self-test refuses real OCR.**
+      `runTesseractSelfTest()` exercises the readiness check
+      and the public surface but never executes
+      `Tesseract.recognize`.
+- [x] **Engine resolver is defensive.** When `tesseract.js` is
+      not present in `node_modules`, the resolver returns
+      `null` and the provider reports `engineNotLoadable`
+      instead of throwing.
+
+### Audit invariants
+- [x] **Allowlist extension.** `audit-events.js` adds exactly
+      six new types: `ocr.tesseract.readiness.requested`,
+      `ocr.tesseract.readiness.completed`,
+      `ocr.tesseract.readiness.failed`,
+      `ocr.tesseract.blockedByFeatureFlag`,
+      `ocr.provider.tesseract.detected`,
+      `ocr.provider.tesseract.unavailable`. Payloads carry
+      only flag booleans, error counts, stable reason ids,
+      durations, and engine-loadability booleans — never the
+      full target text, never an `imageDataUrl`, never PII.
+
+### Diagnostics invariants
+- [x] **Real OCR diagnostics line.** `Copy diagnostics` adds
+      a `Real OCR: …` line carrying
+      `tesseractDependencyPresent`,
+      `tesseractProviderAvailable`,
+      `tesseractProviderEnabled`,
+      `tesseractEngineLoadable`,
+      `realOcrFeatureFlag`,
+      `activeOcrProvider`,
+      `realOcrAutoRun=false`,
+      `lastTesseractReadinessCheck`,
+      `lastTesseractError`,
+      `tesseractDisabledReason`,
+      `realOcr=false`, `realClick=false`. The line never
+      carries the full target text, an `imageDataUrl`, a
+      thumbnail, or PII.
+
+### Electron-security invariants (re-checked at Step 39)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';`.
+- [x] **No new IPC channel.** `main.js` has no
+      `ocr.tesseract.*` handler. `preload.js` exposes no
+      `ocrTesseract*` / `tesseractProvider*` API.
+- [x] **No prohibited dependencies.** `package.json` declares
+      `tesseract.js` (Real OCR Phase 1 dependency) but still
+      declares zero of `tesseract-ocr`, `node-tesseract-ocr`,
+      `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`,
+      `opencv-js`, `sharp`, `jimp`, `pixelmatch`,
+      `looks-same`, `robotjs`, `nut-js`, `nutjs`,
+      `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`.
+- [x] **No prohibited imports.**
+      `tesseract-ocr-provider.js` only references
+      `tesseract.js` through a defensive
+      `require('tesseract.js')` wrapped in `try/catch`. It
+      never imports any other prohibited module.
+
+See [`docs/TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md)
+for the full provider reference and
+[`docs/REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md)
+for the future-integration roadmap.

@@ -29,9 +29,9 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools + Visual Builder UX polish + Scenario Presets + Smart Features QA + Next Branch preparation + **Real OCR Research + Safe Integration Plan**).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools + Visual Builder UX polish + Scenario Presets + Smart Features QA + Next Branch preparation + Real OCR Research + Safe Integration Plan + **Real OCR Provider Integration Phase 1**).
 - Версия: **`0.1.0-beta`**.
-- Состояние: **smart visual desktop MVP, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, **Smart Features QA + Next Branch Plan (Step 37)**, и **OCR provider architecture (Step 38)**: provider interface, provider registry, readiness UI, diagnostics, audit events, integration plan. Реальные клики **не реализованы**, настоящий OCR **не подключён** (есть только mock provider), OpenCV **не подключён**, мобильной версии **нет**.
+- Состояние: **smart visual desktop MVP, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, **Smart Features QA + Next Branch Plan (Step 37)**, **OCR provider architecture (Step 38)**, и **Tesseract OCR provider Phase 1 (Step 39)**: `tesseract.js` объявлен как dependency, real OCR provider shell написан, но disabled by default через feature flags. Реальные клики **не реализованы**, настоящий OCR **disabled by default** (active provider всё ещё mock), OpenCV **не подключён**, мобильной версии **нет**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
@@ -667,6 +667,79 @@ realOcr=false, tesseractProvider=false,
 ocrProviderRegistry=true, ocrMockProvider=true,
 contextIsolation: true, nodeIntegration: false — без
 изменений.**
+**Step 39 — Real OCR Provider Integration Phase 1:** в
+`package.json` объявлена runtime-dependency `tesseract.js`
+(`^5.0.4`); создан новый модуль
+[`src/tesseract-ocr-provider.js`](./src/tesseract-ocr-provider.js)
+(`getTesseractProviderInfo`,
+`isTesseractProviderAvailable`,
+`checkTesseractProviderReadiness(flags)`,
+`runTesseractSelfTest(options)` — НЕ запускает настоящий OCR,
+`recognizeTextWithTesseract(input, options)` — на шаге 39
+ВСЕГДА возвращает blocked-envelope, `normalizeTesseractResult`,
+`mapTesseractBlocks`, `terminateTesseractWorker`,
+`getTesseractProviderDiagnostics`). Engine resolver
+defensive: ищет engine через test-seam → renderer global
+`window.Tesseract` → CommonJS `require('tesseract.js')` в
+try/catch. Если engine не найден — провайдер возвращает
+unavailable, приложение не падает. В
+`src/ocr-provider-registry.js` Tesseract entry перешёл из
+`planned: true` в Phase 1 — `setActiveOcrProvider('tesseract')`
+заблокирован, пока **оба** флага не будут `true` И
+engine-resolver не отчитается о доступности. Добавлена
+`getTesseractProviderStatus()`. В `src/feature-flags.js` —
+явный Step-39 stance для четырёх OCR-флагов
+(`realOcr: false`, `tesseractProvider: false`,
+`ocrMockProvider: true`, `simulationOnly: true`) и новая
+функция `getOcrFeatureStatus()` (flat snapshot:
+`realOcrAllowed = realOcr && tesseractProvider &&
+!simulationOnly`, `realOcrAutoRun: false`). В
+`src/audit-events.js` — 6 новых allowlisted типов
+(`ocr.tesseract.readiness.requested/.completed/.failed`,
+`ocr.tesseract.blockedByFeatureFlag`,
+`ocr.provider.tesseract.detected`,
+`ocr.provider.tesseract.unavailable`). В Advanced → OCR —
+новая карточка **OCR provider status / Статус OCR-провайдера**
+с активным провайдером, флагами Tesseract installed /
+Tesseract enabled / Real OCR feature flag / Real OCR auto-run
+disabled / Real clicks disabled, и кнопкой **Check Tesseract
+readiness / Проверить готовность Tesseract**. Кнопка НЕ
+запускает настоящий OCR — вызывает
+`checkTesseractProviderReadiness`, эмитит структурированные
+audit-события и логирует результат. В `Copy diagnostics` —
+новая строка `Real OCR: tesseractDependencyPresent=…,
+tesseractProviderAvailable=…, tesseractProviderEnabled=false,
+tesseractEngineLoadable=…, realOcrFeatureFlag=false,
+activeOcrProvider=mock, realOcrAutoRun=false,
+lastTesseractReadinessCheck=…, lastTesseractError=…,
+tesseractDisabledReason=…, realOcr=false, realClick=false`.
+Добавлено ~18 новых i18n-ключей RU + EN, parity 795/795.
+Создан документ
+[`docs/TESSERACT_PROVIDER.md`](./docs/TESSERACT_PROVIDER.md)
+(purpose / dependency / feature flags / why disabled by
+default / readiness / future activation plan / privacy /
+performance / known limitations / safety notes). Обновлены
+`docs/OCR_FOUNDATION.md`, `docs/OCR_PROVIDER_INTERFACE.md`,
+`docs/REAL_OCR_INTEGRATION_PLAN.md` (Step 39 Phase 1 progress
+appendix), `docs/TEXT_CLICK_SCENARIO.md`,
+`docs/SECURITY_CHECKLIST.md` (новый раздел Tesseract OCR
+Provider с поведенческими / audit / diagnostics /
+Electron-security инвариантами),
+`docs/KNOWN_LIMITATIONS.md` (новый раздел 19 — Tesseract
+provider installed/prepared but disabled), README,
+PROJECT_CONTEXT, CHANGELOG. Smoke-check расширен
+Step-39-инвариантами (новый модуль + новый док + audit
+allowlist + feature flags + tesseract.js в package.json +
+no other forbidden modules + no new IPC + CSP unchanged +
+ocr-ui.js does NOT add Enable real OCR toggle).
+**Active OCR provider всё ещё `mock`. text_click продолжает
+работать через mock OCR. Visual Builder продолжает
+работать. Real OCR не запускается автоматически. Real OCR
+не запускается даже при флагах === true (Phase 1
+hard-stop). Реальных кликов нет. realDesktopActions=false,
+simulationOnly=true, realOcr=false, tesseractProvider=false,
+realOcrAutoRun=false, contextIsolation: true,
+nodeIntegration: false, CSP — без изменений.**
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -899,7 +972,8 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/NEXT_BRANCH_PLAN.md`](./docs/NEXT_BRANCH_PLAN.md) — план следующих больших веток: Branch A (Real OCR Integration), Branch B (Real Desktop Adapter), Branch C (Android Research). Рекомендация: сначала Branch A (Step 37).
 - [`docs/SMART_FEATURES_LIMITATIONS.md`](./docs/SMART_FEATURES_LIMITATIONS.md) — консолидированный список ограничений smart-features: screen capture permissions, simple matching engine, mock OCR, simulation-only image_click / text_click, Visual Builder foundation, scenario drafts require manual save, no real click (Step 37).
 - [`docs/REAL_OCR_INTEGRATION_PLAN.md`](./docs/REAL_OCR_INTEGRATION_PLAN.md) — план будущей интеграции настоящего OCR: Tesseract.js, language packs, worker model, performance, privacy, security, UI progress, fallback. Real OCR на шаге 38 НЕ запускается (Step 38).
-- [`docs/OCR_PROVIDER_INTERFACE.md`](./docs/OCR_PROVIDER_INTERFACE.md) — формальный контракт OCR-провайдера: input/output shape, error IDs, registry, mock provider, planned Tesseract provider, self-test, safety rules (Step 38).
+- [`docs/OCR_PROVIDER_INTERFACE.md`](./docs/OCR_PROVIDER_INTERFACE.md) — формальный контракт OCR-провайдера: input/output shape, error IDs, registry, mock provider, planned Tesseract provider, self-test, safety rules (Step 38). Дополнен Step-39-секцией с Tesseract implementation notes.
+- [`docs/TESSERACT_PROVIDER.md`](./docs/TESSERACT_PROVIDER.md) — справка по Tesseract OCR provider: dependency, feature flags, why disabled by default, readiness, future activation plan, privacy/performance/safety (Step 39).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и

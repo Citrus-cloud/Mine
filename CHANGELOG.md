@@ -8,6 +8,292 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-39
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, the Step 24 final beta
+release preparation, the Step 25 Screen Capture Foundation, the
+Step 26 Region Selector Foundation, the Step 27 Template Asset
+Manager, the Step 28 Template Matching Mock / Dry-run, the
+Step 29 Real Template Matching Engine Foundation, the
+Step 30 Image Click Scenario Type Foundation, the
+Step 31 Image Click Scenario UX Polish + Visual Test Tools, the
+Step 32 OCR Foundation (mock only), the
+Step 33 Text Click Scenario Type Foundation, the
+Step 34 Text Click Test Tools + OCR UX Polish, the
+Step 36 Visual Builder UX Polish + Scenario Presets, the
+Step 37 Smart Features QA + Next Branch Preparation, the
+Step 38 Real OCR Research + Safe Integration Plan, and the
+**Step 39 Real OCR Provider Integration Phase 1** (real-OCR
+provider shell behind feature flags — `tesseract.js` declared
+as a dependency, defensive provider with disabled-by-default
+recognise path, OCR provider status UI, `Real OCR:` diagnostics
+line).
+**Still simulation-only.**
+
+### Added (Step 39 — Real OCR Provider Integration Phase 1)
+
+- `package.json` declares `tesseract.js` as a runtime
+  dependency (`^5.0.4`). The dependency is the FIRST
+  OCR-engine package ClickFlow ships. It stays unloaded by
+  the renderer at Step 39 — there is no `<script src>` for
+  `tesseract.min.js` and no static `require()` of
+  `tesseract.js`. Source-file imports of `tesseract.js`
+  remain banned in every Step-25–Step-38 module by the
+  smoke-check.
+- `src/tesseract-ocr-provider.js` (new pure-renderer module):
+  - `getTesseractProviderInfo()` — static metadata
+    (`id: 'tesseract'`, `type: 'real'`, `realOcr: true`,
+    `defaultLanguage: 'ru+en'`, supported languages
+    `ru / en / ru+en`, `tesseractLanguageMap` with
+    `ru → 'rus'`, `en → 'eng'`, `ru+en → 'rus+eng'`,
+    `dependencyDeclared: true`).
+  - `isTesseractProviderAvailable()` — boolean. Returns
+    `true` only when an engine reference resolves;
+    defensive — never throws.
+  - `checkTesseractProviderReadiness(flagsArg?)` — returns
+    `{ ready, reasons: [stableId], details: { … }, checkedAt }`.
+    Stable reason IDs: `realOcrFeatureFlagDisabled`,
+    `tesseractProviderFeatureFlagDisabled`,
+    `simulationOnlyMode`, `dependencyNotDeclared`,
+    `engineNotLoadable`. Emits
+    `ocr.tesseract.readiness.requested` →
+    `ocr.tesseract.readiness.completed` (or `.failed`) plus
+    granular `ocr.tesseract.blockedByFeatureFlag` /
+    `ocr.provider.tesseract.detected` /
+    `ocr.provider.tesseract.unavailable` events.
+  - `runTesseractSelfTest(options?)` — runs the readiness
+    check, exercises the public surface, returns
+    `{ ok: false, blocked: true, reasons, durationMs,
+    details, note, ranAt }`. Step 39 NEVER executes real
+    OCR even on a passing readiness check.
+  - `recognizeTextWithTesseract(input, options?)` — Step 39
+    hard-stop. Re-checks the feature flags; returns
+    `{ success: false, blocked: true, error: 'Real OCR
+    provider is disabled by feature flag', providerId:
+    'tesseract', realClick: false, realOcr: false }` whenever
+    `realOcr` / `tesseractProvider` is off OR
+    `simulationOnly` is true. Even when every flag is set,
+    the function returns a defensive blocked envelope; the
+    actual `Tesseract.recognize` call lives behind a future
+    Step-40 review.
+  - `normalizeTesseractResult(rawResult, input)` and
+    `mapTesseractBlocks(rawResult, input)` — pure functions
+    that translate Tesseract.js native shapes
+    (`data.words` / `data.blocks` with `bbox: { x0, y0, x1,
+    y1 }`) into the unified ClickFlow OCR shape
+    (`{ id, text, confidence (0..1), boundingBox, targetPoint }`).
+    Region offset is honoured. No module state.
+  - `terminateTesseractWorker()` — Step 39 no-op that resets
+    the engine reference. Step 40+ replaces the body with
+    the real worker termination call.
+  - `getTesseractProviderDiagnostics()` — diagnostics
+    snapshot (`tesseractDependencyPresent`,
+    `tesseractProviderAvailable`, `tesseractProviderEnabled`,
+    `realOcrFeatureFlag`, `realOcrAutoRun: false`,
+    `activeOcrProvider`, `lastTesseractReadinessCheck`,
+    `lastTesseractError`, `realClick: false`).
+  - `setTesseractEngineForTesting(engine)` — unit-test seam.
+- `src/ocr-provider-registry.js`:
+  - The `tesseract` entry no longer claims `planned: true`.
+    It now exposes `enabledByFeatureFlag` and a dynamic
+    `available` field computed from the live feature
+    flags + the engine resolver.
+  - New helper `_evaluateTesseractSelectability()` returns
+    `{ selectable, flagsAllow, engineLoadable, reason,
+    reasonText }`. Tesseract is selectable only when BOTH
+    `realOcr === true` AND `tesseractProvider === true` AND
+    `simulationOnly === false` AND the engine resolver
+    reports `engineLoadable: true`.
+  - `setActiveOcrProvider('tesseract')` returns
+    `{ ok: false, error: { id: 'realOcrBlocked', reason:
+    'realOcrBlockedByFeatureFlag' | 'tesseractEngineNotLoadable' } }`
+    with stable reason ids. Emits
+    `ocr.provider.selection.blocked` +
+    `ocr.provider.real.unavailable`. The active provider
+    stays `mock`.
+  - New public `getTesseractProviderStatus()` returns the
+    Tesseract-specific snapshot for the OCR readiness card +
+    diagnostics line (`registered`, `available`,
+    `enabledByFeatureFlag`, `engineLoadable`, `realOcr`,
+    `disabledReason`, `dependencyDeclared`,
+    `realOcrFeatureFlag`, `tesseractProviderFlag`,
+    `realOcrAutoRun: false`, `activeProviderId`,
+    `lastReadinessCheck`, `lastError`, `realClick: false`).
+  - `getOcrProviderRegistryStatus()` now reflects the
+    live Tesseract availability (`tesseractProviderEnabled`)
+    plus the existing Step-38 fields.
+  - `isRealOcrProviderRegistered()` now consults the dynamic
+    Tesseract availability rather than the frozen base
+    entry.
+- `src/feature-flags.js`:
+  - The four OCR flags keep their Step-38 safe defaults
+    (`realOcr: false`, `tesseractProvider: false`,
+    `ocrMockProvider: true`, `simulationOnly: true`). Comments
+    are extended to spell out the Step-39 selection rule.
+  - New `getOcrFeatureStatus()` — flat snapshot consumed by
+    every OCR call site:
+    `{ realOcr, tesseractProvider, ocrMockProvider,
+    ocrProviderRegistry, simulationOnly, realOcrAllowed,
+    realOcrAutoRun: false }`. `realOcrAllowed` is true only
+    when `realOcr && tesseractProvider && !simulationOnly`,
+    so it evaluates to `false` at Step 39.
+- `src/audit-events.js` — 6 new allowlisted event types:
+  `ocr.tesseract.readiness.requested`,
+  `ocr.tesseract.readiness.completed`,
+  `ocr.tesseract.readiness.failed`,
+  `ocr.tesseract.blockedByFeatureFlag`,
+  `ocr.provider.tesseract.detected`,
+  `ocr.provider.tesseract.unavailable`. Payloads carry only
+  flag booleans, error counts, stable reason ids, durations,
+  and engine-loadability — never the full target text,
+  never an `imageDataUrl`, never PII.
+- `src/i18n.js` — ~18 new keys per language (RU + EN):
+  `tesseractProvider`, `tesseractInstalled`,
+  `tesseractEnabled`, `checkTesseractReadiness`,
+  `tesseractReadiness`, `tesseractReady`,
+  `tesseractUnavailable`, `tesseractBlockedByFeatureFlag`,
+  `realOcrFeatureFlag`, `realOcrAutoRunDisabled`,
+  `realOcrProviderDisabled`, `realOcrWillBeEnabledLater`,
+  `activeProviderMock`, `activeProviderTesseract`,
+  `ocrProviderStatus`, `tesseractDependencyPresent`,
+  `tesseractReadinessCheckCompleted`,
+  `tesseractReadinessCheckFailed`,
+  `tesseractEngineNotLoadable`. Final i18n parity:
+  795 ru / 795 en.
+- `src/index.html` — new `<script src="tesseract-ocr-provider.js">`
+  loaded between the OCR provider interface and the OCR
+  provider registry, so the registry can dispatch into the
+  Tesseract shell. CSP unchanged.
+- `src/ocr-ui.js` — new **OCR provider status** card rendered
+  below the Step-38 readiness card. Surfaces the Active
+  provider, Tesseract installed, Tesseract enabled, Real OCR
+  feature flag, Real OCR auto-run disabled, Real clicks
+  disabled rows, plus an info banner ("Real OCR provider
+  disabled by default · Real OCR auto-run disabled · Real
+  OCR will be enabled later, after manual review."). Adds a
+  **Check Tesseract readiness** button that calls
+  `runTesseractReadinessCheckFromUi`, logs the outcome, and
+  re-renders the card. The card NEVER renders an "Enable
+  real OCR" toggle.
+- `src/renderer.js` — new `Real OCR:` line in
+  `Copy diagnostics`:
+  `tesseractDependencyPresent=true,
+  tesseractProviderAvailable=false,
+  tesseractProviderEnabled=false,
+  tesseractEngineLoadable=false,
+  realOcrFeatureFlag=false, activeOcrProvider=mock,
+  realOcrAutoRun=false,
+  lastTesseractReadinessCheck=…,
+  lastTesseractError=…,
+  tesseractDisabledReason=…,
+  realOcr=false, realClick=false`.
+- `src/styles.css` — new section "Step 39 — OCR provider
+  status card (Real OCR Phase 1)":
+  `.ocr-provider-status-card`,
+  `.ocr-provider-status-banner`,
+  `.ocr-provider-status-banner-badge`,
+  `.ocr-provider-status-button-row`,
+  `.ocr-provider-status-check-button`,
+  `.ocr-provider-status-readiness-result`
+  (with `-ok`, `-blocked`, `-fail` modifiers). Dark-theme
+  variants. Mobile fallback at 760px.
+- `docs/TESSERACT_PROVIDER.md` (new): full reference for the
+  Tesseract provider — Purpose / Current status / Dependency
+  / Feature flags / Why disabled by default / Provider
+  readiness / Future activation plan / Privacy model /
+  Performance risks / Known limitations / Safety notes.
+- `docs/OCR_FOUNDATION.md` — Tesseract-prepared-but-disabled
+  note.
+- `docs/OCR_PROVIDER_INTERFACE.md` — Tesseract implementation
+  notes (engine resolution / readiness contract / recognise
+  hard-stop / result mapping / audit / worker).
+- `docs/REAL_OCR_INTEGRATION_PLAN.md` — Step 39 Phase 1
+  progress appendix.
+- `docs/TEXT_CLICK_SCENARIO.md` — provider-architecture note
+  (Step 39: text_click still uses mock OCR by default).
+- `docs/SECURITY_CHECKLIST.md` — new "Tesseract OCR Provider
+  (Step 39 — Phase 1)" section with behavioural / audit /
+  diagnostics / Electron-security invariants.
+- `docs/KNOWN_LIMITATIONS.md` — new section
+  **19. Tesseract provider installed/prepared but disabled
+  by feature flag (Step 39)** with subsections 19.1 (not
+  loaded at runtime), 19.2 (disabled by feature flag), 19.3
+  (recognition hard-stopped), 19.4 (text_click stays on
+  mock), 19.5 (no real click).
+- `scripts/smoke-check.js` — Step 39 invariants. New module
+  / new doc / new audit allowlist / feature-flag safe
+  defaults / `tesseract.js` ALLOWED in package.json (other
+  forbidden modules still forbidden) / `tesseract.js`
+  NOT required by any Step-25–Step-38 source file / no new
+  IPC channel / CSP unchanged / OCR UI renders the new
+  card / OCR UI does NOT add an "Enable real OCR" toggle /
+  README + PROJECT_CONTEXT mention Step 39 + Tesseract
+  provider + real OCR disabled by default.
+- `README.md` / `PROJECT_CONTEXT.md` / `CHANGELOG.md` —
+  Step 39 entries. Current status updated to mention the
+  Tesseract OCR provider Phase 1.
+
+### Safety invariants kept (Step 39)
+
+- ClickFlow remains **simulation-only**.
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged (`default-src 'self'; script-src 'self';
+  style-src 'self';`).
+- `simulationOnly: true`, `realDesktopActions: false`,
+  `realOcr: false`, `tesseractProvider: false`,
+  `realOcrAutoRun: false`, `realOcrAllowed: false`,
+  `activeOcrProvider: mock`,
+  `tesseractProviderEnabled: false`,
+  `tesseractProviderAvailable: false` (engine not loaded
+  in production-build), `tesseractDependencyPresent: true`,
+  `ocrEngineImplemented: false`, `ocrMockOnly: true`,
+  `realOcrEnabled: false`, `realTextClickEnabled: false`,
+  `realImageClickEnabled: false`,
+  `autoSavesScenarios: false`, `autoRunsScenarios: false`,
+  `realClick: false`, `realOcr: false` in every status
+  response, audit payload, and diagnostics line.
+- The Tesseract provider runs entirely in the renderer.
+  It never opens a new IPC channel. `main.js` registers no
+  `ocr.tesseract.*` handler. `preload.js` exposes no
+  `ocrTesseract*` / `tesseractProvider*` API.
+- `src/tesseract-ocr-provider.js` does not statically
+  `require()` any forbidden module. It references
+  `tesseract.js` only via a defensive `require('tesseract.js')`
+  wrapped in `try/catch`, behind a runtime engine resolver
+  that returns `null` (and triggers the mock fallback) when
+  the package is missing.
+- `package.json` declares `tesseract.js` as a runtime
+  dependency. It still declares zero of `tesseract-ocr`,
+  `node-tesseract-ocr`, `opencv4nodejs`, `@u4/opencv4nodejs`,
+  `opencv.js`, `opencv-js`, `sharp`, `jimp`, `pixelmatch`,
+  `looks-same`, `robotjs`, `nut-js`, `nutjs`,
+  `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+  `node-key-sender`.
+- `setActiveOcrProvider('tesseract')` returns
+  `{ ok: false, error: { id: 'realOcrBlocked' } }` when
+  either feature flag is off OR the engine resolver reports
+  `engineLoadable: false`. The active provider stays
+  `mock`.
+- `recognizeTextWithTesseract` returns a blocked envelope at
+  Step 39 even when the flags are flipped. There is no
+  call site executing real OCR in this phase.
+- `runTesseractSelfTest` exercises the readiness check and
+  the public surface but never executes
+  `Tesseract.recognize`.
+- The action-pipeline / safety-gates / mock adapter /
+  dry-run sandbox are unchanged. They still reject every
+  `realClick: true` outright.
+- text_click / image_click / simple_click / screen capture /
+  templates / template matching / OCR mock / Visual Builder /
+  Scenario Presets continue to work unchanged via the mock
+  provider.
+
 ## [Unreleased] — Steps 15-38
 
 Final stabilization of the simulation-only beta, design-only handoff

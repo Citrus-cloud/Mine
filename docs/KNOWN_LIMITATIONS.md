@@ -735,3 +735,51 @@ See [`docs/REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md)
 for the step-by-step path to a real backend, and
 [`docs/OCR_PROVIDER_INTERFACE.md`](./OCR_PROVIDER_INTERFACE.md)
 for the contract reference.
+
+
+
+## 19. Tesseract provider installed/prepared but disabled by feature flag (Step 39)
+
+Step 39 — Real OCR Provider Integration Phase 1 — declares
+`tesseract.js` as a runtime dependency in
+[`package.json`](../package.json) and ships
+[`src/tesseract-ocr-provider.js`](../src/tesseract-ocr-provider.js)
+as the disabled-by-default real OCR provider shell. The
+following limitations are intentional.
+
+### 19.1 Tesseract dependency is not loaded at runtime
+- `tesseract.js` is declared in `package.json`. After `npm
+  install` the package lives in `node_modules/tesseract.js/`,
+  but the renderer does NOT load it via a `<script>` tag at
+  Step 39. The provider's engine resolver returns `null` in
+  the production build.
+
+### 19.2 Real OCR is disabled by feature flag
+- `realOcr: false` (umbrella) and `tesseractProvider: false`
+  (per-provider) in `feature-flags.js`. There is no UI to
+  toggle either flag at Step 39.
+- `setActiveOcrProvider('tesseract')` returns
+  `{ ok: false, error: { id: 'realOcrBlocked' } }` when
+  either flag is off. The active provider stays `mock`.
+
+### 19.3 Recognition is hard-stopped
+- `recognizeTextWithTesseract` returns a defensive blocked
+  envelope at Step 39 even when the flags would allow it.
+  The actual `Tesseract.recognize` call is intentionally
+  unimplemented in Phase 1.
+- `runTesseractSelfTest` exercises the readiness check and
+  the public surface but never executes real OCR.
+
+### 19.4 `text_click` continues to use the mock provider
+- The scenario type, the Step-34 Test OCR panel, and the
+  Visual Builder continue to use the Step-32 mock engine.
+
+### 19.5 No real click
+- The Tesseract provider response shape carries
+  `realClick: false` regardless of input.
+- The action pipeline still rejects every `realClick: true`
+  outright.
+
+See [`docs/TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md)
+for the full provider reference and the future activation
+plan.

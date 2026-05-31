@@ -303,3 +303,23 @@ engine still emits simulated `text_click` actions, the
 diagnostics line still reports `realOcr=false`,
 `realClick=false`, and there is still no `text_click` Test
 Match panel — the Step-34 Test OCR panel covers that surface.
+
+
+
+## Provider architecture note (Step 39)
+
+`text_click` continues to use the Step-32 mock OCR engine **by
+default** at Step 39. The Tesseract OCR provider has been
+prepared (see
+[`TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md)), but the
+registry refuses to switch the active provider unless BOTH
+`realOcr === true` AND `tesseractProvider === true` AND the
+engine resolver reports the engine as loadable. The safe
+defaults in `src/feature-flags.js` pin both flags to `false`.
+
+`text_click` execution semantics are unchanged: the click
+engine still emits simulated `text_click` actions, the
+diagnostics line still reports `realOcr=false` /
+`realClick=false` / `realOcrAutoRun=false`. Step 40+ will
+land the call-site swap behind a fresh
+`docs/REAL_OCR_GO_NO_GO.md` review.
