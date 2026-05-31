@@ -7,6 +7,97 @@
 
 ## Текущий шаг
 
+**Шаги 36 и 37 завершены вместе.** Visual Builder UX Polish +
+Scenario Presets + Smart Features QA + Next Branch Preparation.
+Проект остаётся в стадии `0.1.0-beta` (simulation-only desktop
+MVP). На этих шагах добавлены три новых модуля
+[`src/scenario-presets.js`](./src/scenario-presets.js)
+(frozen preset definitions + `getScenarioPresets`,
+`getScenarioPresetById`, `createScenarioDraftFromPreset`,
+`applyVisualContextToPreset`, `validateScenarioPreset`,
+`getScenarioPresetsStatus`),
+[`src/visual-builder.js`](./src/visual-builder.js)
+(`getVisualBuilderState`, `setOverlaySetting`,
+`showAllOverlays`, `hideAllOverlays`, `clearOverlays`,
+`setSelectedActionType`, `buildVisualContextFromState`,
+`buildDraftPreviewFromState`, `clearDraftPreview`,
+`getMissingRequirements`, `getOverlayLayers`,
+`getVisualBuilderDiagnostics`) и
+[`src/visual-builder-ui.js`](./src/visual-builder-ui.js)
+(`renderVisualBuilderTab` со status row,
+onboarding hints, action-type selector, preview + overlay
+layers, overlay legend, six overlay checkboxes + Show all /
+Hide all / Clear overlays, quick-action panel, scenario
+presets cards, draft preview card). Новая вкладка **Visual
+Builder / Визуальный конструктор** в Advanced dashboard. В
+`src/audit-events.js` — 6 новых allowlisted типов
+(`scenarioPreset.selected`, `scenarioPreset.draft.created`,
+`scenarioPreset.form.opened`,
+`visualBuilder.overlay.changed`,
+`visualBuilder.requirement.missing`,
+`visualBuilder.draft.preview.created`); payload содержит
+только ids, type, hasRegion, hasTemplate, targetTextLen,
+missingCount, withVisualContext — **никогда** полный target
+text, **никогда** `imageDataUrl`, **никогда** PII. В
+`Copy diagnostics` — новая строка `Visual Builder: …,
+autoSavesScenarios=false, autoRunsScenarios=false,
+realClick=false, realOcr=false`. Pre-fill сценарной формы из
+preset / draft через `setTimeout(..., 0)` поверх существующего
+`openCreateScenarioForm()`. Добавлено ~70 новых i18n-ключей
+RU + EN, `ru` и `en` имеют одинаковый набор (parity 745/745).
+Step 37 — три новых документа:
+[`docs/SMART_FEATURES_QA.md`](./docs/SMART_FEATURES_QA.md)
+(manual QA-чеклист на цепочку Screen Capture → Region →
+Templates → Matching → Image Click → OCR Mock → Text Click →
+Visual Builder → Scenario Presets с `Status: Not tested`,
+плюс Safety checks, Known issues, Release recommendation),
+[`docs/NEXT_BRANCH_PLAN.md`](./docs/NEXT_BRANCH_PLAN.md)
+(Branch A — Real OCR Integration, Branch B — Real Desktop
+Adapter, Branch C — Android Research; **рекомендация: сначала
+Branch A**, потому что real OCR без реальных кликов менее
+рискованно, чем real desktop adapter), и
+[`docs/SMART_FEATURES_LIMITATIONS.md`](./docs/SMART_FEATURES_LIMITATIONS.md)
+(консолидированный список: screen capture permissions, simple
+matcher, mock OCR, simulation-only image_click / text_click,
+Visual Builder foundation, drafts require manual save, no real
+click). Обновлены
+[`docs/SMOKE_TESTS.md`](./docs/SMOKE_TESTS.md) (#359–#388 —
+Step 36 + Step 37 smoke checks),
+[`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md)
+(новый раздел Visual Builder + Scenario Presets с
+поведенческими / audit / diagnostics / Electron-security
+инвариантами),
+[`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md)
+(новый раздел 17 — Visual Builder + Scenario Presets are
+foundation-only),
+[`README.md`](./README.md), [`CHANGELOG.md`](./CHANGELOG.md).
+Smoke-check расширен Step-37-инвариантами.
+**Visual Builder никогда не сохраняет сценарий автоматически,
+никогда не запускает сценарий автоматически, никогда не
+кликает, никогда не выполняет настоящий OCR, никогда не
+открывает новый IPC канал, никогда не пишет screenshot / debug
+result на диск, никогда не сохраняет imageDataUrl в preset /
+draft / scenario / audit / diagnostics. Presets никогда не
+выполняют сценарии автоматически, никогда не сохраняют
+автоматически — открывается форма с предзаполненными полями,
+сохранение делается вручную.** Settings сохраняются через
+существующий save-flow (нет новых IPC). На шагах 36–37
+**специально не сделано**: реальные клики, real desktop
+adapter, настоящий OCR, Tesseract / tesseract.js, OpenCV /
+opencv*, robotjs, nut.js, iohook, uiohook-napi, мобильная
+версия, обход капчи, обход антибот-систем — это сознательные
+ограничения. ClickFlow остаётся **simulation-only desktop
+MVP**. **`realDesktopActions=false`, `simulationOnly=true`,
+`ocrEngineImplemented=false`, `tesseractAvailable=false`,
+`ocrMockOnly=true`, `realOcrEnabled=false`,
+`realTextClickEnabled=false`, `realImageClickEnabled=false`,
+`autoSavesScenarios=false`, `autoRunsScenarios=false`,
+`contextIsolation: true`, `nodeIntegration: false`, CSP — без
+изменений.** Следующая большая ветка по рекомендации Step 37
+— **Branch A (Real OCR Integration)** в отдельной ветке.
+
+## Прошлый шаг
+
 **Шаг 34 завершён.** Text Click Test Tools + OCR UX Polish.
 Проект остаётся в стадии `0.1.0-beta` (simulation-only). На
 шаге 34 в форму `text_click` сценария (шаг 33) добавлен блок
@@ -93,7 +184,7 @@ simple_click, image_click и text_click сценарии работают без
 `realTextClickEnabled=false`, `contextIsolation: true`,
 `nodeIntegration: false`, CSP — без изменений.**
 
-## Прошлый шаг
+## Шаг 33 (компактно)
 
 **Шаг 33 завершён.** Text Click Scenario Type Foundation. Проект
 остаётся в стадии `0.1.0-beta` (simulation-only). На шаге 33

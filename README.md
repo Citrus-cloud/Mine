@@ -29,9 +29,9 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools + Visual Builder UX polish + Scenario Presets + Smart Features QA + Next Branch preparation).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлены read-only **Screen Capture Foundation** (Step 25 — preview only), **Region Selector Foundation** (Step 26 — rectangular selection on the preview), **Template Asset Manager** (Step 27 — image assets storage only), **Template Matching Mock / Dry-run** (Step 28 — mock-only pipeline), **Real Template Matching Engine Foundation** (Step 29 — plain-JS preview-only engine producing a real confidence score) и новый тип сценария **image_click** (Step 30 — simulation-only orchestration: matcher запускается на каждой итерации, action-pipeline эмитит `action.imageClick.simulated`, реального клика нет). Поиск шаблонов на live-screen, OCR, OpenCV и реальные клики **по-прежнему не реализованы**.
+- Состояние: **smart visual desktop MVP, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, и **Smart Features QA + Next Branch Plan (Step 37)**. Реальные клики **не реализованы**, настоящий OCR **не реализован**, OpenCV **не подключён**, мобильной версии **нет**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
@@ -520,6 +520,87 @@ realDesktopActions=false, simulationOnly=true,
 ocrEngineImplemented=false, tesseractAvailable=false,
 contextIsolation: true, nodeIntegration: false — без
 изменений.**
+**Step 36 — Visual Builder UX Polish + Scenario Presets:**
+добавлены три новых модуля
+[`src/scenario-presets.js`](./src/scenario-presets.js) (frozen
+preset definitions + `getScenarioPresets`,
+`getScenarioPresetById`, `createScenarioDraftFromPreset`,
+`applyVisualContextToPreset`, `validateScenarioPreset`,
+`getScenarioPresetsStatus`),
+[`src/visual-builder.js`](./src/visual-builder.js)
+(`getVisualBuilderState`, `setOverlaySetting`,
+`showAllOverlays`, `hideAllOverlays`, `clearOverlays`,
+`setSelectedActionType`, `buildVisualContextFromState`,
+`buildDraftPreviewFromState`, `clearDraftPreview`,
+`getMissingRequirements`, `getOverlayLayers`,
+`getVisualBuilderDiagnostics`) и
+[`src/visual-builder-ui.js`](./src/visual-builder-ui.js)
+(`renderVisualBuilderTab` + status row, onboarding hints
+с быстрыми кнопками Open Screen Capture / Open Templates /
+Open Region Selector / Open OCR, action-type selector,
+preview с overlay-слоями, overlay legend, шесть
+overlay-чекбоксов + Show all / Hide all / Clear overlays,
+quick-action panel, scenario presets cards с Use preset /
+Use with current visual context, draft preview card с Open
+draft in form). Новая вкладка **Visual Builder /
+Визуальный конструктор** в Advanced dashboard. В
+`src/audit-events.js` — 6 новых allowlisted типов
+(`scenarioPreset.selected/draft.created/form.opened`,
+`visualBuilder.overlay.changed/requirement.missing/draft.preview.created`),
+payload содержит только ids, type, hasRegion, hasTemplate,
+targetTextLen, missingCount, withVisualContext —
+**никогда** полный target text, **никогда** `imageDataUrl`.
+В `Copy diagnostics` — новая строка `Visual Builder: …,
+autoSavesScenarios=false, autoRunsScenarios=false,
+realClick=false, realOcr=false`. Pre-fill сценарной формы
+из preset / draft через `setTimeout(..., 0)` поверх
+существующего `openCreateScenarioForm()`. Добавлено
+~70 новых i18n-ключей RU + EN. CSP не ослаблен. **Visual
+Builder никогда не сохраняет сценарий автоматически,
+никогда не запускает сценарий автоматически, никогда не
+кликает, никогда не выполняет настоящий OCR, никогда не
+открывает новый IPC канал, никогда не пишет screenshot /
+debug result на диск, никогда не сохраняет imageDataUrl в
+preset / draft / scenario / audit / diagnostics.
+Tesseract / tesseract.js / OpenCV / robotjs / nut.js /
+iohook / uiohook-napi не подключены.
+realDesktopActions=false, simulationOnly=true,
+ocrEngineImplemented=false, tesseractAvailable=false,
+contextIsolation: true, nodeIntegration: false — без
+изменений.**
+**Step 37 — Smart Features QA + Next Branch Preparation:**
+добавлены три новых документа
+[`docs/SMART_FEATURES_QA.md`](./docs/SMART_FEATURES_QA.md)
+(manual QA-чеклист на всю цепочку Screen Capture → Region →
+Templates → Matching → Image Click → OCR Mock → Text Click →
+Visual Builder → Scenario Presets с Steps / Expected /
+Status: Not tested, плюс Safety checks, Known issues,
+Release recommendation),
+[`docs/NEXT_BRANCH_PLAN.md`](./docs/NEXT_BRANCH_PLAN.md)
+(Branch A — Real OCR Integration, Branch B — Real Desktop
+Adapter, Branch C — Android Research; рекомендация
+**сначала Branch A** — настоящий OCR без реальных кликов
+менее рискованно, чем real desktop adapter), и
+[`docs/SMART_FEATURES_LIMITATIONS.md`](./docs/SMART_FEATURES_LIMITATIONS.md)
+(консолидированный список ограничений: screen capture,
+region, templates, matching, OCR, image_click, text_click,
+Visual Builder, presets, real clicks). Обновлены
+`docs/SMOKE_TESTS.md` (#359–#388 — Step 36 + Step 37 smoke
+checks), `docs/SECURITY_CHECKLIST.md` (новый раздел Visual
+Builder + Scenario Presets с поведенческими, audit,
+diagnostics и Electron-security инвариантами),
+`docs/KNOWN_LIMITATIONS.md` (новый раздел 17 — Visual
+Builder + Scenario Presets are foundation-only),
+[`README.md`](./README.md), [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md),
+[`CHANGELOG.md`](./CHANGELOG.md). Smoke-check расширен
+Step-37-инвариантами. **Реальные клики / настоящий OCR /
+Tesseract / tesseract.js / OpenCV / robotjs / nut.js /
+iohook / uiohook-napi по-прежнему отсутствуют. ClickFlow
+остаётся simulation-only desktop MVP.
+realDesktopActions=false, simulationOnly=true,
+ocrEngineImplemented=false, tesseractAvailable=false,
+contextIsolation: true, nodeIntegration: false — без
+изменений.**
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -748,6 +829,9 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/OCR_FOUNDATION.md`](./docs/OCR_FOUNDATION.md) — описание OCR Foundation: mock OCR flow, input/result format, `text_click` action preview, region support, future Tesseract integration, safety notes (Step 32).
 - [`docs/TEXT_CLICK_SCENARIO.md`](./docs/TEXT_CLICK_SCENARIO.md) — описание Text Click Scenario Type Foundation: формат сценария, target text, OCR settings, optional region, execution flow, simulation-only invariants, что **не** реализовано (Step 33).
 - [`docs/TEXT_CLICK_TEST_TOOLS.md`](./docs/TEXT_CLICK_TEST_TOOLS.md) — описание Text Click Test Tools: Test OCR flow, OCR blocks overlay, action preview, troubleshooting, safety notes (Step 34).
+- [`docs/SMART_FEATURES_QA.md`](./docs/SMART_FEATURES_QA.md) — manual QA checklist на всю smart-features цепочку: Screen Capture → Region → Templates → Matching → Image Click → OCR Mock → Text Click → Visual Builder → Scenario Presets, плюс Safety checks, Known issues, Release recommendation (Step 37).
+- [`docs/NEXT_BRANCH_PLAN.md`](./docs/NEXT_BRANCH_PLAN.md) — план следующих больших веток: Branch A (Real OCR Integration), Branch B (Real Desktop Adapter), Branch C (Android Research). Рекомендация: сначала Branch A (Step 37).
+- [`docs/SMART_FEATURES_LIMITATIONS.md`](./docs/SMART_FEATURES_LIMITATIONS.md) — консолидированный список ограничений smart-features: screen capture permissions, simple matching engine, mock OCR, simulation-only image_click / text_click, Visual Builder foundation, scenario drafts require manual save, no real click (Step 37).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и

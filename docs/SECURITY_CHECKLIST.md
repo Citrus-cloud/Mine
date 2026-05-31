@@ -927,3 +927,102 @@ See [`docs/TEXT_CLICK_TEST_TOOLS.md`](./TEXT_CLICK_TEST_TOOLS.md)
 for the full description, the debug-result shape, the error
 IDs, the troubleshooting list, and the list of features that
 are **not** implemented at Step 34.
+
+
+
+## Visual Builder + Scenario Presets (Step 36)
+
+The Visual Builder is a smart-features dashboard that gathers the
+Step 25–34 foundations into one tab. Scenario Presets are three
+frozen template scenarios that pre-fill the scenario form. Both
+features are pure renderer code.
+
+### Behavioural invariants
+- [x] **Visual Builder creates drafts only.** No code path inside
+      `visual-builder.js` / `visual-builder-ui.js` calls
+      `createScenario` / `updateScenario` / `saveScenarios`.
+      The Save button still lives inside the existing scenario
+      form and the user must press it manually.
+- [x] **Presets do not execute automatically.** No code path
+      inside `scenario-presets.js` calls `runScenario`,
+      `runImageClickScenario`, `runTextClickScenario`,
+      `executeAction`, the mock adapter, or the dry-run sandbox.
+- [x] **`image_click` simulation only.** The Visual Builder draft
+      preview defaults `realClick: false`. The action pipeline
+      and safety gates still reject any `realClick: true`.
+- [x] **`text_click` uses mock OCR only.** The Visual Builder
+      reads the OCR slice; the slice is fed exclusively by the
+      Step 32 mock engine. The draft preview defaults
+      `realOcr: false`.
+- [x] **Template matching preview only.** The Visual Builder
+      reads `state.templateMatching.lastResult`; the matcher
+      analyses the captured preview, not the live screen.
+- [x] **Screen capture requires user action.** The Visual
+      Builder never auto-triggers `screen-capture:capture-preview`.
+      It only consumes the slice if the user has captured a
+      preview manually.
+- [x] **No real click.** The action-target overlay is
+      visualisation only. Toggling it never executes anything.
+- [x] **No OCR engine yet.** No new dependency. No call to a real
+      OCR backend.
+- [x] **Overlays are visualisation only.** Toggling
+      `showRegion` / `showTemplateMatch` / `showTemplateTarget` /
+      `showOcrBlocks` / `showOcrTarget` / `showActionTarget`
+      changes only DOM. No scenario / matcher / OCR call is
+      triggered by an overlay change.
+- [x] **No `imageDataUrl` outside the screen-capture slice.**
+      `scenario-presets.js`, `visual-builder.js`, and
+      `visual-builder-ui.js` only read the captured `imageDataUrl`
+      to set `<img>.src` on the preview. They never copy it into
+      a preset, a draft, a diagnostics line, an audit payload, or
+      a scenario record.
+- [x] **No new IPC channel.** Visual Builder and presets never
+      open a new IPC channel. `main.js` registers no
+      `visualBuilder.*` / `scenarioPreset.*` handler.
+      `preload.js` exposes no `visualBuilder.*` /
+      `scenarioPreset.*` API.
+
+### Audit invariants
+- [x] **Allowlist extension.** `audit-events.js` adds exactly six
+      new types: `scenarioPreset.selected`,
+      `scenarioPreset.draft.created`,
+      `scenarioPreset.form.opened`,
+      `visualBuilder.overlay.changed`,
+      `visualBuilder.requirement.missing`,
+      `visualBuilder.draft.preview.created`. Each payload carries
+      only ids, type strings, numeric metadata
+      (`hasRegion`, `hasTemplate`, `targetTextLen`,
+      `missingCount`, `withVisualContext`). Payloads NEVER
+      carry the full target text, an `imageDataUrl`, a
+      thumbnail, or PII.
+
+### Diagnostics invariants
+- [x] **Visual Builder line.** `Copy diagnostics` adds a single
+      `Visual Builder:` line carrying counters and overlay
+      booleans. The line ends with the always-on safety flags
+      (`autoSavesScenarios=false`, `autoRunsScenarios=false`,
+      `realClick=false`, `realOcr=false`).
+
+### Electron-security invariants (re-checked at Step 36)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no `unsafe-eval`,
+      no remote sources.
+- [x] **No prohibited dependencies.** `package.json` still
+      declares zero of `tesseract`, `tesseract.js`,
+      `tesseract-ocr`, `node-tesseract-ocr`, `opencv4nodejs`,
+      `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`,
+      `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`,
+      `nutjs`, `@nut-tree/nut-js`, `iohook`, `uiohook-napi`,
+      `node-key-sender`.
+- [x] **No prohibited imports.** `scenario-presets.js`,
+      `visual-builder.js`, and `visual-builder-ui.js` never call
+      `require()`, never import `electron` or `ipcRenderer`,
+      never use `localStorage`, and never use `innerHTML` on
+      user data.
+
+See [`docs/SMART_FEATURES_QA.md`](./SMART_FEATURES_QA.md) for the
+full smart-features QA checklist and
+[`docs/SMART_FEATURES_LIMITATIONS.md`](./SMART_FEATURES_LIMITATIONS.md)
+for the smart-features limitations.
