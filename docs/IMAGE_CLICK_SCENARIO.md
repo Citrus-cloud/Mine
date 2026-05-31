@@ -213,6 +213,24 @@ opens the click gate:
 Until that gate opens, `image_click` is the sandbox where the
 data shapes can be exercised without touching the OS.
 
+## Test Match (Step 31)
+
+Step 31 ships a Test Match panel inside the `image_click`
+scenario form. It runs the Step-29 matcher over the captured
+preview using the form's current values (template, region,
+threshold, step) and renders a structured debug result, a
+visual overlay, and an action preview — **without saving the
+scenario and without clicking**.
+
+See [`docs/IMAGE_CLICK_TEST_TOOLS.md`](./IMAGE_CLICK_TEST_TOOLS.md)
+for the full data flow, error / warning IDs, and overlay rules.
+
+Test Match is renderer-only logic. It never opens a new IPC
+channel, never moves the cursor, never executes the scenario,
+never persists the screenshot or the debug result on disk. The
+diagnostics card "Image click test diagnostics" in Advanced →
+Safety surfaces only ids and numbers.
+
 ## Cross-references
 
 - [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md) — section

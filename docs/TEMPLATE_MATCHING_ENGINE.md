@@ -270,3 +270,33 @@ the engine + the action-pipeline so the user can run a full
 "capture → match → simulated click" loop end-to-end.
 
 See [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md).
+
+
+
+---
+
+## Step 31 — engine is also used by Test Match
+
+[Step 31](./IMAGE_CLICK_TEST_TOOLS.md) ships a Test Match panel
+inside the `image_click` scenario form. The panel calls
+`runTemplateMatch(screenDataUrl, templateDataUrl, options)`
+directly with the form's current threshold / step / region —
+the same way the Step-30 click engine does — and renders the
+result as a debug overlay, an action preview, and a structured
+debug result.
+
+The engine itself is unchanged at Step 31:
+
+- still pure renderer code, no IPC, no native deps;
+- still analyses **only** the captured preview, never the live
+  screen;
+- still emits warnings via the `warnings: []` array
+  (`search-area-downscaled`, `template-downscaled`,
+  `search-area-cost-high`, `step-raised-by-engine`);
+- still refuses to fire any real click.
+
+Test Match adds a soft 8-second timeout on top of the engine's
+own cost guards so the scenario form never hangs while the
+user is editing.
+
+See [`docs/IMAGE_CLICK_TEST_TOOLS.md`](./IMAGE_CLICK_TEST_TOOLS.md).

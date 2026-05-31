@@ -563,3 +563,86 @@ does not weaken any of the beta-MVP safety invariants.
 See [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md)
 for the full description, the data shape, the execution flow,
 and the list of features that are **not** implemented at Step 30.
+
+
+
+## image_click test tools (Step 31)
+
+> Step 31 ships a Test Match panel inside the `image_click`
+> scenario form ([`docs/IMAGE_CLICK_TEST_TOOLS.md`](./IMAGE_CLICK_TEST_TOOLS.md)).
+> The panel never executes the scenario, never clicks, never
+> persists the screenshot or the debug result on disk, and
+> never opens a new IPC channel. The whole MVP remains
+> simulation-only.
+
+### Behavioural invariants
+- [x] **Test Match does not click.** The Run Test Match button
+      calls `runImageClickTest`, which validates inputs,
+      invokes the Step-29 `runTemplateMatch` engine over the
+      captured preview (`imageDataUrl`) and the template's
+      `previewDataUrl`, and returns a debug result. It NEVER
+      calls `click-engine.runScenario`,
+      `click-engine.runImageClickScenario`, the action
+      pipeline's real branch, the mock adapter, or the
+      dry-run sandbox. realClick: false in every result.
+- [x] **Test Match uses preview only.** The matcher analyses
+      the screen-capture preview the user explicitly captured
+      in Step 25. It never reads the live screen, never opens
+      a new screenshot session, never decodes anything outside
+      the `imageDataUrl` that is already in renderer memory.
+- [x] **Test Match never persists the screenshot.** Neither
+      `image-click-test-tools.js` nor `image-click-test-ui.js`
+      writes to disk. The module-local `_lastTestResult` lives
+      in renderer memory only and is cleared on
+      `clearImageClickTestResult()` and on every scenario form
+      open / close.
+- [x] **Test Match never persists the debug result.** The
+      result is **not** serialised into `scenarios.json`,
+      `settings.json`, `profiles.json`, `templates.json` or
+      `localStorage`. Saving the scenario only persists the
+      Step-30 fields (`templateId`, `region`, `threshold`,
+      `step`, `timeoutMs`, `intervalMs`, `repeatCount`).
+- [x] **No `imageDataUrl` in audit / diagnostics.** The five
+      new audit event types
+      (`imageClick.test.started`,
+      `imageClick.test.completed`,
+      `imageClick.test.failed`,
+      `imageClick.test.lowConfidence`,
+      `imageClick.test.cleared`)
+      and the `Image click test:` line in `Copy diagnostics`
+      carry only ids, numbers, and short reasons — never an
+      `imageDataUrl`, never a thumbnail, never a screenshot.
+- [x] **The action preview is never executed.** It is rendered
+      through `<pre>.textContent` (no HTML interpolation) and
+      its `realClick: false` / `realMatching: false` /
+      `mode: 'preview'` markers ensure the click engine, the
+      action pipeline, the mock adapter, and the dry-run
+      sandbox refuse to consume it.
+
+### Pipeline-level invariants
+- [x] **No new IPC channel at Step 31.** The renderer does not
+      gain any new privilege over the OS. `main.js` registers
+      no `imageClick.test.*` handler. `preload.js` exposes no
+      `imageClick.test.*` API.
+- [x] **No prohibited dependencies.** `package.json` still
+      declares zero of `tesseract`, `tesseract.js`,
+      `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`,
+      `opencv-js`, `sharp`, `jimp`, `pixelmatch`, `looks-same`,
+      `robotjs`, `nut-js`, `nutjs`, `@nut-tree/nut-js`,
+      `iohook`, `uiohook-napi`, `node-key-sender`.
+- [x] **No prohibited imports.** `image-click-test-tools.js`
+      and `image-click-test-ui.js` never call `require()`,
+      never import `electron` or `ipcRenderer`, never use
+      `localStorage`, and never use `innerHTML` on user data.
+
+### Electron-security invariants (re-checked at Step 31)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';` — no `unsafe-inline`, no
+      `unsafe-eval`, no remote sources.
+
+See [`docs/IMAGE_CLICK_TEST_TOOLS.md`](./IMAGE_CLICK_TEST_TOOLS.md)
+for the full description, the debug-result shape, the error /
+warning IDs, the troubleshooting list, and the list of features
+that are **not** implemented at Step 31.
