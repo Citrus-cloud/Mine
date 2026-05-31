@@ -282,6 +282,7 @@ function renderAdvancedDashboard() {
     case 'settings': renderAdvancedSettings(); break;
     case 'safety': renderAdvancedSafety(); break;
     case 'screenCapture': if (typeof renderScreenCapture === 'function') renderScreenCapture(); break;
+    case 'templates': if (typeof renderTemplatesTab === 'function') renderTemplatesTab(); break;
     case 'future': renderAdvancedFuture(); break;
   }
 }
@@ -732,6 +733,38 @@ function renderAdvancedSafety() {
   addCardRow(regCard, 'lastError', regState.lastError || t('none2'));
   c.appendChild(regCard);
 
+  // --- Step 27: Template Asset Manager status (compact diagnostics block) ---
+  const tplCard = document.createElement('div'); tplCard.className = 'adv-card';
+  const tplTitle = document.createElement('div'); tplTitle.className = 'adv-card-title';
+  tplTitle.textContent = t('templatesDiagnostics');
+  tplCard.appendChild(tplTitle);
+  const tplState = state.templates || { items: [], activeTemplateId: null, lastError: null };
+  const tplItems = Array.isArray(tplState.items) ? tplState.items : [];
+  addCardRow(tplCard, t('templatesCount'), String(tplItems.length));
+  addCardRow(tplCard, 'activeTemplateId', tplState.activeTemplateId || t('none2'));
+  // Active template name (from in-memory slice).
+  let _activeName = t('none2');
+  if (tplState.activeTemplateId) {
+    const _foundActive = tplItems.find(_x => _x && _x.id === tplState.activeTemplateId);
+    if (_foundActive && _foundActive.name) _activeName = _foundActive.name;
+  }
+  addCardRow(tplCard, t('activeTemplate'), _activeName);
+  // storageReady — async.
+  const tplStorageRow = document.createElement('div'); tplStorageRow.className = 'adv-card-row';
+  const tplStorageLbl = document.createElement('span'); tplStorageLbl.className = 'adv-card-label'; tplStorageLbl.textContent = t('templatesStorageReady');
+  const tplStorageVal = document.createElement('span'); tplStorageVal.className = 'adv-card-value'; tplStorageVal.textContent = '...';
+  tplStorageRow.appendChild(tplStorageLbl); tplStorageRow.appendChild(tplStorageVal); tplCard.appendChild(tplStorageRow);
+  if (typeof getTemplatesStats === 'function') {
+    getTemplatesStats().then(st => { tplStorageVal.textContent = st && st.storageReady ? t('yes') : t('no'); }).catch(() => { tplStorageVal.textContent = '?'; });
+  } else {
+    tplStorageVal.textContent = '?';
+  }
+  addCardRow(tplCard, 'lastError', tplState.lastError || t('none2'));
+  // Step 27 reminders — image matching / OCR / clicks still absent.
+  addCardRow(tplCard, t('screenMatchingNotImplemented'), t('flagDisabled'));
+  addCardRow(tplCard, t('templateMatchingPlanned'),      t('planned'));
+  c.appendChild(tplCard);
+
   // --- Step 18: Desktop adapter status ---
   const adCard = document.createElement('div'); adCard.className = 'adv-card';
   const adTitle = document.createElement('div'); adTitle.className = 'adv-card-title'; adTitle.textContent = t('desktopAdapterStatus'); adCard.appendChild(adTitle);
@@ -942,7 +975,21 @@ async function copyDiagnostics() {
     }
   }
   const rsLine = `Region selector: selectedRegion=${!!rs.selectedRegion}, normalizedRegion=${!!rs.normalizedRegion}, regionWidth=${rs.selectedRegion ? (rs.selectedRegion.width|0) : 0}, regionHeight=${rs.selectedRegion ? (rs.selectedRegion.height|0) : 0}, regionArea=${rsArea2}, attachedScenario=${rsAttachedScenario}, lastUpdatedAt=${rs.lastUpdatedAt || 'none'}, lastError=${rs.lastError || 'none'}, ocrImplemented=false, imageMatchingImplemented=false, realClicksImplemented=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  // Step 27: Template Asset Manager line. Numeric / metadata only —
+  // never base64, never pixel data, never the original filesystem path.
+  let templatesStats = { count: 0, storageReady: false, lastError: null };
+  try {
+    if (typeof getTemplatesStats === 'function') templatesStats = await getTemplatesStats();
+  } catch (e) {}
+  const tpl = state.templates || { items: [], activeTemplateId: null, lastError: null };
+  const tplItemsForDiag = Array.isArray(tpl.items) ? tpl.items : [];
+  let tplActiveName = 'none';
+  if (tpl.activeTemplateId) {
+    const _foundForDiag = tplItemsForDiag.find(x => x && x.id === tpl.activeTemplateId);
+    if (_foundForDiag && _foundForDiag.name) tplActiveName = _foundForDiag.name;
+  }
+  const tplLine = `Templates: count=${tplItemsForDiag.length}, storageCount=${templatesStats.count|0}, storageReady=${!!templatesStats.storageReady}, activeTemplateId=${tpl.activeTemplateId || 'none'}, activeTemplateName=${tplActiveName}, lastError=${tpl.lastError || 'none'}, screenMatchingImplemented=false, ocrImplemented=false, realClicksImplemented=false`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
@@ -1239,9 +1286,14 @@ async function init() {
   applyTheme(settings.theme);
   await initScenarios();
   await initProfiles();
+  // Step 27: load template assets so the Templates tab and the
+  // diagnostics card see them right away. Failures degrade
+  // gracefully — the slice stays empty and lastError is surfaced.
+  if (typeof initTemplates === 'function') {
+    try { await initTemplates(); } catch (e) {}
+  }
   const def = getDefaultScenario(); setSelectedScenario(def);
   resetExecution();
-
   // Step 15: surface JSON corruption fallback to the user as warning logs
   // (no crash — defaults are already in use, broken file kept on disk).
   if (settings.__corrupted) {

@@ -1665,6 +1665,428 @@ record(
   htmlTxt3.indexOf('unsafe-eval') === -1
 );
 
+// --- Step 27: Template Asset Manager ---
+
+// 92. New source / doc files exist.
+[
+  'main/template-assets.js',
+  'src/template-manager.js',
+  'src/template-ui.js'
+].forEach(function (rel) {
+  record('Step 27 file exists: ' + rel, fileExists(rel));
+});
+record('Step 27 doc exists: docs/TEMPLATE_ASSETS.md', fileExists('docs/TEMPLATE_ASSETS.md'));
+
+// 93. main.js wires the templates module.
+record(
+  "main.js requires ./main/template-assets",
+  /require\(['"]\.\/main\/template-assets['"]\)/.test(mainTxt)
+);
+record(
+  'main.js calls registerTemplateAssetsIpc',
+  mainTxt.indexOf('registerTemplateAssetsIpc(') !== -1
+);
+
+// 94. main/template-assets.js declares the documented surface and
+//     keeps the simulation-only invariants.
+var taTxt = readText('main/template-assets.js');
+[
+  'function registerTemplateAssetsIpc',
+  'function getTemplatesStats',
+  "ALLOWED_TEMPLATE_EXTENSIONS",
+  "ALLOWED_TEMPLATE_MIME_TYPES",
+  "MAX_TEMPLATE_FILE_BYTES",
+  "MAX_TEMPLATE_NAME_LEN",
+  "MAX_TEMPLATE_DESCRIPTION_LEN"
+].forEach(function (needle) {
+  record(
+    'main/template-assets.js declares ' + needle,
+    taTxt.indexOf(needle) !== -1
+  );
+});
+record(
+  'main/template-assets.js registers ipcMain.handle(\'templates:load\')',
+  taTxt.indexOf("ipcMain.handle('templates:load'") !== -1
+);
+record(
+  'main/template-assets.js registers ipcMain.handle(\'templates:import-image\')',
+  taTxt.indexOf("ipcMain.handle('templates:import-image'") !== -1
+);
+record(
+  'main/template-assets.js registers ipcMain.handle(\'templates:save-metadata\')',
+  taTxt.indexOf("ipcMain.handle('templates:save-metadata'") !== -1
+);
+record(
+  'main/template-assets.js registers ipcMain.handle(\'templates:delete\')',
+  taTxt.indexOf("ipcMain.handle('templates:delete'") !== -1
+);
+record(
+  'main/template-assets.js registers ipcMain.handle(\'templates:reset\')',
+  taTxt.indexOf("ipcMain.handle('templates:reset'") !== -1
+);
+record(
+  'main/template-assets.js opens dialog.showOpenDialog only in import-image',
+  /templates:import-image[\s\S]{0,3000}dialog\.showOpenDialog/.test(taTxt)
+);
+record(
+  'main/template-assets.js declares the png/jpg/jpeg/webp allow-list',
+  /['"]png['"][\s\S]{0,40}['"]jpg['"][\s\S]{0,40}['"]jpeg['"][\s\S]{0,40}['"]webp['"]/.test(taTxt)
+);
+record(
+  'main/template-assets.js performs a magic-bytes detection',
+  taTxt.indexOf('_detectImageType') !== -1 && /0x89/.test(taTxt) && /0xFF/.test(taTxt)
+);
+record(
+  'main/template-assets.js never decodes pixels (no sharp/jimp/opencv/tesseract require)',
+  taTxt.indexOf("require('sharp')") === -1 &&
+  taTxt.indexOf("require('jimp')") === -1 &&
+  taTxt.indexOf("require('opencv4nodejs')") === -1 &&
+  taTxt.indexOf("require('@u4/opencv4nodejs')") === -1 &&
+  taTxt.indexOf("require('tesseract.js')") === -1 &&
+  taTxt.indexOf("require('tesseract')") === -1 &&
+  taTxt.indexOf("require('pixelmatch')") === -1
+);
+
+// 95. preload.js exposes the templates API and still does not leak ipcRenderer.
+record(
+  'preload.js exposes templates API',
+  /templates\s*:\s*\{[\s\S]{0,800}importImage/.test(preloadTxt) &&
+  preloadTxt.indexOf("'templates:load'") !== -1 &&
+  preloadTxt.indexOf("'templates:import-image'") !== -1 &&
+  preloadTxt.indexOf("'templates:save-metadata'") !== -1 &&
+  preloadTxt.indexOf("'templates:delete'") !== -1 &&
+  preloadTxt.indexOf("'templates:reset'") !== -1
+);
+
+// 96. src/template-manager.js exports the documented surface.
+var tmTxt = readText('src/template-manager.js');
+[
+  'function initTemplates',
+  'function getTemplates',
+  'function getTemplateById',
+  'function getActiveTemplate',
+  'function setActiveTemplate',
+  'function importTemplateImage',
+  'function updateTemplateMetadata',
+  'function deleteTemplate',
+  'function resetTemplates',
+  'function validateTemplateMetadata',
+  'function loadTemplates',
+  'function getTemplatesStats'
+].forEach(function (needle) {
+  record(
+    'template-manager.js declares ' + needle,
+    tmTxt.indexOf(needle) !== -1
+  );
+});
+record(
+  'template-manager.js does not require electron or ipcRenderer',
+  tmTxt.indexOf("require('electron')") === -1 &&
+  tmTxt.indexOf("require('ipcRenderer')") === -1 &&
+  tmTxt.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'template-manager.js never persists previews via localStorage',
+  (function () {
+    var stripped = tmTxt
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map(function (ln) { return ln.replace(/\/\/.*$/, ''); })
+      .join('\n');
+    return stripped.indexOf('localStorage') === -1;
+  })()
+);
+
+// 97. src/template-ui.js declares the documented surface and is DOM-safe.
+var tuTxt = readText('src/template-ui.js');
+[
+  'function renderTemplatesTab',
+  'function renderTemplateList',
+  'function renderTemplateCard',
+  'function renderActiveTemplate',
+  'function openTemplateImport',
+  'function openTemplateEdit',
+  'function saveTemplateEdit',
+  'function cancelTemplateEdit',
+  'function deleteTemplateById',
+  'function resetTemplateAssets',
+  'function refreshTemplates'
+].forEach(function (needle) {
+  record(
+    'template-ui.js declares ' + needle,
+    tuTxt.indexOf(needle) !== -1
+  );
+});
+record(
+  'template-ui.js does not require electron or ipcRenderer',
+  tuTxt.indexOf("require('electron')") === -1 &&
+  tuTxt.indexOf('ipcRenderer.invoke') === -1
+);
+record(
+  'template-ui.js never persists previews via localStorage',
+  (function () {
+    var stripped = tuTxt
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map(function (ln) { return ln.replace(/\/\/.*$/, ''); })
+      .join('\n');
+    return stripped.indexOf('localStorage') === -1;
+  })()
+);
+record(
+  'template-ui.js never assigns innerHTML to user data',
+  (function () {
+    var lines = tuTxt.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var code = lines[i].replace(/\/\/.*$/, '').trim();
+      if (code.indexOf('innerHTML') === -1) continue;
+      if (!/innerHTML\s*=\s*(['"])\s*\1\s*;?\s*$/.test(code)) return false;
+    }
+    return true;
+  })()
+);
+
+// 98. app-state.js declares the templates slice and 5 mutators.
+record(
+  'app-state.js declares appState.templates slice',
+  /templates\s*:\s*\{[\s\S]{0,300}items\s*:\s*\[\]/.test(appStateTxt)
+);
+[
+  'function setTemplates',
+  'function setActiveTemplateId',
+  'function setTemplatesLoading',
+  'function setTemplatesError',
+  'function resetTemplatesState'
+].forEach(function (needle) {
+  record(
+    'app-state.js declares ' + needle,
+    appStateTxt.indexOf(needle) !== -1
+  );
+});
+
+// 99. audit-events.js allowlist contains the eight new template.* types.
+[
+  "'template.import.requested'",
+  "'template.import.completed'",
+  "'template.import.cancelled'",
+  "'template.import.failed'",
+  "'template.metadata.updated'",
+  "'template.selected'",
+  "'template.deleted'",
+  "'template.reset'"
+].forEach(function (needle) {
+  record(
+    'audit allowlist includes ' + needle.replace(/'/g, ''),
+    auditTxt.indexOf(needle) !== -1
+  );
+});
+
+// 100. index.html wires the new tab + scripts in the right order.
+record(
+  'index.html has Templates tab button',
+  /data-advanced-tab=['"]templates['"]/.test(htmlTxt3)
+);
+record(
+  'index.html has Templates section',
+  /id=['"]advanced-tab-templates['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads template-manager.js',
+  /src=['"]template-manager\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads template-ui.js',
+  /src=['"]template-ui\.js['"]/.test(htmlTxt3)
+);
+record(
+  'index.html loads template-manager.js BEFORE template-ui.js',
+  htmlTxt3.indexOf('template-manager.js') !== -1 &&
+  htmlTxt3.indexOf('template-ui.js') !== -1 &&
+  htmlTxt3.indexOf('template-manager.js') < htmlTxt3.indexOf('template-ui.js')
+);
+record(
+  'index.html loads template-ui.js BEFORE renderer.js',
+  htmlTxt3.indexOf('template-ui.js') !== -1 &&
+  htmlTxt3.indexOf('renderer.js') !== -1 &&
+  htmlTxt3.indexOf('template-ui.js') < htmlTxt3.indexOf('renderer.js')
+);
+
+// 101. renderer.js diagnostics card + Copy diagnostics line.
+record(
+  'renderer.js wires Templates tab into setAdvancedTab switch',
+  /case 'templates'[\s\S]{0,80}renderTemplatesTab/.test(rendTxt)
+);
+record(
+  'renderer.js has Image templates diagnostics card',
+  rendTxt.indexOf("t('templatesDiagnostics')") !== -1
+);
+record(
+  'renderer.js Copy diagnostics has Templates line',
+  /Templates: count=[\s\S]{0,400}screenMatchingImplemented=false/.test(rendTxt)
+);
+record(
+  'renderer.js init() calls initTemplates()',
+  /await initTemplates\(\)/.test(rendTxt) || /initTemplates\(\)/.test(rendTxt)
+);
+
+// 102. README / PROJECT_CONTEXT mention step 27 / template asset manager.
+record(
+  'README or PROJECT_CONTEXT mentions step 27',
+  /step\s*27|шаг\s*27|Step 27|Шаг 27/.test(readText('README.md')) ||
+  /step\s*27|шаг\s*27|Step 27|Шаг 27/.test(readText('PROJECT_CONTEXT.md'))
+);
+record(
+  'README or PROJECT_CONTEXT mentions templates / шаблон',
+  /template[\s-]?asset|Image Templates|Шаблон/i.test(readText('README.md')) ||
+  /template[\s-]?asset|Image Templates|Шаблон/i.test(readText('PROJECT_CONTEXT.md'))
+);
+
+// 103. docs/TEMPLATE_ASSETS.md asserts simulation-only / preview-only.
+var taDoc = readText('docs/TEMPLATE_ASSETS.md');
+record(
+  'docs/TEMPLATE_ASSETS.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(taDoc)
+);
+record(
+  'docs/TEMPLATE_ASSETS.md asserts no image matching / OCR / clicks at step 27',
+  /no\s+template\s+matching|no\s+image\s+matching|matcher\s+is\s+not\s+implemented/i.test(taDoc) &&
+  /(no ocr|never runs ocr|ocr is\s+(not|deliberately))/i.test(taDoc) &&
+  /(no real clicks|never\s+performs\s+a\s+click|click engine[\s\S]{0,80}unaware)/i.test(taDoc)
+);
+record(
+  'docs/TEMPLATE_ASSETS.md describes the userData/templates storage',
+  /userData[\s\S]{0,30}templates/.test(taDoc) &&
+  /templates\.json/.test(taDoc) &&
+  /images/.test(taDoc)
+);
+record(
+  'docs/TEMPLATE_ASSETS.md mentions the planned image_click action',
+  /image_click/i.test(taDoc)
+);
+
+// 104. SECURITY_CHECKLIST has a Template asset manager (Step 27) section.
+var taSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has Template Asset Manager (Step 27) section',
+  /template\s+asset\s+manager\s*\(?step\s*27/i.test(taSec) ||
+  /## Template Asset Manager/i.test(taSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts dialog-only import + format allow-list',
+  /dialog\.showOpenDialog/.test(taSec) &&
+  /png/i.test(taSec) && /jpg/i.test(taSec) && /webp/i.test(taSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts metadata-only / no base64 in templates.json',
+  /metadata\s+only|no\s+base64|no\s+pixel\s+data/i.test(taSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts no OCR / no image matching / no real clicks at step 27',
+  /no real clicks/i.test(taSec) &&
+  /no template matching|no image matching|no image recognition/i.test(taSec) &&
+  /no ocr/i.test(taSec)
+);
+
+// 105. KNOWN_LIMITATIONS / SMOKE_TESTS / ACTION_SCHEMA reference step 27.
+var klTxt27 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has a Template asset manager (Step 27) section',
+  /template\s+asset\s+manager\s*\(?step\s*27/i.test(klTxt27) ||
+  /##\s*11\.\s*Template asset manager/i.test(klTxt27) ||
+  /Templates are stored but not matched yet/i.test(klTxt27)
+);
+var stTxt27 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 27 template asset manager block',
+  /Step\s*27\s*[—-]\s*Template Asset Manager/i.test(stTxt27) ||
+  /Step 27.*Template Asset Manager/i.test(stTxt27)
+);
+var asDoc27 = readText('docs/ACTION_SCHEMA.md');
+record(
+  'docs/ACTION_SCHEMA.md describes the planned image_click action (Step 27)',
+  /image_click/i.test(asDoc27) && /templateId/.test(asDoc27)
+);
+
+// 106. CHANGELOG mentions Step 27 / Template Asset Manager.
+var chTxt27 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 27 — Template Asset Manager',
+  /Step\s*27.*Template Asset Manager/i.test(chTxt27) ||
+  /Шаг\s*27.*Template Asset/i.test(chTxt27) ||
+  /Template Asset Manager/i.test(chTxt27)
+);
+
+// 107. package.json must STILL NOT pull in OCR / OpenCV / robotjs / nut.js
+//     / image recognition / template matching / sharp / jimp / pixelmatch
+//     / looks-same at step 27.
+if (pkg) {
+  var allDeps27 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step27Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps27, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 27',
+    step27Forbidden.length === 0,
+    step27Forbidden.length ? step27Forbidden.join(', ') : ''
+  );
+}
+
+// 108. Source files don't import OCR / OpenCV / image-recognition / sharp at step 27.
+var step27SourceFiles = [
+  'main.js', 'preload.js',
+  'main/template-assets.js',
+  'src/template-manager.js',
+  'src/template-ui.js'
+];
+var step27Imports = [
+  'tesseract.js', 'tesseract', 'opencv4nodejs', '@u4/opencv4nodejs',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep27Imports = [];
+step27SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step27Imports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep27Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 27 source files',
+  foundStep27Imports.length === 0,
+  foundStep27Imports.length ? foundStep27Imports.join(', ') : ''
+);
+
+// 109. main.js still does not flip the simulation-only safety flags at step 27.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 27)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 27)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 27 (no unsafe-inline / unsafe-eval)',
+  htmlTxt3.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt3.indexOf('unsafe-inline') === -1 &&
+  htmlTxt3.indexOf('unsafe-eval') === -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

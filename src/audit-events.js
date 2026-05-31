@@ -57,10 +57,19 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   RegionSelectionCompleted:         'region.selection.completed',
   RegionSelectionCleared:           'region.selection.cleared',
   RegionAttachedToScenario:         'region.attached.toScenario',
-  RegionValidationFailed:           'region.validation.failed'
-});
-
-var KNOWN_TYPES = Object.freeze(
+  RegionValidationFailed:           'region.validation.failed',
+  // Step 27: template asset manager events.
+  // Payloads carry only short metadata (id, name, mime, size) — never
+  // the raw image bytes, base64, dataURL, or filesystem paths.
+  TemplateImportRequested:          'template.import.requested',
+  TemplateImportCompleted:          'template.import.completed',
+  TemplateImportCancelled:          'template.import.cancelled',
+  TemplateImportFailed:             'template.import.failed',
+  TemplateMetadataUpdated:          'template.metadata.updated',
+  TemplateSelected:                 'template.selected',
+  TemplateDeleted:                  'template.deleted',
+  TemplateReset:                    'template.reset'
+});var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );
 

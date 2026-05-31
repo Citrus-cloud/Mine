@@ -1934,3 +1934,241 @@ body {
     padding: 1px 4px;
   }
 }
+
+
+
+/* =====================================================================
+   Step 27 — Template Asset Manager (Advanced → Templates tab)
+   --------------------------------------------------------------------- */
+
+.template-safety-notice {
+  /* Inherits .adv-warning. Slight separation from the action row. */
+  margin-bottom: var(--space-3);
+}
+
+.template-actions {
+  margin-bottom: var(--space-3);
+}
+
+.template-active-card,
+.template-list-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.template-active-preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-muted, var(--card));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-2);
+  min-height: 96px;
+  margin-bottom: var(--space-2);
+}
+
+.template-active-preview-image {
+  max-width: 100%;
+  max-height: 220px;
+  height: auto;
+  width: auto;
+  display: block;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.template-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0; /* allow text-overflow inside grid items */
+}
+
+.template-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.template-selected-badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.template-preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-muted, var(--card));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-2);
+  min-height: 96px;
+}
+
+.template-preview-image {
+  /* Bound the preview so even huge templates do not blow up the grid. */
+  max-width: 100%;
+  max-height: 140px;
+  width: auto;
+  height: auto;
+  display: block;
+  /* No drag-and-drop affordance; suppresses native drag image. */
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.template-preview-image-empty {
+  width: 100%;
+  height: 96px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--card-muted, var(--card)),
+    var(--card-muted, var(--card)) 8px,
+    var(--border) 8px,
+    var(--border) 9px
+  );
+  border-radius: 6px;
+}
+
+.template-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.template-card-description {
+  font-size: 0.85rem;
+  color: var(--muted);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.template-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+}
+
+.template-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.template-empty-state {
+  /* Reuses .adv-log-empty styling but adds a touch of breathing room. */
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.template-loading {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.template-error {
+  margin-bottom: var(--space-2);
+}
+
+/* Inline edit form */
+.template-card-editing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.template-edit-title {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.template-edit-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: var(--space-2);
+  display: block;
+}
+
+.template-edit-input,
+.template-edit-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.9rem;
+  background: var(--card-muted, var(--card));
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-top: 2px;
+}
+
+.template-edit-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.template-edit-error {
+  color: var(--danger, #b94a48);
+  font-size: 0.85rem;
+  margin-top: var(--space-2);
+  min-height: 1.2em;
+}
+
+/* Dark theme tweaks */
+[data-theme="dark"] .template-card {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"] .template-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .template-preview-box,
+[data-theme="dark"] .template-active-preview-box {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .template-edit-input,
+[data-theme="dark"] .template-edit-textarea {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+  .template-preview-image {
+    max-height: 120px;
+  }
+}

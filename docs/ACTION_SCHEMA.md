@@ -284,3 +284,65 @@ When `executionMode === "real"`:
 | wait | ❌ Planned |
 | findText | ❌ Planned (requires OCR) |
 | findImage | ❌ Planned (requires image recognition) |
+
+
+
+---
+
+## Future: Step 27 introduces template ASSETS only
+
+[Step 27](./TEMPLATE_ASSETS.md) ships a Template Asset Manager
+that stores small reference images in
+`userData/templates/templates.json` +
+`userData/templates/images/template-<id>.<ext>`. **It does not
+match templates against the screenshot, run OCR, or trigger any
+click.** The matcher and the action type below are still
+**planned only** in `0.1.x` and remain blocked by
+[`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md).
+
+### image_click (Planned — requires template asset + matcher)
+
+```json
+{
+  "type": "image_click",
+  "templateId": "template-<unix-ms>-<8 hex bytes>",
+  "region": { "x": 0, "y": 0, "width": 0, "height": 0 },
+  "confidence": 0.9,
+  "timeout": 5000,
+  "action": "click"
+}
+```
+
+| Field        | Type    | Description                                                                                       |
+|--------------|---------|---------------------------------------------------------------------------------------------------|
+| `templateId` | string  | Id of a stored template asset (Step 27).                                                          |
+| `region`     | object? | Optional Step-26 image-space region scoping the search.                                           |
+| `confidence` | number  | Match-confidence threshold (0 … 1). Default 0.9.                                                  |
+| `timeout`    | number  | Max time to search before giving up (ms).                                                         |
+| `action`     | string  | What to do once matched: `"click"`, `"doubleClick"`, …                                            |
+
+The action references a **stored template by id**, not the image
+bytes. The matcher resolves the id to a file path inside
+`userData/templates/images/` at execution time. Until the safety
+gate is met:
+
+- `image_click` is **not** a recognised action in
+  `src/click-engine.js`.
+- `src/action-pipeline.js` rejects unknown action types.
+- The mock adapter has no handler for it.
+- No scenario validation accepts `templateId` in
+  `scenario.actions[i]` yet.
+
+When the gate opens, the matcher will:
+
+- run **inside the main process** — not the renderer;
+- read the screenshot from `screen-capture:capture-preview`
+  (Step 25);
+- read the optional region from
+  `appState.regionSelector.normalizedRegion` (Step 26);
+- read the template image bytes from the path described in
+  `docs/TEMPLATE_ASSETS.md`.
+
+| Action Type   | Status                                                                                  |
+|---------------|------------------------------------------------------------------------------------------|
+| `image_click` | ❌ Planned (requires template matcher + Step 27 storage). Stored ASSETS already exist.   |
