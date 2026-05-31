@@ -8,7 +8,7 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
-## [Unreleased] — Steps 15-33
+## [Unreleased] — Steps 15-34
 
 Final stabilization of the simulation-only beta, design-only handoff
 to the future real-input release line, the Step 17 architectural
@@ -23,12 +23,255 @@ Manager, the Step 28 Template Matching Mock / Dry-run, the
 Step 29 Real Template Matching Engine Foundation, the
 Step 30 Image Click Scenario Type Foundation, the
 Step 31 Image Click Scenario UX Polish + Visual Test Tools, the
-Step 32 OCR Foundation (mock only), and the
-**Step 33 Text Click Scenario Type Foundation** (new
-simulation-only scenario type that runs the Step-32 mock OCR every
-iteration and dispatches a SIMULATED `text_click` action through
-the existing action-pipeline; never recognises real text, never
-clicks, never opens a new IPC channel). **Still simulation-only.**
+Step 32 OCR Foundation (mock only), the
+Step 33 Text Click Scenario Type Foundation, and the
+**Step 34 Text Click Test Tools + OCR UX Polish** (Test OCR /
+Test Text Match panel inside the `text_click` scenario form —
+never executes the scenario, never clicks, never performs real
+OCR, never opens a new IPC channel). **Still simulation-only.**
+
+### Added (Step 34 — Text Click Test Tools + OCR UX Polish)
+
+- `src/text-click-test-tools.js` (new pure-renderer module):
+  - `buildTextClickTestInput(formData, appState)` — collects
+    target text, language, match mode, case-sensitive flag,
+    optional region (form copy), and the captured screen
+    preview from the renderer state slices. Sanitises every
+    field; copies the preview's `imageDataUrl` only into the
+    input so the mock engine can read it — never copies it
+    onward into diagnostics, audit payloads, or persisted
+    state.
+  - `validateTextClickTestInput(input)` — returns
+    `{ valid, errors: [stableId], warnings: [stableId] }`.
+    Stable error IDs: `targetTextRequired`,
+    `captureScreenPreviewFirst`, `invalidRegion`,
+    `invalidOcrLanguage`, `invalidMatchMode`,
+    `mockOcrEngineUnavailable`, `targetTextWasNotFound`.
+  - `runTextClickTest(input)` (sync) — validates, calls the
+    Step-32 `createOcrInput` + `runMockOcr`, builds a debug
+    result. Records `textClick.test.started` /
+    `textClick.test.completed` / `textClick.test.failed` /
+    `textClick.test.noMatch` /
+    `textClick.test.actionPreview.created` audit events.
+    NEVER calls `runScenario`, `runTextClickScenario`,
+    `executeAction` real branch, the mock adapter, or the
+    dry-run sandbox. NEVER calls a real OCR backend — only
+    delegates to the Step-32 mock engine.
+  - `createTextClickDebugResult(ocrResult, input, runMeta)`
+    — builds `{ scenarioDraftName, targetText, language,
+    matchMode, caseSensitive, region, screenSourceId / Name,
+    previewSize, matched, matchedText, confidence,
+    boundingBox, targetPoint, durationMs, blocks,
+    actionPreview, errors, warnings, createdAt,
+    realOcr: false, realClick: false }`. The action preview
+    is built by the Step-32 mock engine and re-stamped with
+    `mode: "preview"`, `realClick: false`, `realOcr: false`
+    defensively.
+  - `clearTextClickTestResult()` — wipes module-local
+    `_lastTextClickTestResult` + `_textClickTestDiagnostics`
+    and emits `textClick.test.cleared`.
+  - `getTextClickTestStatus()` — diagnostics snapshot
+    (`hasResult`, `lastTextClickTestAt`,
+    `lastTextClickTestMatched`,
+    `lastTextClickTestConfidence`,
+    `lastTextClickTestDurationMs`,
+    `lastTextClickTestTargetTextLen`,
+    `lastTextClickTestErrorsCount`,
+    `lastTextClickTestLanguage`,
+    `lastTextClickTestMatchMode`,
+    `lastTextClickTestRegionUsed`,
+    `lastTextClickTestBlocksCount`, `ocrMockOnly: true`,
+    `realOcrEnabled: false`, `realTextClickEnabled: false`,
+    `realClick: false`, `realOcr: false`).
+  - `getLastTextClickTestResult()` — shallow copy of the
+    last debug result. Module-local; never persisted.
+- `src/text-click-test-ui.js` (new renderer UI module):
+  - `initTextClickTestUi()` — builds the panel skeleton
+    inside `#form-section-text-click` once. Idempotent.
+  - `refreshTextClickTestPanel()` — re-renders the three
+    info cards.
+  - `renderTextClickScreenPreviewStatus()` — Screen preview
+    status card (source name, image size, capturedAt,
+    `Preview only = enabled` reminder).
+  - `renderTextClickRegionSummary()` — Region summary card
+    (used region from form draft + selected region from the
+    region-selector slice).
+  - `renderTextClickOcrSettings()` — OCR settings card
+    (target text trimmed and truncated to 60 chars, language
+    label, match mode label, case sensitive flag,
+    `Mock OCR only = enabled` reminder). Auto-refreshes on
+    every form change.
+  - `runTextClickTestFromForm()` — collects form data,
+    validates, runs the mock engine, renders the result,
+    logs.
+  - `renderTextClickTestResult(result)` — coloured headline
+    (matched=green / failed=red / no-match=yellow), metric
+    rows.
+  - `renderTextClickBlocksList(result)` — recognised-blocks
+    list with matched-row highlight + MATCHED badge.
+  - `renderTextClickOcrOverlay(result)` — preview `<img>` +
+    region rectangle (dashed blue) + every OCR block
+    (yellow-dashed, dimmed when no match) + matched block
+    (solid green with text label) + target dot (red with
+    white halo). CSS percentage positioning so the overlay
+    scales correctly.
+  - `renderTextClickActionPreview(result)` — JSON of the
+    planned `text_click` action via `<pre>.textContent` (no
+    HTML interpolation, never executed).
+  - `clearTextClickTestResultUi()` — collapses every block.
+  - Three quick navigation buttons (Open OCR / Open Screen
+    Capture / Open Region Selector → `setAdvancedTab(tab)`).
+- `src/audit-events.js` — 6 new allowlisted event types:
+  `textClick.test.started`, `textClick.test.completed`,
+  `textClick.test.failed`, `textClick.test.noMatch`,
+  `textClick.test.cleared`,
+  `textClick.test.actionPreview.created`. Payloads carry
+  only ids and short metadata (confidence, target X / Y,
+  durationMs, threshold, errorsCount, blocksCount, language,
+  matchMode, hasRegion, targetTextLen / textLen) — never
+  the full target text, never an `imageDataUrl`, never a
+  thumbnail, never PII.
+- `src/i18n.js` — 30 new keys per language (RU + EN):
+  `testOcr`, `testTextMatch`, `runTextClickTest`,
+  `textClickTestTools`, `textClickTestResult`,
+  `textClickBlocks`, `ocrBlocksOverlay`, `matchedBlock`,
+  `targetTextWasNotFound`, `mockOcrEngineUnavailable`,
+  `openOcr`, `textClickTestStarted`,
+  `textClickTestCompleted`, `textClickTestFailed`,
+  `textClickTestNoMatch`, `textClickTestCleared`,
+  `textClickTestFormTypeMismatch`, `ocrMockOnly`,
+  `testDoesNotUseRealOcr`, `textClickDebugPanel`,
+  `matchedTextBlock`, `noTextClickTestResult`,
+  `textClickTestDiagnostics`, `lastTextClickTestAt`,
+  `lastTextClickTestMatched`, `lastTextClickTestConfidence`,
+  `lastTextClickTestDurationMs`,
+  `lastTextClickTestTargetTextLen`,
+  `lastTextClickTestErrorsCount`, plus
+  `targetTextRequired` / `invalidOcrLanguage` /
+  `invalidMatchMode` reused from Step 32.
+- `src/index.html` — loads `text-click-test-tools.js` and
+  `text-click-test-ui.js` between `ocr-ui.js` and
+  `renderer.js`. CSP unchanged. No new IPC channel. No new
+  `<script>` injected at runtime.
+- `src/renderer.js`:
+  - `init()` ends with `initTextClickTestUi()` (in addition
+    to the existing `initImageClickTestUi()`).
+  - `openCreateScenarioForm` / `openEditScenarioForm` /
+    `closeScenarioForm` clear the test panel result via
+    `clearTextClickTestResultUi()` and refresh / init the
+    panel.
+  - `syncScenarioFormSections` refreshes the test panel when
+    the user switches to the text_click section.
+  - `bindScenarioFormTextClickHandlers` wires `input` /
+    `change` listeners on the target text / language /
+    match mode / case-sensitive form fields so the OCR
+    settings card auto-refreshes.
+  - `refreshTextClickRegionSummary` ends with
+    `renderTextClickRegionSummary()` (different module, no
+    recursion).
+  - `refreshTextClickPreviewWarning` ends with
+    `renderTextClickScreenPreviewStatus()` (different
+    module, no recursion).
+  - New **Text click test diagnostics** card in
+    `renderAdvancedSafety` with last-run rows + always-on
+    safety reminders.
+  - New `Text click test:` line in `Copy diagnostics`
+    (numeric / metadata only — `lastTextClickTestTargetTextLen`
+    instead of the full text, `ocrMockOnly=true`,
+    `realOcrEnabled=false`, `realTextClickEnabled=false`,
+    `testDoesNotClick=true`, `realClick=false`,
+    `realOcr=false`).
+- `src/styles.css` — new section "Step 34 — text_click test
+  tools": `.text-click-test-panel`,
+  `.text-click-test-header`, `.text-click-test-title`,
+  `.text-click-test-subtitle`,
+  `.text-click-test-subtitle-mock`, `.text-click-test-nav`,
+  `.text-click-test-nav-button`, `.text-click-test-card`,
+  `.text-click-test-card-title`, `.text-click-test-empty`,
+  `.text-click-test-row`, `.text-click-test-row-label`,
+  `.text-click-test-row-value`, `.text-click-test-controls`,
+  `.text-click-test-button`, `.text-click-test-button-busy`,
+  `.text-click-test-clear-button`,
+  `.text-click-test-errors`,
+  `.text-click-test-errors-title-soft`,
+  `.text-click-test-warnings`,
+  `.text-click-test-result-panel`,
+  `.text-click-test-result-headline` with three coloured
+  variants (matched=green, failed=red, no-match=yellow),
+  `.text-click-test-blocks-card`,
+  `.text-click-test-blocks-list`,
+  `.text-click-test-block-row`,
+  `.text-click-test-block-row-matched`,
+  `.text-click-test-block-badge`,
+  `.text-click-test-overlay-card`,
+  `.text-click-test-overlay-wrapper`,
+  `.text-click-test-overlay-image` (`max-width: 100%`),
+  `.text-click-test-overlay-region` (dashed blue),
+  `.text-click-test-overlay-block` (yellow-dashed),
+  `.text-click-test-overlay-block-matched` (solid green),
+  `.text-click-test-overlay-block-muted` (dimmed),
+  `.text-click-test-overlay-block-label`,
+  `.text-click-test-overlay-target` (red dot with white
+  halo), `.text-click-test-action-preview-json` (max-height
+  280 px, monospace, `<pre>.textContent` only). Dark-theme
+  tweaks via `[data-theme="dark"]`. Mobile fallback at
+  `max-width: 760px`.
+- `docs/TEXT_CLICK_TEST_TOOLS.md` — new doc covering
+  purpose, current status, Test OCR flow, Test Text Match
+  flow, required data, OCR blocks overlay, action preview,
+  what is not executed, troubleshooting, safety notes.
+- `docs/TEXT_CLICK_SCENARIO.md` — adds **Test OCR / Test
+  Match (Step 34)** section linking to the new doc.
+- `docs/OCR_FOUNDATION.md` — adds **Step 34 — mock OCR is
+  also used by the text_click test tools** section.
+- `docs/SECURITY_CHECKLIST.md` — adds **text_click test
+  tools (Step 34)** section with behavioural / pipeline /
+  Electron-security invariants.
+- `docs/SMOKE_TESTS.md` — adds **Step 34 — Text Click Test
+  Tools + OCR UX Polish** smoke checks (#337–#358).
+- `scripts/smoke-check.js` — Step 34 invariants (see below).
+
+### Safety invariants kept (Step 34)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `realMatching: false`, `realClick: false`,
+  `realOcr: false`, `ocrEngineImplemented: false`,
+  `tesseractAvailable: false`, `ocrMockOnly: true`,
+  `realOcrEnabled: false`, `realTextClickEnabled: false`,
+  `testDoesNotClick: true` in every status response, audit
+  payload, and diagnostics line.
+- Test OCR runs entirely in the renderer. It never opens a
+  new IPC channel, never imports `electron`, `ipcRenderer`,
+  `fs`, or `localStorage`. `text-click-test-tools.js` and
+  `text-click-test-ui.js` contain no `require()` of any
+  prohibited module (`tesseract` / `tesseract.js` /
+  `opencv4nodejs` / `@u4/opencv4nodejs` / `opencv.js` /
+  `opencv-js` / `sharp` / `jimp` / `pixelmatch` /
+  `looks-same` / `robotjs` / `nut-js` / `nutjs` /
+  `@nut-tree/nut-js` / `iohook` / `uiohook-napi` /
+  `node-key-sender`).
+- The mock desktop adapter does not consume `text_click`
+  preview-mode actions. The dry-run sandbox does not consume
+  `text_click` either. Any `realClick: true` /
+  `realOcr: true` is rejected by `validateAction`.
+- The action preview is rendered through `<pre>.textContent`.
+  No HTML interpolation. The click engine, the action
+  pipeline, the mock adapter, and the dry-run sandbox do not
+  consume `mode: "preview"` actions.
+- The screenshot is never persisted on disk by Test OCR.
+  The debug result is never written into `scenarios.json`,
+  `settings.json`, `profiles.json`, `templates.json`, or
+  `localStorage`. Module-local `_lastTextClickTestResult`
+  lives in renderer memory and is cleared on
+  `clearTextClickTestResult()` and on every scenario form
+  open / close.
+- Audit payloads carry only ids and short metadata. No
+  `imageDataUrl`, no thumbnails, never the full target text
+  (only `targetTextLen` / `textLen`), no PII.
+
+## [Unreleased] — Steps 15-33
 
 ### Added (Step 33 — Text Click Scenario Type Foundation)
 

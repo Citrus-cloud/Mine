@@ -251,6 +251,27 @@ When the real-click gate opens:
 Until that gate opens, `text_click` is the sandbox where the data
 shapes can be exercised without touching the OS.
 
+## Test OCR / Test Match (Step 34)
+
+Step 34 ships a **Test OCR / Test Text Match** panel inside the
+`text_click` scenario form. It runs the Step-32 mock OCR
+matcher over the captured preview using the form's current
+values (target text, language, match mode, case sensitive,
+optional region) and renders a structured debug result, an
+OCR-blocks list, a visual overlay, and a `text_click` action
+preview — **without saving the scenario, without clicking, and
+without performing real OCR**.
+
+See [`docs/TEXT_CLICK_TEST_TOOLS.md`](./TEXT_CLICK_TEST_TOOLS.md)
+for the full data flow, error / warning IDs, and overlay rules.
+
+Test OCR is renderer-only logic. It never opens a new IPC
+channel, never moves the cursor, never executes the scenario,
+never persists the screenshot or the debug result on disk. The
+diagnostics card "Text click test diagnostics" in Advanced →
+Safety surfaces only ids, numbers, language / match mode
+labels, and `targetTextLen` — never the full target text.
+
 See also:
 
 - [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md)

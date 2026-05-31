@@ -151,7 +151,24 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   ScenarioTextClickSimulated:        'scenario.textClick.simulated',
   ScenarioTextClickFailed:           'scenario.textClick.failed',
   ActionTextClickSimulated:          'action.textClick.simulated',
-  ActionTextClickRealBlocked:        'action.textClick.realBlocked'
+  ActionTextClickRealBlocked:        'action.textClick.realBlocked',
+  // Step 34: text_click Test OCR / Test Text Match (UX polish +
+  // visual test tools). Test OCR runs the Step-32 mock OCR
+  // engine against the captured preview to debug a draft
+  // text_click scenario BEFORE saving / running it. Payloads
+  // carry only ids and short metadata (confidence, target X / Y,
+  // durationMs, blocksCount, language, matchMode, errorsCount,
+  // hasRegion: bool, targetTextLen: int) — never the full target
+  // text, never an `imageDataUrl`, never a thumbnail, never a
+  // screenshot, never PII. Test OCR never executes the scenario,
+  // never moves the cursor, never clicks, never performs real
+  // OCR.
+  TextClickTestStarted:               'textClick.test.started',
+  TextClickTestCompleted:             'textClick.test.completed',
+  TextClickTestFailed:                'textClick.test.failed',
+  TextClickTestNoMatch:               'textClick.test.noMatch',
+  TextClickTestCleared:               'textClick.test.cleared',
+  TextClickTestActionPreviewCreated:  'textClick.test.actionPreview.created'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

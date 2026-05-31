@@ -239,9 +239,9 @@ function renderScenarioList() {
 
 function openScenarioList() { addLogEntry(createLog('info', t('logScenariosOpened'))); showView('scenarios'); renderScenarioList(); renderState(); }
 function selectScenarioById(id) { const sc = getScenarioById(id); if (!sc) return; setSelectedScenario(sc); addLogEntry(createLog('success', `${t('select')}: ${sc.name}`)); showView('main'); renderState(); }
-function openCreateScenarioForm() { setScenarioFormMode('create'); setEditingScenarioId(null); clearScenarioForm(); clearFormError(); formTitle.textContent = t('createScenarioTitle'); showView('scenarioForm'); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); if (typeof initImageClickTestUi === 'function') initImageClickTestUi(); else if (typeof refreshImageClickTestPanel === 'function') refreshImageClickTestPanel(); }
-function openEditScenarioForm(id) { const sc = getScenarioById(id); if (!sc) return; setScenarioFormMode('edit'); setEditingScenarioId(id); fillScenarioForm(sc); clearFormError(); formTitle.textContent = t('editScenarioTitle'); showView('scenarioForm'); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); if (typeof initImageClickTestUi === 'function') initImageClickTestUi(); else if (typeof refreshImageClickTestPanel === 'function') refreshImageClickTestPanel(); }
-function closeScenarioForm() { setScenarioFormMode(null); setEditingScenarioId(null); clearFormError(); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); showView('scenarios'); renderScenarioList(); }
+function openCreateScenarioForm() { setScenarioFormMode('create'); setEditingScenarioId(null); clearScenarioForm(); clearFormError(); formTitle.textContent = t('createScenarioTitle'); showView('scenarioForm'); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); if (typeof initImageClickTestUi === 'function') initImageClickTestUi(); else if (typeof refreshImageClickTestPanel === 'function') refreshImageClickTestPanel(); if (typeof clearTextClickTestResultUi === 'function') clearTextClickTestResultUi(); if (typeof initTextClickTestUi === 'function') initTextClickTestUi(); else if (typeof refreshTextClickTestPanel === 'function') refreshTextClickTestPanel(); }
+function openEditScenarioForm(id) { const sc = getScenarioById(id); if (!sc) return; setScenarioFormMode('edit'); setEditingScenarioId(id); fillScenarioForm(sc); clearFormError(); formTitle.textContent = t('editScenarioTitle'); showView('scenarioForm'); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); if (typeof initImageClickTestUi === 'function') initImageClickTestUi(); else if (typeof refreshImageClickTestPanel === 'function') refreshImageClickTestPanel(); if (typeof clearTextClickTestResultUi === 'function') clearTextClickTestResultUi(); if (typeof initTextClickTestUi === 'function') initTextClickTestUi(); else if (typeof refreshTextClickTestPanel === 'function') refreshTextClickTestPanel(); }
+function closeScenarioForm() { setScenarioFormMode(null); setEditingScenarioId(null); clearFormError(); if (typeof clearImageClickTestResultUi === 'function') clearImageClickTestResultUi(); if (typeof clearTextClickTestResultUi === 'function') clearTextClickTestResultUi(); showView('scenarios'); renderScenarioList(); }
 
 async function saveScenarioFromForm() {
   const data = getScenarioFormData(); const state = getState(); let result;
@@ -1113,6 +1113,53 @@ function renderAdvancedSafety() {
   addCardRow(ictCard, t('realClickDisabled'),        t('flagEnabled'));
   c.appendChild(ictCard);
 
+  // --- Step 34: Text Click Test diagnostics card ---
+  // Surfaces the last Test OCR invocation from the text_click
+  // scenario form. Test OCR never clicks and never performs
+  // real OCR — these are mock-engine debug numbers only. The
+  // full target text NEVER appears here (only its length).
+  const tctCard = document.createElement('div'); tctCard.className = 'adv-card';
+  const tctTitle = document.createElement('div'); tctTitle.className = 'adv-card-title';
+  tctTitle.textContent = t('textClickTestDiagnostics');
+  tctCard.appendChild(tctTitle);
+  let tctStatus = null;
+  if (typeof getTextClickTestStatus === 'function') {
+    try { tctStatus = getTextClickTestStatus(); } catch (e) { tctStatus = null; }
+  }
+  if (tctStatus) {
+    addCardRow(tctCard, t('lastTextClickTestAt'),       tctStatus.lastTextClickTestAt        || t('none2'));
+    addCardRow(tctCard, t('lastTextClickTestMatched'),
+      tctStatus.lastTextClickTestMatched === null ? t('none2') : (tctStatus.lastTextClickTestMatched ? t('yes') : t('no')));
+    addCardRow(tctCard, t('lastTextClickTestConfidence'),
+      (typeof tctStatus.lastTextClickTestConfidence === 'number')
+        ? (Math.round(tctStatus.lastTextClickTestConfidence * 1000) / 10).toFixed(1) + '%'
+        : t('none2'));
+    addCardRow(tctCard, t('lastTextClickTestDurationMs'),
+      (typeof tctStatus.lastTextClickTestDurationMs === 'number')
+        ? tctStatus.lastTextClickTestDurationMs + ' ms'
+        : t('none2'));
+    addCardRow(tctCard, t('lastTextClickTestTargetTextLen'),
+      String(tctStatus.lastTextClickTestTargetTextLen | 0));
+    addCardRow(tctCard, t('lastTextClickTestErrorsCount'),
+      String(tctStatus.lastTextClickTestErrorsCount | 0));
+    addCardRow(tctCard, t('ocrLanguage'),
+      tctStatus.lastTextClickTestLanguage || t('none2'));
+    addCardRow(tctCard, t('matchMode'),
+      tctStatus.lastTextClickTestMatchMode || t('none2'));
+    addCardRow(tctCard, t('regionUsed'),
+      tctStatus.lastTextClickTestRegionUsed ? t('yes') : t('no'));
+    addCardRow(tctCard, t('lastOcrBlocksCount'),
+      String(tctStatus.lastTextClickTestBlocksCount | 0));
+  } else {
+    addCardRow(tctCard, '', t('noData'));
+  }
+  // Always-on safety reminders.
+  addCardRow(tctCard, t('ocrMockOnly'),                 t('flagEnabled'));
+  addCardRow(tctCard, t('realOcrDisabled'),             t('flagEnabled'));
+  addCardRow(tctCard, t('realTextClickDisabled'),       t('flagEnabled'));
+  addCardRow(tctCard, t('testDoesNotClick'),            t('flagEnabled'));
+  c.appendChild(tctCard);
+
   // --- Step 32: OCR Foundation diagnostics card ---
   // Surfaces the last mock OCR run from the Advanced → OCR tab.
   // Real OCR is NOT connected at Step 32 — these are debug
@@ -1441,6 +1488,29 @@ async function copyDiagnostics() {
   const ictTemplateId    = ictDiagStatus ? (ictDiagStatus.lastImageClickTestTemplateId || 'none') : 'none';
   const ictErrors        = ictDiagStatus ? (ictDiagStatus.lastImageClickTestErrorsCount | 0) : 0;
   const ictLine = `Image click test: hasResult=${ictHasResult}, lastImageClickTestAt=${ictAt}, lastImageClickTestMatched=${ictMatched}, lastImageClickTestConfidence=${ictConfidence}, lastImageClickTestDurationMs=${ictDuration}, lastImageClickTestTemplateId=${ictTemplateId}, lastImageClickTestErrorsCount=${ictErrors}, testDoesNotClick=true, realMatching=false, realClick=false`;
+  // Step 34: text_click Test OCR / Test Text Match line. Numbers
+  // and short strings only — never the full target text, never
+  // an imageDataUrl.
+  let tctDiagStatus = null;
+  if (typeof getTextClickTestStatus === 'function') {
+    try { tctDiagStatus = getTextClickTestStatus(); } catch (e) { tctDiagStatus = null; }
+  }
+  const tctHasResult     = tctDiagStatus ? !!tctDiagStatus.hasResult : false;
+  const tctAt            = tctDiagStatus ? (tctDiagStatus.lastTextClickTestAt || 'none') : 'none';
+  const tctMatched       = tctDiagStatus
+    ? (tctDiagStatus.lastTextClickTestMatched === null ? 'none' : !!tctDiagStatus.lastTextClickTestMatched)
+    : 'none';
+  const tctConfidence    = (tctDiagStatus && (typeof tctDiagStatus.lastTextClickTestConfidence === 'number'))
+    ? tctDiagStatus.lastTextClickTestConfidence : 'none';
+  const tctDuration      = (tctDiagStatus && (typeof tctDiagStatus.lastTextClickTestDurationMs === 'number'))
+    ? tctDiagStatus.lastTextClickTestDurationMs : 'none';
+  const tctTextLen       = tctDiagStatus ? (tctDiagStatus.lastTextClickTestTargetTextLen | 0) : 0;
+  const tctErrors        = tctDiagStatus ? (tctDiagStatus.lastTextClickTestErrorsCount | 0) : 0;
+  const tctLanguage      = tctDiagStatus ? (tctDiagStatus.lastTextClickTestLanguage || 'none') : 'none';
+  const tctMatchMode     = tctDiagStatus ? (tctDiagStatus.lastTextClickTestMatchMode || 'none') : 'none';
+  const tctRegionUsed    = tctDiagStatus ? !!tctDiagStatus.lastTextClickTestRegionUsed : false;
+  const tctBlocksCount   = tctDiagStatus ? (tctDiagStatus.lastTextClickTestBlocksCount | 0) : 0;
+  const tctLine = `Text click test: hasResult=${tctHasResult}, lastTextClickTestAt=${tctAt}, lastTextClickTestMatched=${tctMatched}, lastTextClickTestConfidence=${tctConfidence}, lastTextClickTestDurationMs=${tctDuration}, lastTextClickTestTargetTextLen=${tctTextLen}, lastTextClickTestErrorsCount=${tctErrors}, lastTextClickTestLanguage=${tctLanguage}, lastTextClickTestMatchMode=${tctMatchMode}, lastTextClickTestRegionUsed=${tctRegionUsed}, lastTextClickTestBlocksCount=${tctBlocksCount}, ocrMockOnly=true, realOcrEnabled=false, realTextClickEnabled=false, testDoesNotClick=true, realClick=false, realOcr=false`;
   // Step 32: OCR Foundation line. Numbers / metadata only — never
   // base64, never imageDataUrl, never the full target text.
   let ocrDiagStatus = null;
@@ -1463,7 +1533,7 @@ async function copyDiagnostics() {
   const ocrBlocksCnt   = ocrDiagStatus ? (ocrDiagStatus.lastOcrBlocksCount | 0) : 0;
   const ocrRegionUsed  = ocrDiagStatus ? !!ocrDiagStatus.lastOcrRegionUsed : false;
   const ocrLine = `OCR: ocrMockAvailable=${ocrMockAvail}, realOcrAvailable=${ocrRealAvail}, lastOcrRunAt=${ocrLastAt}, lastOcrMatched=${ocrLastMatched}, lastOcrConfidence=${ocrLastConf}, lastOcrDurationMs=${ocrLastDur}, ocrLanguage=${ocrLastLang}, ocrMatchMode=${ocrLastMode}, targetTextPresent=${ocrTargetLen > 0}, lastOcrBlocksCount=${ocrBlocksCnt}, regionUsed=${ocrRegionUsed}, realOcr=false, realClick=false, tesseractAvailable=false, ocrEngineImplemented=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\n${tcLine}\n${ictLine}\n${ocrLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\n${tcLine}\n${ictLine}\n${tctLine}\n${ocrLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
@@ -1814,6 +1884,11 @@ async function init() {
   if (typeof initImageClickTestUi === 'function') {
     try { initImageClickTestUi(); } catch (e) {}
   }
+  // Step 34: build the Test OCR panel skeleton inside the
+  // text_click section. Same idempotent pattern as Step 31.
+  if (typeof initTextClickTestUi === 'function') {
+    try { initTextClickTestUi(); } catch (e) {}
+  }
 }
 init();
 
@@ -1841,9 +1916,14 @@ function syncScenarioFormSections() {
   // Step 33: refresh the text_click "no preview" warning whenever
   // the user switches to text_click — preview state may have
   // changed since the form was last open.
+  // Step 34: also refresh the new Test OCR panel so the screen /
+  // region / OCR-settings cards mirror the form state.
   if (type === 'text_click') {
     refreshTextClickPreviewWarning();
     refreshTextClickRegionSummary();
+    if (typeof refreshTextClickTestPanel === 'function') {
+      refreshTextClickTestPanel();
+    }
   }
 }
 
@@ -1976,6 +2056,10 @@ function refreshTextClickRegionSummary() {
     textClickRegionSummary.textContent = t('noRegionSelected') || 'No region selected';
     textClickRegionSummary.classList.remove('text-click-region-summary-active');
   }
+  // Step 34: keep the Test OCR Region summary card in sync.
+  if (typeof renderTextClickRegionSummary === 'function') {
+    renderTextClickRegionSummary();
+  }
 }
 
 // Show the "capture a screen preview first" warning whenever the
@@ -1989,6 +2073,10 @@ function refreshTextClickPreviewWarning() {
     hasPreview = !!(p && typeof p.imageDataUrl === 'string' && p.imageDataUrl.indexOf('data:image/') === 0);
   }
   textClickNoPreview.classList.toggle('view-hidden', hasPreview);
+  // Step 34: keep the Test OCR Screen preview status card in sync.
+  if (typeof renderTextClickScreenPreviewStatus === 'function') {
+    renderTextClickScreenPreviewStatus();
+  }
 }
 
 // "Use selected region" — copies the current region-selector
@@ -2019,6 +2107,19 @@ function bindScenarioFormTextClickHandlers() {
   if (btnTextClickClearRegion) {
     btnTextClickClearRegion.addEventListener('click', clearTextClickFormRegion);
   }
+  // Step 34: refresh the Test OCR settings card whenever the user
+  // edits the target text / language / match mode / case
+  // sensitivity. The Test OCR result itself is NOT re-run — the
+  // user must press the button.
+  function _refreshOcrCard() {
+    if (typeof renderTextClickOcrSettings === 'function') {
+      renderTextClickOcrSettings();
+    }
+  }
+  if (inputTextTarget)        inputTextTarget.addEventListener('input',  _refreshOcrCard);
+  if (inputTextLanguage)      inputTextLanguage.addEventListener('change', _refreshOcrCard);
+  if (inputTextMatchMode)     inputTextMatchMode.addEventListener('change', _refreshOcrCard);
+  if (inputTextCaseSensitive) inputTextCaseSensitive.addEventListener('change', _refreshOcrCard);
 }
 bindScenarioFormTextClickHandlers();
 
