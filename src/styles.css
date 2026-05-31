@@ -2437,3 +2437,110 @@ body {
     font-size: 0.74rem;
   }
 }
+
+
+
+/* =====================================================================
+   Step 29 — Real Template Matching Engine Foundation
+   --------------------------------------------------------------------- */
+
+/* Match-mode controls (mode select + threshold + step) */
+
+.template-matching-controls-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.template-matching-control-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.template-matching-control-label {
+  min-width: 140px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.template-matching-mode-select,
+.template-matching-step-select,
+.template-matching-threshold-input {
+  font-size: 0.9rem;
+  background: var(--card-muted, var(--card));
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-width: 140px;
+}
+
+.template-matching-threshold-input {
+  width: 100px;
+  min-width: 100px;
+}
+
+.template-matching-real-preview-notice {
+  /* Inherits .adv-warning. Slightly softer accent so it doesn't
+     compete with the global mock notice above it. */
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+/* Real-preview badge — visually distinct from the mock badge so the
+   user can tell at a glance which engine produced the result. */
+.template-matching-real-preview-badge {
+  background: rgba(46, 160, 67, 0.18);
+  color: #1a7f37;
+  border-color: rgba(46, 160, 67, 0.4);
+}
+
+[data-theme="dark"] .template-matching-real-preview-badge {
+  background: rgba(63, 185, 80, 0.16);
+  color: #4ac26b;
+  border-color: rgba(63, 185, 80, 0.45);
+}
+
+/* Result headline (Match found / Low confidence / No match) */
+.template-matching-headline {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: var(--space-1);
+}
+
+.template-matching-headline-ok {
+  color: #1a7f37;
+}
+
+.template-matching-headline-low {
+  color: #b25f00;
+}
+
+[data-theme="dark"] .template-matching-headline-ok { color: #4ac26b; }
+[data-theme="dark"] .template-matching-headline-low { color: #d29922; }
+
+/* Real-preview bbox styling — solid green for matches; dashed for
+   low-confidence "best candidate" so the user immediately sees
+   that the engine was not confident enough. */
+.template-matching-overlay-bbox-real {
+  border-color: rgba(46, 160, 67, 0.92);
+  background: rgba(46, 160, 67, 0.12);
+}
+.template-matching-overlay-bbox-candidate {
+  border-style: dashed;
+  background: transparent;
+}
+
+[data-theme="dark"] .template-matching-overlay-bbox-real {
+  border-color: rgba(63, 185, 80, 0.95);
+  background: rgba(63, 185, 80, 0.18);
+}
+
+@media (max-width: 760px) {
+  .template-matching-control-label { min-width: 0; }
+  .template-matching-mode-select,
+  .template-matching-step-select,
+  .template-matching-threshold-input { min-width: 0; width: 100%; }
+}

@@ -77,7 +77,19 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   TemplateMatchMockCompleted:       'template.match.mock.completed',
   TemplateMatchMockFailed:          'template.match.mock.failed',
   TemplateMatchMockCleared:         'template.match.mock.cleared',
-  ImageClickPreviewCreated:         'image.click.preview.created'
+  ImageClickPreviewCreated:         'image.click.preview.created',
+  // Step 29: real preview-only matching engine events. Payloads
+  // carry only ids, numeric metadata (confidence, target point,
+  // bounding box dimensions, durationMs, threshold, step) and
+  // short reasons — never an imageDataUrl, never a thumbnail,
+  // never a screenshot. The "real preview" name describes that
+  // the engine analyses the captured preview image, NOT the live
+  // screen. No real cursor movement, no real click.
+  TemplateMatchRealPreviewRequested: 'template.match.realPreview.requested',
+  TemplateMatchRealPreviewCompleted: 'template.match.realPreview.completed',
+  TemplateMatchRealPreviewFailed:    'template.match.realPreview.failed',
+  TemplateMatchLowConfidence:        'template.match.lowConfidence',
+  TemplateMatchEngineWarning:        'template.match.engine.warning'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

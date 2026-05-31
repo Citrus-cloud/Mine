@@ -111,13 +111,26 @@ function renderTemplateMatchingTab() {
   // 4. Current input summary (preview / template / region snapshot).
   c.appendChild(renderTemplateMatchingInputSummary());
 
-  // 5. Action buttons. Run is enabled only when input is valid.
+  // 5. Match mode + algorithm controls (Step 29). The user picks
+  //    between Mock (Step 28 deterministic) and Real preview
+  //    (Step 29 plain-JS engine analysing the captured preview
+  //    image). Threshold and step are forwarded to the engine on
+  //    every run.
+  c.appendChild(renderTemplateMatchingControls());
+
+  // 6. Action buttons. Run is enabled only when input is valid.
   var actions = document.createElement('div'); actions.className = 'adv-btn-group template-matching-actions';
+
+  var state = _tmReadState();
+  var mode = (state.templateMatching && state.templateMatching.mode) || 'mock';
+  var isReal = (mode === 'real-preview');
 
   var runBtn = document.createElement('button');
   runBtn.className = 'adv-btn'; runBtn.id = 'tm-btn-run';
-  runBtn.textContent = _tt('runMockMatch', 'Run mock match');
-  runBtn.addEventListener('click', runTemplateMatchingMock);
+  runBtn.textContent = isReal
+    ? _tt('runRealPreviewMatch', 'Run real preview match')
+    : _tt('runMockMatch', 'Run mock match');
+  runBtn.addEventListener('click', runTemplateMatchingDispatch);
   actions.appendChild(runBtn);
 
   var clearBtn = document.createElement('button');
@@ -128,24 +141,32 @@ function renderTemplateMatchingTab() {
 
   c.appendChild(actions);
 
-  // 6. Visual overlay (compact preview with the bounding box +
+  // 7. Visual overlay (compact preview with the bounding box +
   //    target point drawn on top). Empty state if no preview.
   c.appendChild(renderTemplateMatchingOverlay());
 
-  // 7. Result card.
+  // 8. Result card.
   c.appendChild(renderTemplateMatchingResult());
 
-  // 8. Action preview card — the planned `image_click` action,
+  // 9. Action preview card — the planned `image_click` action,
   //    rendered as text. Never executed.
   c.appendChild(renderActionPreview());
 
-  // Disable Run when input is invalid; the user still gets a clear
-  // explanation in the requirements checklist above.
+  // Disable Run when the matcher is busy or the input is invalid;
+  // the user still gets a clear explanation in the requirements
+  // checklist above.
   var input = buildTemplateMatchInputFromState();
   var validation = (typeof validateTemplateMatchInput === 'function')
     ? validateTemplateMatchInput(input)
     : { valid: !!(input && input.screenPreview && input.template), reason: null };
-  runBtn.disabled = !validation.valid;
+  var slice = state.templateMatching || { isRunning: false };
+  // Real preview also needs the active template to have a
+  // previewDataUrl available — without pixel data the engine can
+  // only run in mock mode.
+  var hasTemplatePixels = isReal ? _activeTemplateHasPreview(state) : true;
+  var hasPreviewPixels  = isReal ? _activePreviewHasPixels(state)   : true;
+  runBtn.disabled = !!slice.isRunning || !validation.valid ||
+    !hasTemplatePixels || !hasPreviewPixels;
 }
 
 // =====================================================================
@@ -263,6 +284,28 @@ function renderTemplateMatchingRequirements() {
   });
   addCheck(_tt('regionOptional', 'Region (optional)'), hasRegion, { optional: true });
 
+  // Step 29: when the user picks Real preview, surface whether the
+  // pixel data needed by the engine is actually in renderer memory.
+  var stateForChecks = _tmReadState();
+  var modeForChecks = (stateForChecks.templateMatching && stateForChecks.templateMatching.mode) || 'mock';
+  if (modeForChecks === 'real-preview') {
+    var hasPreviewPixels  = _activePreviewHasPixels(stateForChecks);
+    var hasTemplatePixels = _activeTemplateHasPreview(stateForChecks);
+    addCheck(_tt('engineAvailable', 'Engine available'),
+      typeof runTemplateMatch === 'function', { optional: true });
+    addCheck(_tt('analyzesPreviewOnly', 'Analyzes preview only'), true, { optional: true });
+    if (!hasPreviewPixels) {
+      addCheck(_tt('screenPreviewMissing', 'Screen preview is missing'), false, {
+        hint: _tt('capturePreviewFirst', 'Capture a screenshot preview first.')
+      });
+    }
+    if (!hasTemplatePixels) {
+      addCheck(_tt('templateImageMissing', 'Template image is missing'), false, {
+        hint: _tt('templateImageMissing', 'Template image is missing')
+      });
+    }
+  }
+
   // Hard "no real" rows — visually identical to the others so the
   // user always sees the simulation contract on this tab.
   addCheck(_tt('realMatchingDisabled', 'Real matching disabled'), false, {
@@ -360,6 +403,14 @@ function renderTemplateMatchingOverlay() {
     var bb = match.boundingBox;
     var bbEl = document.createElement('div');
     bbEl.className = 'template-matching-overlay-bbox';
+    if (match.mode === 'real-preview') {
+      bbEl.classList.add('template-matching-overlay-bbox-real');
+    }
+    if (!match.matched) {
+      // Low-confidence / candidate styling — dashed border, faint
+      // fill, no centered confidence badge.
+      bbEl.classList.add('template-matching-overlay-bbox-candidate');
+    }
     bbEl.style.left   = (bb.x      / preview.width)  * 100 + '%';
     bbEl.style.top    = (bb.y      / preview.height) * 100 + '%';
     bbEl.style.width  = (bb.width  / preview.width)  * 100 + '%';
@@ -369,7 +420,11 @@ function renderTemplateMatchingOverlay() {
     // Confidence badge (small label inside the rectangle).
     var conf = document.createElement('span');
     conf.className = 'template-matching-overlay-confidence';
-    conf.textContent = _tmFormatConfidence(match.confidence) + ' · ' + _tt('mockTemplateMatching', 'mock');
+    var modeLabel = (match.mode === 'real-preview')
+      ? _tt('realPreviewMatching', 'real preview')
+      : _tt('mockTemplateMatching', 'mock');
+    var stateLabel = match.matched ? '' : ' · ' + _tt('lowConfidence', 'low');
+    conf.textContent = _tmFormatConfidence(match.confidence) + ' · ' + modeLabel + stateLabel;
     bbEl.appendChild(conf);
   }
 
@@ -401,6 +456,303 @@ function _isPositiveSize(p) {
 }
 
 // =====================================================================
+// Step 29: Match-mode controls (mode / threshold / step)
+// =====================================================================
+
+// Build the controls card. Uses native <select> / <input> elements
+// — no third-party form widgets — and writes back through the
+// app-state mutators, so the diagnostics card immediately reflects
+// the change.
+function renderTemplateMatchingControls() {
+  var card = document.createElement('div'); card.className = 'adv-card template-matching-controls-card';
+  var title = document.createElement('div'); title.className = 'adv-card-title';
+  title.textContent = _tt('matchMode', 'Match mode');
+  card.appendChild(title);
+
+  var state = _tmReadState();
+  var slice = state.templateMatching || { mode: 'mock', threshold: 0.75, step: 4 };
+  var mode = slice.mode || 'mock';
+  var isReal = (mode === 'real-preview');
+
+  // --- Mode picker (Mock / Real preview) ---
+  var modeRow = document.createElement('div'); modeRow.className = 'template-matching-control-row';
+  var modeLabel = document.createElement('label');
+  modeLabel.className = 'template-matching-control-label';
+  modeLabel.textContent = _tt('matchMode', 'Match mode');
+  var modeSelect = document.createElement('select');
+  modeSelect.className = 'template-matching-mode-select';
+  modeSelect.id = 'tm-input-mode';
+  [
+    { value: 'mock',         label: _tt('mockTemplateMatching', 'Mock / dry-run') },
+    { value: 'real-preview', label: _tt('realPreviewMatching',  'Real preview matching') }
+  ].forEach(function (opt) {
+    var o = document.createElement('option');
+    o.value = opt.value;
+    o.textContent = opt.label;
+    if (opt.value === mode) o.selected = true;
+    modeSelect.appendChild(o);
+  });
+  modeSelect.addEventListener('change', function () {
+    if (typeof setTemplateMatchingMode === 'function') {
+      setTemplateMatchingMode(modeSelect.value);
+    }
+    renderTemplateMatchingTab();
+  });
+  modeRow.appendChild(modeLabel);
+  modeRow.appendChild(modeSelect);
+  card.appendChild(modeRow);
+
+  // --- Real-preview safety notice (only shown for real preview) ---
+  if (isReal) {
+    var realNotice = document.createElement('div');
+    realNotice.className = 'adv-warning template-matching-real-preview-notice';
+    realNotice.textContent = _tt(
+      'realPreviewMatchNotice',
+      'Real preview matching analyzes the preview image only. It does not click or control the device.'
+    );
+    card.appendChild(realNotice);
+  }
+
+  // --- Threshold (number input) ---
+  var thrRow = document.createElement('div'); thrRow.className = 'template-matching-control-row';
+  var thrLabel = document.createElement('label');
+  thrLabel.className = 'template-matching-control-label';
+  thrLabel.textContent = _tt('threshold', 'Threshold');
+  thrLabel.setAttribute('for', 'tm-input-threshold');
+  var thrInput = document.createElement('input');
+  thrInput.type = 'number';
+  thrInput.id = 'tm-input-threshold';
+  thrInput.className = 'template-matching-threshold-input';
+  thrInput.min = '0'; thrInput.max = '1'; thrInput.step = '0.05';
+  var rawThr = (typeof slice.threshold === 'number' && isFinite(slice.threshold)) ? slice.threshold : 0.75;
+  thrInput.value = String(rawThr);
+  thrInput.addEventListener('change', function () {
+    if (typeof setTemplateMatchingThreshold === 'function') {
+      setTemplateMatchingThreshold(thrInput.value);
+    }
+    renderTemplateMatchingTab();
+  });
+  thrRow.appendChild(thrLabel);
+  thrRow.appendChild(thrInput);
+  card.appendChild(thrRow);
+
+  // --- Step (select 1/2/4/8/16) ---
+  var stepRow = document.createElement('div'); stepRow.className = 'template-matching-control-row';
+  var stepLabel = document.createElement('label');
+  stepLabel.className = 'template-matching-control-label';
+  stepLabel.textContent = _tt('step', 'Step');
+  stepLabel.setAttribute('for', 'tm-input-step');
+  var stepSelect = document.createElement('select');
+  stepSelect.id = 'tm-input-step';
+  stepSelect.className = 'template-matching-step-select';
+  var rawStep = (typeof slice.step === 'number' && slice.step > 0) ? slice.step : 4;
+  [1, 2, 4, 8, 16].forEach(function (s) {
+    var o = document.createElement('option');
+    o.value = String(s); o.textContent = String(s);
+    if (s === rawStep) o.selected = true;
+    stepSelect.appendChild(o);
+  });
+  stepSelect.addEventListener('change', function () {
+    if (typeof setTemplateMatchingStep === 'function') {
+      setTemplateMatchingStep(stepSelect.value);
+    }
+    renderTemplateMatchingTab();
+  });
+  stepRow.appendChild(stepLabel);
+  stepRow.appendChild(stepSelect);
+  card.appendChild(stepRow);
+
+  return card;
+}
+
+// Helper: does the active template have a previewDataUrl in memory?
+// Real-preview matching needs pixel bytes; without them we keep
+// the Run button disabled (and surface a hint via the requirements
+// checklist).
+function _activeTemplateHasPreview(state) {
+  if (!state || !state.templates) return false;
+  var activeId = state.templates.activeTemplateId;
+  if (!activeId) return false;
+  var items = Array.isArray(state.templates.items) ? state.templates.items : [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i] && items[i].id === activeId) {
+      return typeof items[i].previewDataUrl === 'string' && items[i].previewDataUrl.indexOf('data:image/') === 0;
+    }
+  }
+  return false;
+}
+
+// Helper: does the captured preview have an imageDataUrl in memory?
+function _activePreviewHasPixels(state) {
+  if (!state || !state.screenCapture) return false;
+  var p = state.screenCapture.preview;
+  if (!p) return false;
+  return typeof p.imageDataUrl === 'string' && p.imageDataUrl.indexOf('data:image/') === 0;
+}
+
+// =====================================================================
+// Step 29: dispatcher — picks Mock or Real preview
+// =====================================================================
+
+function runTemplateMatchingDispatch() {
+  var state = _tmReadState();
+  var slice = state.templateMatching || { mode: 'mock' };
+  var mode = slice.mode || 'mock';
+  if (mode === 'real-preview') {
+    runTemplateMatchingRealPreview();
+  } else {
+    runTemplateMatchingMock();
+  }
+}
+
+// Run the real preview-only matching engine. Pulls the screen
+// preview imageDataUrl and the active template previewDataUrl from
+// state, then forwards them to the engine.
+async function runTemplateMatchingRealPreview() {
+  if (typeof runTemplateMatch !== 'function') {
+    _tmLog('error', _tt('mockMatchFailed', 'Match failed') + ': engine unavailable');
+    return;
+  }
+  var state = _tmReadState();
+  var preview = state.screenCapture ? state.screenCapture.preview : null;
+  var activeTpl = (function () {
+    if (!state.templates || !state.templates.activeTemplateId) return null;
+    var items = Array.isArray(state.templates.items) ? state.templates.items : [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] && items[i].id === state.templates.activeTemplateId) return items[i];
+    }
+    return null;
+  })();
+  if (!preview || !preview.imageDataUrl) {
+    _tmLog('error', _tt('screenPreviewMissing', 'Screen preview is missing'));
+    if (typeof setTemplateMatchingError === 'function') setTemplateMatchingError(_tt('screenPreviewMissing', 'Screen preview is missing'));
+    _tmAudit('template.match.realPreview.failed', { reason: 'screen-preview-missing' });
+    renderTemplateMatchingTab();
+    return;
+  }
+  if (!activeTpl || typeof activeTpl.previewDataUrl !== 'string' || activeTpl.previewDataUrl.length === 0) {
+    _tmLog('error', _tt('templateImageMissing', 'Template image is missing'));
+    if (typeof setTemplateMatchingError === 'function') setTemplateMatchingError(_tt('templateImageMissing', 'Template image is missing'));
+    _tmAudit('template.match.realPreview.failed', { reason: 'template-image-missing' });
+    renderTemplateMatchingTab();
+    return;
+  }
+
+  // Build the sanitised input snapshot (Step 28's helper drops any
+  // imageDataUrl from the metadata it stores in app-state).
+  var input = buildTemplateMatchInputFromState();
+  if (typeof setTemplateMatchingInput === 'function') setTemplateMatchingInput(input);
+
+  // Audit (numbers / ids only — no pixel bytes ever).
+  _tmAudit('template.match.realPreview.requested', {
+    sourceId:  input.screenPreview ? (input.screenPreview.sourceId || '') : '',
+    templateId: input.template     ? (input.template.id            || '') : '',
+    hasRegion: !!input.region,
+    threshold: state.templateMatching ? state.templateMatching.threshold : null,
+    step:      state.templateMatching ? state.templateMatching.step : null
+  });
+
+  if (typeof setTemplateMatchingError   === 'function') setTemplateMatchingError(null);
+  if (typeof setTemplateMatchingRunning === 'function') setTemplateMatchingRunning(true);
+  renderTemplateMatchingTab();
+
+  var threshold = (state.templateMatching && typeof state.templateMatching.threshold === 'number') ? state.templateMatching.threshold : 0.75;
+  var step      = (state.templateMatching && typeof state.templateMatching.step === 'number')      ? state.templateMatching.step      : 4;
+
+  var resp;
+  try {
+    resp = await runTemplateMatch(preview.imageDataUrl, activeTpl.previewDataUrl, {
+      region:    input.region || null,
+      threshold: threshold,
+      step:      step,
+      screenSize: { width: preview.width || 0, height: preview.height || 0 }
+    });
+  } catch (err) {
+    resp = { success: false, error: 'engine-exception', warnings: [] };
+  }
+
+  if (typeof setTemplateMatchingRunning === 'function') setTemplateMatchingRunning(false);
+
+  if (!resp || !resp.success || !resp.match) {
+    var msg = (resp && resp.error) ? resp.error : 'real-preview-match-failed';
+    if (typeof setTemplateMatchingError === 'function') setTemplateMatchingError(msg);
+    _tmAudit('template.match.realPreview.failed', { reason: msg });
+    _tmLog('error', _tt('mockMatchFailed', 'Match failed') + ': ' + msg);
+    renderTemplateMatchingTab();
+    return;
+  }
+
+  // Audit any engine warnings up-front so the audit timeline shows
+  // "we capped the search area" / "we raised the step" before the
+  // completed event.
+  if (Array.isArray(resp.warnings)) {
+    resp.warnings.forEach(function (w) {
+      _tmAudit('template.match.engine.warning', { reason: w });
+    });
+  }
+
+  // Convert the engine match into the renderer-shared shape and
+  // store it in the slice. From this point onwards the existing
+  // result card / overlay / action preview render the result the
+  // same way they render a mock result.
+  var result = (typeof createTemplateMatchResult === 'function')
+    ? createTemplateMatchResult(resp.match, input)
+    : null;
+  if (!result) {
+    _tmAudit('template.match.realPreview.failed', { reason: 'result-shape-invalid' });
+    _tmLog('error', _tt('mockMatchFailed', 'Match failed') + ': result shape invalid');
+    renderTemplateMatchingTab();
+    return;
+  }
+
+  if (typeof setTemplateMatchingResult === 'function') setTemplateMatchingResult(result);
+
+  if (result.matched) {
+    _tmAudit('template.match.realPreview.completed', {
+      templateId: result.templateId || '',
+      confidence: result.confidence,
+      threshold:  result.threshold,
+      targetX:    result.targetPoint ? (result.targetPoint.x | 0) : 0,
+      targetY:    result.targetPoint ? (result.targetPoint.y | 0) : 0,
+      boxW:       result.boundingBox ? (result.boundingBox.width  | 0) : 0,
+      boxH:       result.boundingBox ? (result.boundingBox.height | 0) : 0,
+      durationMs: result.durationMs || 0,
+      step:       result.step || 0,
+      pixelStep:  result.pixelStep || 0,
+      scannedPositions: result.scannedPositions || 0,
+      usedRegion:    !!result.usedRegion,
+      realMatching:  false,
+      realClick:     false
+    });
+    _tmLog('success', _tt('matchFound', 'Match found') + ' (' + Math.round(result.confidence * 100) + '%)');
+  } else {
+    _tmAudit('template.match.lowConfidence', {
+      templateId: result.templateId || '',
+      confidence: result.confidence,
+      threshold:  result.threshold,
+      durationMs: result.durationMs || 0
+    });
+    _tmLog('warning', _tt('lowConfidence', 'Low confidence') + ' (' + Math.round(result.confidence * 100) + '% < ' + Math.round(result.threshold * 100) + '%)');
+  }
+
+  // Action preview (planned image_click) — same audit as Step 28.
+  if (typeof createImageClickActionPreview === 'function') {
+    var ap = createImageClickActionPreview(result);
+    if (ap) {
+      _tmAudit('image.click.preview.created', {
+        templateId:  ap.templateId || '',
+        targetX:     ap.targetPoint ? (ap.targetPoint.x | 0) : 0,
+        targetY:     ap.targetPoint ? (ap.targetPoint.y | 0) : 0,
+        confidence:  ap.confidence,
+        realClick:   false,
+        realMatching: false
+      });
+    }
+  }
+  renderTemplateMatchingTab();
+}
+
+// =====================================================================
 // Result card
 // =====================================================================
 
@@ -428,15 +780,59 @@ function renderTemplateMatchingResult() {
   var r = slice.lastResult;
   // Mock badge. Always shows even after a "successful" mock match.
   var badge = document.createElement('div'); badge.className = 'template-matching-mock-badge';
-  badge.textContent = _tt('mockTemplateMatching', 'mock / dry-run');
+  if (r.mode === 'real-preview') {
+    badge.classList.add('template-matching-real-preview-badge');
+    badge.textContent = _tt('realPreviewMatching', 'Real preview matching');
+  } else {
+    badge.textContent = _tt('mockTemplateMatching', 'mock / dry-run');
+  }
   card.appendChild(badge);
+
+  // "Match found" / "Low confidence" / "No match" headline. The
+  // bbox is still shown — for a low-confidence run it is the best
+  // candidate the engine could find.
+  var headline = document.createElement('div');
+  headline.className = 'template-matching-headline';
+  if (r.matched) {
+    headline.classList.add('template-matching-headline-ok');
+    headline.textContent = _tt('matchFound', 'Match found');
+  } else if (r.mode === 'real-preview') {
+    headline.classList.add('template-matching-headline-low');
+    headline.textContent = _tt('lowConfidence', 'Low confidence — showing best candidate');
+  } else {
+    headline.classList.add('template-matching-headline-low');
+    headline.textContent = _tt('matchNotFound', 'No match');
+  }
+  card.appendChild(headline);
 
   _tmAddCardRow(card, 'matched',                              _tmBoolText(!!r.matched));
   _tmAddCardRow(card, _tt('matchConfidence', 'Confidence'),   _tmFormatConfidence(r.confidence));
+  if (typeof r.threshold === 'number' && isFinite(r.threshold)) {
+    _tmAddCardRow(card, _tt('matchThreshold', 'Threshold'),   _tmFormatConfidence(r.threshold));
+  }
   _tmAddCardRow(card, _tt('boundingBox', 'Bounding box'),     _tmFormatRect(r.boundingBox));
   _tmAddCardRow(card, _tt('targetPoint', 'Target point'),     _tmFormatPoint(r.targetPoint));
   _tmAddCardRow(card, _tt('usedRegion', 'Used region'),       r.usedRegion ? _tmFormatRect(r.usedRegion) : _tt('noRegionSelected', 'No region selected'));
   _tmAddCardRow(card, _tt('templateName', 'Template name'),   r.templateName || r.templateId || '—');
+  if (typeof r.durationMs === 'number' && isFinite(r.durationMs)) {
+    _tmAddCardRow(card, _tt('durationMs', 'Duration'),        r.durationMs + ' ms');
+  }
+  if (typeof r.step === 'number' && r.step > 0) {
+    var stepText = String(r.step);
+    if (typeof r.requestedStep === 'number' && r.requestedStep > 0 && r.requestedStep !== r.step) {
+      stepText = r.step + ' (requested ' + r.requestedStep + ')';
+    }
+    _tmAddCardRow(card, _tt('step', 'Step'), stepText);
+  }
+  if (typeof r.pixelStep === 'number' && r.pixelStep > 0 && r.pixelStep !== 1) {
+    _tmAddCardRow(card, 'pixelStep', String(r.pixelStep));
+  }
+  if (r.downscaledSearch) {
+    _tmAddCardRow(card, _tt('searchAreaTooLarge', 'Search area downscaled'), _tmBoolText(true));
+  }
+  if (r.downscaledTemplate) {
+    _tmAddCardRow(card, _tt('templateTooLarge', 'Template downscaled'), _tmBoolText(true));
+  }
   _tmAddCardRow(card, _tt('capturedAt', 'Captured at'),       r.createdAt || _tt('none2', '—'));
   _tmAddCardRow(card, _tt('realMatchingDisabled', 'Real matching disabled'), _tmBoolText(!r.realMatching));
   _tmAddCardRow(card, _tt('realClickDisabled', 'Real click disabled'),       _tmBoolText(!r.realClick));

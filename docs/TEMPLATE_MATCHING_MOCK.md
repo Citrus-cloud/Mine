@@ -264,3 +264,29 @@ bytes from `userData/templates/images/<fileName>`.
   contract that gates the matcher and the `image_click` action.
 - [`ACTION_SCHEMA.md`](./ACTION_SCHEMA.md) — the planned
   `image_click` schema entry.
+
+
+
+---
+
+## Step 29 — Mock now sits next to a real preview engine
+
+[Step 29](./TEMPLATE_MATCHING_ENGINE.md) added a real preview-only
+matching engine. The Template Matching tab gained a **Match mode**
+selector with two values:
+
+- `Mock` — the deterministic Step 28 pipeline described above.
+  Useful for quick UI / audit / diagnostics testing without
+  spending CPU.
+- `Real preview` — the new Step 29 engine. Real matching against
+  the captured preview image, **not** the live screen. Real
+  clicks remain disabled.
+
+The shapes of the result, the action preview, the audit events,
+and the diagnostics line are intentionally identical between
+the two modes — the renderer renders both through the same code
+path. The mode of the active result is exposed as `result.mode`
+(`mock` / `real-preview`) and as a separate badge in the result
+card.
+
+See [`docs/TEMPLATE_MATCHING_ENGINE.md`](./TEMPLATE_MATCHING_ENGINE.md).

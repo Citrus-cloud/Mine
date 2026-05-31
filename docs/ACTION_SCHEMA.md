@@ -399,3 +399,26 @@ opens, the same shape will be promoted to a real
 | Action Type    | Status                                                                                        |
 |----------------|------------------------------------------------------------------------------------------------|
 | `image_click`  | ❌ Planned. Step 27 storage + Step 28 mock match preview. Real matcher and execution still gated. |
+
+
+
+---
+
+## Step 29 — `image_click` action preview now carries real-engine numbers
+
+The `image_click` action preview is unchanged in shape, but the
+fields it carries can now come from the **real preview matching
+engine** (Step 29) instead of the deterministic mock (Step 28).
+
+- `confidence` is a real number computed by the engine, in
+  `[0, 1]`. Default threshold is `0.75`.
+- `boundingBox` and `targetPoint` are in the original preview
+  coordinate space (image-space), even when the engine had to
+  downscale internally for performance.
+- `usedRegion` carries the user-drawn region (Step 26) when
+  present.
+
+The action preview is **still not executed** by the click engine,
+the action pipeline, the mock adapter, or the dry-run sandbox.
+Step 29 stops at producing the shape; flipping the click switch
+remains gated by [`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md).

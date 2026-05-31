@@ -72,7 +72,14 @@ const appState = {
     lastResult: null,
     isRunning: false,
     lastError: null,
-    lastRunAt: null
+    lastRunAt: null,
+    // Step 29 — match mode + algorithm tuning. `mode` is one of
+    // `"mock"` (Step 28 deterministic mock) or `"real-preview"`
+    // (Step 29 plain-JS engine analysing the captured preview
+    // image only — never the live screen, never a real click).
+    mode: 'mock',
+    threshold: 0.75,
+    step: 4
   },
   settings: {
     language: "ru",
@@ -124,7 +131,10 @@ function getState() {
       lastResult: appState.templateMatching.lastResult ? _cloneTemplateMatchResult(appState.templateMatching.lastResult) : null,
       isRunning:  appState.templateMatching.isRunning,
       lastError:  appState.templateMatching.lastError,
-      lastRunAt:  appState.templateMatching.lastRunAt
+      lastRunAt:  appState.templateMatching.lastRunAt,
+      mode:       appState.templateMatching.mode,
+      threshold:  appState.templateMatching.threshold,
+      step:       appState.templateMatching.step
     },
     settings: {
       ...appState.settings,
@@ -394,7 +404,32 @@ function resetTemplateMatchingState() {
   appState.templateMatching.lastRunAt  = null;
 }
 
-// Strip pixel-bearing fields and return a plain-data clone. Defence
+// Step 29 — match mode + algorithm tuning. The setters validate
+// the inputs and silently ignore unknown values so the slice
+// always holds a sane combination. `mode` is the only field the
+// engine cares about; `threshold` and `step` are passed straight
+// through to `runTemplateMatch`. Neither setter triggers any I/O
+// and neither setter persists anything to disk.
+function setTemplateMatchingMode(mode) {
+  if (mode === 'mock' || mode === 'real-preview') {
+    appState.templateMatching.mode = mode;
+  }
+}
+function setTemplateMatchingThreshold(value) {
+  var v = Number(value);
+  if (typeof v === 'number' && isFinite(v)) {
+    if (v < 0) v = 0;
+    if (v > 1) v = 1;
+    appState.templateMatching.threshold = Math.round(v * 100) / 100;
+  }
+}
+function setTemplateMatchingStep(value) {
+  var v = Number(value) | 0;
+  if (v >= 1 && v <= 32) {
+    appState.templateMatching.step = v;
+  }
+}
+
 // in depth — the matching mock already drops `imageDataUrl` /
 // `previewDataUrl`, but if a buggy caller passes them we never let
 // them reach the slice or the diagnostics output.
@@ -443,6 +478,17 @@ function _cloneTemplateMatchResult(result) {
     mode:         typeof result.mode === 'string' ? result.mode : 'mock',
     matched:      !!result.matched,
     confidence:   typeof result.confidence === 'number' ? result.confidence : 0,
+    // Step 29 — both shapes (mock and real-preview) may carry these.
+    // We pass the optional fields through unchanged so the renderer
+    // can show step / pixelStep / durationMs etc.
+    threshold:        typeof result.threshold === 'number' ? result.threshold : null,
+    durationMs:       typeof result.durationMs === 'number' ? result.durationMs : null,
+    step:             typeof result.step === 'number' ? result.step : null,
+    requestedStep:    typeof result.requestedStep === 'number' ? result.requestedStep : null,
+    pixelStep:        typeof result.pixelStep === 'number' ? result.pixelStep : null,
+    scannedPositions: typeof result.scannedPositions === 'number' ? result.scannedPositions : null,
+    downscaledSearch:   typeof result.downscaledSearch === 'boolean' ? result.downscaledSearch : null,
+    downscaledTemplate: typeof result.downscaledTemplate === 'boolean' ? result.downscaledTemplate : null,
     boundingBox:  result.boundingBox ? { ...result.boundingBox } : null,
     targetPoint:  result.targetPoint ? { ...result.targetPoint } : null,
     usedRegion:   result.usedRegion  ? { ...result.usedRegion }  : null,
