@@ -243,3 +243,56 @@ minor release, Branch B (Real Desktop Adapter) can be reopened
 with a fresh `docs/REAL_ACTIONS_GO_NO_GO.md` review.
 
 Until then, ClickFlow remains **simulation-only**.
+
+
+
+---
+
+## Appendix — Step 39 Phase 1 progress
+
+Step 39 lands **Phase 1** of this plan:
+
+- `tesseract.js` is declared as a runtime dependency in
+  [`package.json`](../package.json).
+- A defensive provider shell ships at
+  [`src/tesseract-ocr-provider.js`](../src/tesseract-ocr-provider.js)
+  with `getTesseractProviderInfo`,
+  `isTesseractProviderAvailable`,
+  `checkTesseractProviderReadiness(flags?)`,
+  `runTesseractSelfTest()`,
+  `recognizeTextWithTesseract(input, options?)`,
+  `normalizeTesseractResult`, `mapTesseractBlocks`,
+  `terminateTesseractWorker`, and
+  `getTesseractProviderDiagnostics`.
+- The OCR provider registry honours both safety flags:
+  `setActiveOcrProvider('tesseract')` is BLOCKED unless
+  BOTH `realOcr === true` AND `tesseractProvider === true`
+  AND the engine resolver reports the engine as loadable.
+  At Step 39 the safe defaults pin the flags to `false`.
+- The Advanced → OCR tab gains an **OCR provider status**
+  card with a **Check Tesseract readiness** button. The
+  button never runs real OCR — it calls
+  `checkTesseractProviderReadiness` and emits structured
+  audit events.
+- Diagnostics gain a `Real OCR: …` line carrying
+  `tesseractDependencyPresent`, `tesseractProviderAvailable`,
+  `tesseractProviderEnabled`, `realOcrFeatureFlag`,
+  `realOcrAutoRun=false`, `lastTesseractReadinessCheck`,
+  `realClick=false`.
+- Six new audit event types
+  (`ocr.tesseract.readiness.requested/.completed/.failed`,
+  `ocr.tesseract.blockedByFeatureFlag`,
+  `ocr.provider.tesseract.detected`,
+  `ocr.provider.tesseract.unavailable`).
+- Detailed reference:
+  [`TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md).
+
+Phase 1 deliberately stops short of executing real OCR.
+`recognizeTextWithTesseract` still returns a blocked envelope
+even when the flags would otherwise allow it. Phase 2
+(Step 40+) wires the actual `Tesseract.recognize` call after
+a fresh `docs/REAL_OCR_GO_NO_GO.md` review.
+
+ClickFlow remains **simulation-only** during Phase 1: no real
+cursor work, no real keyboard input, no real OCR call site at
+runtime, and no new IPC channel.

@@ -222,3 +222,112 @@ is held in module-local memory only — no disk write.
   source. Step 38 ships pure-renderer JavaScript only.
 - **`contextIsolation: true`** and **`nodeIntegration:
   false`** are unchanged.
+
+
+
+---
+
+## Tesseract provider — implementation notes (Step 39)
+
+[`src/tesseract-ocr-provider.js`](../src/tesseract-ocr-provider.js)
+implements the contract described above for the Tesseract
+backend. It is the first real provider to land, but it stays
+**disabled by default** at Step 39.
+
+### Engine resolution
+
+The provider does NOT statically `require('tesseract.js')`.
+Instead, `_resolveTesseractEngine()` looks for a usable engine
+in this order:
+
+1. an explicit injection through `setTesseractEngineForTesting`
+   (unit-test seam — never used in production);
+2. a renderer global `window.Tesseract` (the Step-40+ wire-up
+   path: a `<script src="tesseract.min.js">` tag);
+3. a CommonJS `require('tesseract.js')` wrapped in `try/catch`
+   (only works under Node-side unit tests; the production
+   build keeps `nodeIntegration: false` so this path is dead
+   at runtime).
+
+If none resolves, the provider reports `unavailable` instead
+of crashing.
+
+### Readiness contract
+
+`checkTesseractProviderReadiness(flagsArg?)` returns:
+
+```js
+{
+  ready: boolean,
+  reasons: [stableId],
+  details: {
+    featureFlagRealOcr,
+    featureFlagTesseractProvider,
+    simulationOnly,
+    dependencyDeclared,
+    engineLoadable,
+    engineLoadError: string | null
+  },
+  checkedAt: ISOString
+}
+```
+
+Stable reason IDs include `realOcrFeatureFlagDisabled`,
+`tesseractProviderFeatureFlagDisabled`, `simulationOnlyMode`,
+`dependencyNotDeclared`, `engineNotLoadable`. The
+`flagsArg` parameter accepts a feature-flag override (handy
+for unit tests); when omitted the provider asks
+`getOcrFeatureStatus()` from
+[`src/feature-flags.js`](../src/feature-flags.js).
+
+### Recognise contract — Phase 1 hard-stop
+
+`recognizeTextWithTesseract(input, options?)`:
+
+```js
+{
+  success: false,
+  blocked: true,
+  error: 'Real OCR provider is disabled by feature flag',
+  providerId: 'tesseract',
+  realClick: false,
+  realOcr: false
+}
+```
+
+…whenever any of `realOcr`, `tesseractProvider`,
+`!simulationOnly` is false. Even with all three true, the
+function returns a defensive blocked envelope at Step 39
+because the actual `Tesseract.recognize` call is
+intentionally unimplemented. Step 40+ replaces the
+hard-stop with the real call.
+
+### Result mapping
+
+`mapTesseractBlocks(rawResult, input)` and
+`normalizeTesseractResult(rawResult, input)` are pure
+functions that translate the Tesseract.js native shape
+(`data.words` / `data.blocks` with `bbox: { x0, y0, x1, y1 }`)
+into the unified ClickFlow OCR shape (`{ id, text,
+confidence, boundingBox: { x, y, width, height }, targetPoint }`).
+Confidence is normalised to `0..1`. Region offset is added
+when `input.region` is set.
+
+### Audit events
+
+Six new allowlisted types — `ocr.tesseract.readiness.requested`,
+`ocr.tesseract.readiness.completed`,
+`ocr.tesseract.readiness.failed`,
+`ocr.tesseract.blockedByFeatureFlag`,
+`ocr.provider.tesseract.detected`,
+`ocr.provider.tesseract.unavailable`. Payloads carry only
+flag booleans, error counts, stable reason ids, durations,
+and engine-loadability — never the full target text, never
+an `imageDataUrl`, never PII.
+
+### Worker termination
+
+`terminateTesseractWorker()` is a no-op that resets the
+module-local engine reference at Step 39. Step 40+ replaces
+the body with the real worker termination call once the
+worker is live.

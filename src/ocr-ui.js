@@ -57,6 +57,18 @@ function renderOcrTab() {
   c.appendChild(readinessCard);
   renderOcrProviderReadiness(readinessCard);
 
+  // 1c. OCR provider status card (Step 39). Reports the Tesseract
+  //     dependency / feature-flag / engine state side by side with
+  //     the active provider, plus a "Check Tesseract readiness"
+  //     button. The button NEVER runs real OCR. It calls the
+  //     readiness helper in `src/tesseract-ocr-provider.js`, which
+  //     returns a structured report and emits audit events.
+  var providerStatusCard = document.createElement('div');
+  providerStatusCard.className = 'adv-card ocr-provider-status-card';
+  providerStatusCard.id = 'ocr-provider-status-card';
+  c.appendChild(providerStatusCard);
+  renderOcrProviderStatusCard(providerStatusCard);
+
   // 2. Screen preview status card.
   var screenCard = document.createElement('div');
   screenCard.className = 'adv-card ocr-screen-card';
@@ -848,6 +860,130 @@ function runOcrProviderSelfTestFromUi() {
   }
   // Re-render the readiness card so the inline status updates.
   renderOcrProviderReadiness();
+}
+
+// =====================================================================
+// Step 39 — OCR provider status card.
+// =====================================================================
+//
+// Pure DOM rendering. Reads the OCR provider registry + the
+// Tesseract provider shell, paints an "OCR provider status" card,
+// and offers a "Check Tesseract readiness" button.
+//
+// The button NEVER triggers real OCR — `checkTesseractProviderReadiness`
+// inspects feature flags + the engine resolver and returns a
+// structured report. Step 39 deliberately does not expose any
+// "turn on real OCR" toggle here — Phase 1 is readiness only.
+function renderOcrProviderStatusCard(host) {
+  var card = host || document.getElementById('ocr-provider-status-card');
+  if (!card) return;
+  while (card.firstChild) card.removeChild(card.firstChild);
+
+  var title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = _ocrT('ocrProviderStatus', 'OCR provider status');
+  card.appendChild(title);
+
+  var registry = (typeof getOcrProviderRegistryStatus === 'function')
+    ? getOcrProviderRegistryStatus() : null;
+  var tess = (typeof getTesseractProviderStatus === 'function')
+    ? getTesseractProviderStatus() : null;
+
+  // Reassuring banner — Step 39 invariant, always rendered.
+  var banner = document.createElement('div');
+  banner.className = 'ocr-provider-status-banner';
+  var bannerBadge = document.createElement('span');
+  bannerBadge.className = 'ocr-provider-status-banner-badge';
+  bannerBadge.textContent = _ocrT('realOcrProviderDisabled', 'Real OCR provider disabled by default');
+  var bannerText = document.createElement('span');
+  bannerText.className = 'ocr-provider-status-banner-text';
+  bannerText.textContent =
+    _ocrT('realOcrAutoRunDisabled', 'Real OCR auto-run disabled') + ' · ' +
+    _ocrT('realOcrWillBeEnabledLater', 'Real OCR will be enabled later, after manual review.');
+  banner.appendChild(bannerBadge);
+  banner.appendChild(bannerText);
+  card.appendChild(banner);
+
+  // Status rows.
+  _ocrAddCardRow(card,
+    _ocrT('activeOcrProvider', 'Active OCR provider'),
+    (registry && registry.activeProviderName) ||
+    (registry && registry.activeProviderId) ||
+    _ocrT('activeProviderMock', 'Active provider: mock'));
+  _ocrAddCardRow(card,
+    _ocrT('tesseractInstalled', 'Tesseract installed'),
+    tess && tess.dependencyDeclared
+      ? (tess.engineLoadable ? _ocrT('flagYes', 'yes') : _ocrT('flagYes', 'yes') + ' · ' + _ocrT('tesseractEngineNotLoadable', 'Tesseract engine is not loadable in this build'))
+      : _ocrT('flagNo', 'no'));
+  _ocrAddCardRow(card,
+    _ocrT('tesseractEnabled', 'Tesseract enabled'),
+    tess && tess.enabledByFeatureFlag ? _ocrT('flagYes', 'yes') : _ocrT('flagNo', 'no'));
+  _ocrAddCardRow(card,
+    _ocrT('realOcrFeatureFlag', 'Real OCR feature flag'),
+    tess && tess.realOcrFeatureFlag ? _ocrT('flagEnabled', 'enabled') : _ocrT('flagDisabled', 'disabled'));
+  _ocrAddCardRow(card,
+    _ocrT('realOcrAutoRunDisabled', 'Real OCR auto-run disabled'),
+    _ocrT('flagYes', 'yes'));
+  _ocrAddCardRow(card,
+    _ocrT('realClicks', 'Real clicks'),
+    _ocrT('disabled', 'disabled'));
+
+  // Check Tesseract readiness button.
+  var btnRow = document.createElement('div');
+  btnRow.className = 'ocr-provider-status-button-row';
+  var checkBtn = document.createElement('button');
+  checkBtn.type = 'button';
+  checkBtn.className = 'btn btn-secondary ocr-provider-status-check-button';
+  checkBtn.id = 'ocr-tesseract-readiness-button';
+  checkBtn.textContent = _ocrT('checkTesseractReadiness', 'Check Tesseract readiness');
+  checkBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    runTesseractReadinessCheckFromUi();
+  });
+  btnRow.appendChild(checkBtn);
+
+  // Last readiness result inline.
+  var inline = document.createElement('span');
+  inline.className = 'ocr-provider-status-readiness-result';
+  if (!tess || !tess.lastReadinessCheck) {
+    inline.textContent = '—';
+  } else {
+    if (tess.available) {
+      inline.classList.add('ocr-provider-status-readiness-result-ok');
+      inline.textContent = _ocrT('tesseractReady', 'Tesseract ready') + ' · ' + tess.lastReadinessCheck;
+    } else if (!tess.enabledByFeatureFlag) {
+      inline.classList.add('ocr-provider-status-readiness-result-blocked');
+      inline.textContent = _ocrT('tesseractBlockedByFeatureFlag', 'Tesseract blocked by feature flag') + ' · ' + tess.lastReadinessCheck;
+    } else {
+      inline.classList.add('ocr-provider-status-readiness-result-fail');
+      inline.textContent = _ocrT('tesseractUnavailable', 'Tesseract unavailable') + ' · ' + tess.lastReadinessCheck;
+    }
+  }
+  btnRow.appendChild(inline);
+  card.appendChild(btnRow);
+}
+
+function runTesseractReadinessCheckFromUi() {
+  if (typeof checkTesseractProviderReadiness !== 'function') return;
+  var report;
+  try {
+    report = checkTesseractProviderReadiness();
+  } catch (e) {
+    report = { ready: false, reasons: ['exception'], details: null };
+  }
+  if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+    if (report && report.ready) {
+      addLogEntry(createLog('success',
+        _ocrT('tesseractReadinessCheckCompleted', 'Tesseract readiness check completed') +
+        ' · ' + _ocrT('tesseractReady', 'Tesseract ready')));
+    } else {
+      var reasons = (report && Array.isArray(report.reasons)) ? report.reasons.join(', ') : '';
+      addLogEntry(createLog('info',
+        _ocrT('tesseractReadinessCheckCompleted', 'Tesseract readiness check completed') +
+        (reasons ? ' · ' + reasons : '')));
+    }
+  }
+  renderOcrProviderStatusCard();
 }
 
 function _ocrAddCardRow(card, label, value) {

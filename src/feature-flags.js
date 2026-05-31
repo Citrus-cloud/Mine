@@ -1,5 +1,5 @@
 // =====================================================================
-// ClickFlow — feature-flags.js (Step 16)
+// ClickFlow — feature-flags.js (Step 16, extended at Steps 38–39)
 // ---------------------------------------------------------------------
 // Hard-coded, frozen safe defaults for ClickFlow runtime.
 //
@@ -26,20 +26,34 @@ const FEATURE_FLAGS = Object.freeze({
   importExport: true,
 
   // Step 38 — Real OCR Research + Safe Integration Plan.
-  // The OCR provider registry ships as architecture only. The mock
-  // provider is the single active provider. Tesseract / tesseract.js
-  // is intentionally NOT wired up at runtime.
+  // Step 39 — Real OCR Provider Integration Phase 1.
+  //
+  // The OCR provider registry exposes the architecture; Step 39 adds
+  // the `tesseract.js` dependency declaration and a real OCR provider
+  // shell (`src/tesseract-ocr-provider.js`). The real provider is
+  // **disabled by default** and **never auto-runs**.
   //
   // - `realOcr` is the umbrella safety flag for "is real OCR allowed
-  //   to run". Hard-coded false until Step 39+ ships the Tesseract
-  //   provider behind a separate signed-off review.
-  // - `ocrProviderRegistry` enables the new readiness UI / diagnostics
-  //   surfaces. It is true at Step 38 so the user can see the
-  //   architecture, but flipping it does not unlock any real OCR.
-  // - `ocrMockProvider` confirms the mock provider is registered and
-  //   available. Hard-coded true.
-  // - `tesseractProvider` confirms the Tesseract provider is wired
-  //   up at runtime. Hard-coded false at Step 38.
+  //   to run". Hard-coded false. Flipping it in source is required
+  //   before any real OCR call site fires.
+  // - `tesseractProvider` enables the registered Tesseract provider
+  //   for selection. Hard-coded false. Even with the dependency
+  //   installed, the registry refuses to switch the active provider
+  //   unless this flag is true.
+  // - `ocrProviderRegistry` enables the readiness UI / diagnostics
+  //   surfaces. True so the user can see the architecture, but
+  //   flipping it does not unlock any real OCR.
+  // - `ocrMockProvider` confirms the mock provider is registered
+  //   and available. Hard-coded true.
+  //
+  // Selection rule (registry):
+  //   active provider may switch to `tesseract` only if BOTH
+  //   `realOcr === true` AND `tesseractProvider === true`. Otherwise
+  //   the selection is BLOCKED and the active provider stays `mock`.
+  //
+  // Auto-run rule (provider):
+  //   `recognizeTextWithTesseract` always re-checks the flags and
+  //   returns `{ blocked: true }` when either flag is false.
   realOcr: false,
   ocrProviderRegistry: true,
   ocrMockProvider: true,
@@ -79,5 +93,37 @@ function getFeatureFlagsForDiagnostics() {
       ocrProviderRegistry: FEATURE_FLAGS.ocrProviderRegistry,
       ocrMockProvider: FEATURE_FLAGS.ocrMockProvider
     }
+  };
+}
+
+
+// ---------------------------------------------------------------------
+// Step 39 — Real OCR Provider Integration Phase 1.
+// ---------------------------------------------------------------------
+// `getOcrFeatureStatus()` is the single source of truth for the OCR
+// readiness UI / Tesseract provider readiness check / diagnostics
+// line. It returns a flat plain-data snapshot of every OCR-related
+// safety flag, so the call sites do not have to read `FEATURE_FLAGS`
+// directly. The values here are derived only from the frozen flag
+// object — there is no runtime mutation.
+function getOcrFeatureStatus() {
+  // `realOcrAllowed` is true only if every safety flag agrees:
+  //   - `realOcr` (umbrella) is true,
+  //   - `tesseractProvider` (provider gate) is true,
+  //   - `simulationOnly` is false (simulation-only builds refuse).
+  // At Step 39 the safe defaults pin all three to a non-allowing
+  // state, so this evaluates to `false`. The function deliberately
+  // does the boolean math here so call sites do not have to.
+  var realOcrAllowed = (FEATURE_FLAGS.realOcr === true) &&
+                       (FEATURE_FLAGS.tesseractProvider === true) &&
+                       (FEATURE_FLAGS.simulationOnly !== true);
+  return {
+    realOcr:             FEATURE_FLAGS.realOcr === true,
+    tesseractProvider:   FEATURE_FLAGS.tesseractProvider === true,
+    ocrMockProvider:     FEATURE_FLAGS.ocrMockProvider === true,
+    ocrProviderRegistry: FEATURE_FLAGS.ocrProviderRegistry === true,
+    simulationOnly:      FEATURE_FLAGS.simulationOnly === true,
+    realOcrAllowed:      realOcrAllowed,
+    realOcrAutoRun:      false   // hard-coded — never auto-run real OCR
   };
 }

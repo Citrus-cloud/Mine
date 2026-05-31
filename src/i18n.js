@@ -878,7 +878,28 @@ const translations = {
     flagNo: "нет",
     flagAvailable: "доступен",
     flagUnavailable: "недоступен",
-    flagActive: "активен"
+    flagActive: "активен",
+
+    // Step 39 — Real OCR Provider Integration Phase 1.
+    tesseractProvider: "Tesseract OCR-провайдер",
+    tesseractInstalled: "Tesseract установлен",
+    tesseractEnabled: "Tesseract включён",
+    checkTesseractReadiness: "Проверить готовность Tesseract",
+    tesseractReadiness: "Готовность Tesseract",
+    tesseractReady: "Tesseract готов",
+    tesseractUnavailable: "Tesseract недоступен",
+    tesseractBlockedByFeatureFlag: "Tesseract заблокирован feature-флагом",
+    realOcrFeatureFlag: "Feature-флаг реального OCR",
+    realOcrAutoRunDisabled: "Автозапуск реального OCR отключён",
+    realOcrProviderDisabled: "Реальный OCR-провайдер отключён по умолчанию",
+    realOcrWillBeEnabledLater: "Реальный OCR будет включён позже, после ручной проверки.",
+    activeProviderMock: "Активный провайдер: mock",
+    activeProviderTesseract: "Активный провайдер: tesseract",
+    ocrProviderStatus: "Статус OCR-провайдера",
+    tesseractDependencyPresent: "Зависимость Tesseract присутствует",
+    tesseractReadinessCheckCompleted: "Проверка готовности Tesseract завершена",
+    tesseractReadinessCheckFailed: "Проверка готовности Tesseract не прошла",
+    tesseractEngineNotLoadable: "Движок Tesseract не загружается в этой сборке"
   },
   en: {
     // Main screen
@@ -1757,7 +1778,28 @@ const translations = {
     flagNo: "no",
     flagAvailable: "available",
     flagUnavailable: "unavailable",
-    flagActive: "active"
+    flagActive: "active",
+
+    // Step 39 — Real OCR Provider Integration Phase 1.
+    tesseractProvider: "Tesseract OCR provider",
+    tesseractInstalled: "Tesseract installed",
+    tesseractEnabled: "Tesseract enabled",
+    checkTesseractReadiness: "Check Tesseract readiness",
+    tesseractReadiness: "Tesseract readiness",
+    tesseractReady: "Tesseract ready",
+    tesseractUnavailable: "Tesseract unavailable",
+    tesseractBlockedByFeatureFlag: "Tesseract blocked by feature flag",
+    realOcrFeatureFlag: "Real OCR feature flag",
+    realOcrAutoRunDisabled: "Real OCR auto-run disabled",
+    realOcrProviderDisabled: "Real OCR provider disabled by default",
+    realOcrWillBeEnabledLater: "Real OCR will be enabled later, after manual review.",
+    activeProviderMock: "Active provider: mock",
+    activeProviderTesseract: "Active provider: tesseract",
+    ocrProviderStatus: "OCR provider status",
+    tesseractDependencyPresent: "Tesseract dependency present",
+    tesseractReadinessCheckCompleted: "Tesseract readiness check completed",
+    tesseractReadinessCheckFailed: "Tesseract readiness check failed",
+    tesseractEngineNotLoadable: "Tesseract engine is not loadable in this build"
   }
 };
 
