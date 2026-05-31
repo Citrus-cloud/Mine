@@ -43,6 +43,7 @@ const btnFormCancel = document.getElementById('btn-form-cancel');
 const inputScenarioType       = document.getElementById('input-scenario-type');
 const formSectionSimple       = document.getElementById('form-section-simple-click');
 const formSectionImage        = document.getElementById('form-section-image-click');
+const formSectionText         = document.getElementById('form-section-text-click');
 const inputTemplateId         = document.getElementById('input-template-id');
 const inputImageThreshold     = document.getElementById('input-image-threshold');
 const inputImageStep          = document.getElementById('input-image-step');
@@ -54,6 +55,20 @@ const imageClickNoTemplates   = document.getElementById('image-click-no-template
 const btnImageClickUseRegion  = document.getElementById('btn-image-click-use-region');
 const btnImageClickClearRegion= document.getElementById('btn-image-click-clear-region');
 let _imageClickFormRegion = null;
+
+// Step 33: text_click form fields.
+const inputTextTarget         = document.getElementById('input-text-target');
+const inputTextLanguage       = document.getElementById('input-text-language');
+const inputTextMatchMode      = document.getElementById('input-text-match-mode');
+const inputTextCaseSensitive  = document.getElementById('input-text-case-sensitive');
+const inputTextTimeout        = document.getElementById('input-text-timeout');
+const inputTextInterval       = document.getElementById('input-text-interval');
+const inputTextRepeat         = document.getElementById('input-text-repeat');
+const textClickRegionSummary  = document.getElementById('text-click-region-summary');
+const textClickNoPreview      = document.getElementById('text-click-no-preview');
+const btnTextClickUseRegion   = document.getElementById('btn-text-click-use-region');
+const btnTextClickClearRegion = document.getElementById('btn-text-click-clear-region');
+let _textClickFormRegion = null;
 
 // DOM — настройки
 const settingsLanguage = document.getElementById('settings-language');
@@ -128,6 +143,7 @@ function renderExecutionProgress(ex) {
 }
 
 // Step 30 — render either simple_click or image_click last action.
+// Step 33 — also render text_click last action.
 // Returns a short text fragment (no HTML).
 function formatLastAction(action) {
   if (!action) return t('none');
@@ -139,6 +155,18 @@ function formatLastAction(action) {
       return 'image_click ' + t('imageClickNoMatch') + ' template=' + tplId + ' confidence=' + conf;
     }
     return 'image_click template=' + tplId + ' x=' + (tp.x | 0) + ' y=' + (tp.y | 0) + ' confidence=' + conf + ' (simulated)';
+  }
+  if (action.type === 'text_click') {
+    var ttext = typeof action.text === 'string' ? action.text : '';
+    var ttp = action.targetPoint || { x: 0, y: 0 };
+    var tconf = (typeof action.confidence === 'number') ? Math.round(action.confidence * 100) + '%' : '?';
+    if (action.status === 'no_match') {
+      return 'text_click ' + t('textClickNoMatch');
+    }
+    // Render only the first 40 chars of the text to avoid leaking
+    // huge user input into the on-screen status bar.
+    var safeText = ttext.length > 40 ? ttext.slice(0, 40) + '…' : ttext;
+    return 'text_click text="' + safeText + '" x=' + (ttp.x | 0) + ' y=' + (ttp.y | 0) + ' confidence=' + tconf + ' (simulated)';
   }
   return 'click x=' + action.x + ' y=' + action.y + ' ' + action.button;
 }
@@ -191,6 +219,12 @@ function renderScenarioList() {
       typeBadge.textContent = t('imageClick') || 'image_click';
       header.appendChild(typeBadge);
     }
+    if (sc.type === 'text_click') {
+      const typeBadge = document.createElement('span');
+      typeBadge.className = 'scenario-card-badge scenario-card-badge-text-click';
+      typeBadge.textContent = t('textClick') || 'text_click';
+      header.appendChild(typeBadge);
+    }
     card.appendChild(header);
     const info = document.createElement('div'); info.className = 'scenario-card-settings';
     info.textContent = formatScenarioSettingsLine(sc);
@@ -231,6 +265,8 @@ function getScenarioFormData() {
   // its old shape (so old callers / tests stay happy); image_click
   // returns the full new shape including templateId / region /
   // threshold / step / timeoutMs.
+  // Step 33: text_click returns its own shape with targetText /
+  // language / matchMode / caseSensitive / region.
   var type = (inputScenarioType && inputScenarioType.value) ? inputScenarioType.value : 'simple_click';
   if (type === 'image_click') {
     return {
@@ -246,6 +282,21 @@ function getScenarioFormData() {
       repeatCount:inputImageRepeat   ? Number(inputImageRepeat.value)    : 1
     };
   }
+  if (type === 'text_click') {
+    return {
+      type: 'text_click',
+      name: inputName.value,
+      description: inputDescription.value,
+      targetText:    inputTextTarget       ? inputTextTarget.value       : '',
+      language:      inputTextLanguage     ? inputTextLanguage.value     : 'ru+en',
+      matchMode:     inputTextMatchMode    ? inputTextMatchMode.value    : 'contains',
+      caseSensitive: inputTextCaseSensitive ? !!inputTextCaseSensitive.checked : false,
+      region:        _textClickFormRegion ? { ..._textClickFormRegion } : null,
+      timeoutMs:     inputTextTimeout      ? Number(inputTextTimeout.value)  : 10000,
+      intervalMs:    inputTextInterval     ? Number(inputTextInterval.value) : 1000,
+      repeatCount:   inputTextRepeat       ? Number(inputTextRepeat.value)   : 1
+    };
+  }
   return {
     type: 'simple_click',
     name: inputName.value,
@@ -259,7 +310,10 @@ function getScenarioFormData() {
 function fillScenarioForm(sc) {
   inputName.value = sc.name; inputDescription.value = sc.description || '';
   // Step 30: render either branch depending on the loaded scenario.
-  var type = (sc.type === 'image_click') ? 'image_click' : 'simple_click';
+  // Step 33: text_click branch.
+  var type = 'simple_click';
+  if (sc.type === 'image_click') type = 'image_click';
+  else if (sc.type === 'text_click') type = 'text_click';
   if (inputScenarioType) inputScenarioType.value = type;
   if (type === 'image_click') {
     var s = sc.settings || {};
@@ -271,6 +325,21 @@ function fillScenarioForm(sc) {
     if (inputImageInterval)  inputImageInterval.value  = (typeof s.intervalMs === 'number') ? s.intervalMs : 1000;
     if (inputImageRepeat)    inputImageRepeat.value    = (typeof s.repeatCount === 'number') ? s.repeatCount : 1;
     refreshImageClickRegionSummary();
+    syncScenarioFormSections();
+    return;
+  }
+  if (type === 'text_click') {
+    var ts = sc.settings || {};
+    if (inputTextTarget)        inputTextTarget.value        = (typeof ts.targetText === 'string') ? ts.targetText : '';
+    if (inputTextLanguage)      inputTextLanguage.value      = (ts.language === 'ru' || ts.language === 'en' || ts.language === 'ru+en') ? ts.language : 'ru+en';
+    if (inputTextMatchMode)     inputTextMatchMode.value     = (ts.matchMode === 'exact') ? 'exact' : 'contains';
+    if (inputTextCaseSensitive) inputTextCaseSensitive.checked = !!ts.caseSensitive;
+    if (inputTextTimeout)       inputTextTimeout.value       = (typeof ts.timeoutMs === 'number') ? ts.timeoutMs : 10000;
+    if (inputTextInterval)      inputTextInterval.value      = (typeof ts.intervalMs === 'number') ? ts.intervalMs : 1000;
+    if (inputTextRepeat)        inputTextRepeat.value        = (typeof ts.repeatCount === 'number') ? ts.repeatCount : 1;
+    _textClickFormRegion = (ts.region && typeof ts.region === 'object') ? { ...ts.region } : null;
+    refreshTextClickRegionSummary();
+    refreshTextClickPreviewWarning();
     syncScenarioFormSections();
     return;
   }
@@ -295,6 +364,17 @@ function clearScenarioForm() {
   if (inputImageInterval)  inputImageInterval.value  = '1000';
   if (inputImageRepeat)    inputImageRepeat.value    = '1';
   refreshImageClickRegionSummary();
+  // Step 33: reset text_click defaults.
+  _textClickFormRegion = null;
+  if (inputTextTarget)        inputTextTarget.value        = '';
+  if (inputTextLanguage)      inputTextLanguage.value      = 'ru+en';
+  if (inputTextMatchMode)     inputTextMatchMode.value     = 'contains';
+  if (inputTextCaseSensitive) inputTextCaseSensitive.checked = false;
+  if (inputTextTimeout)       inputTextTimeout.value       = '10000';
+  if (inputTextInterval)      inputTextInterval.value      = '1000';
+  if (inputTextRepeat)        inputTextRepeat.value        = '1';
+  refreshTextClickRegionSummary();
+  refreshTextClickPreviewWarning();
   syncScenarioFormSections();
 }
 function showFormError(msg) { formError.textContent = msg; formError.classList.add('visible'); }
@@ -346,6 +426,9 @@ function startScenario() {
       // (no_match included) because the user benefits from seeing
       // every match cycle; for simple_click we keep the rate
       // limit so 100k iterations don't flood the log.
+      // Step 33: text_click follows the same "always log" rule as
+      // image_click — the user explicitly asked to find a text,
+      // so each cycle is worth surfacing.
       if (action && action.type === 'image_click') {
         var tplId = action.templateId || '';
         if (action.status === 'no_match') {
@@ -353,6 +436,18 @@ function startScenario() {
         } else {
           var tp = action.targetPoint || { x: 0, y: 0 };
           addLogEntry(createLog('info', `${c}/${total}: ${t('imageClickSimulated')} x=${tp.x | 0} y=${tp.y | 0} confidence=${(typeof action.confidence === 'number') ? Math.round(action.confidence * 100) + '%' : '?'}`));
+        }
+      } else if (action && action.type === 'text_click') {
+        if (action.status === 'no_match') {
+          addLogEntry(createLog('warning', `${c}/${total}: ${t('textClickNoMatch')}`));
+        } else {
+          var ttp = action.targetPoint || { x: 0, y: 0 };
+          // Truncate the target text inside the log so a huge
+          // input doesn't blow up the renderer log card.
+          var safe = typeof action.text === 'string'
+            ? (action.text.length > 60 ? action.text.slice(0, 60) + '…' : action.text)
+            : '';
+          addLogEntry(createLog('info', `${c}/${total}: ${t('textClickSimulated')} text="${safe}" x=${ttp.x | 0} y=${ttp.y | 0} confidence=${(typeof action.confidence === 'number') ? Math.round(action.confidence * 100) + '%' : '?'}`));
         }
       } else if (shouldLogAction(c, total)) {
         addLogEntry(createLog('info', `${c}/${total}: click x=${action.x} y=${action.y}`));
@@ -953,6 +1048,38 @@ function renderAdvancedSafety() {
   addCardRow(icCard, t('realImageClickDisabled'),   t('flagEnabled'));
   c.appendChild(icCard);
 
+  // --- Step 33: Text Click Scenario diagnostics card ---
+  const tcCard = document.createElement('div'); tcCard.className = 'adv-card';
+  const tcTitle = document.createElement('div'); tcTitle.className = 'adv-card-title';
+  tcTitle.textContent = t('textClickScenario');
+  tcCard.appendChild(tcTitle);
+  let tcCount = 0;
+  if (typeof getScenariosByType === 'function') {
+    tcCount = getScenariosByType('text_click').length;
+  }
+  addCardRow(tcCard, t('textClickScenariosCount'), String(tcCount));
+  // Last text_click action — read from execution.lastAction.
+  const lastTc = (state.execution && state.execution.lastAction && state.execution.lastAction.type === 'text_click')
+    ? state.execution.lastAction : null;
+  addCardRow(tcCard, t('lastTextClickResult'),
+    lastTc ? (lastTc.status === 'no_match' ? t('textClickNoMatch') : t('textClickSimulated'))
+           : t('none2'));
+  addCardRow(tcCard, t('confidence'),
+    (lastTc && typeof lastTc.confidence === 'number') ? Math.round(lastTc.confidence * 1000) / 10 + '%' : t('none2'));
+  addCardRow(tcCard, t('textClickTarget'),
+    (lastTc && lastTc.targetPoint) ? ((lastTc.targetPoint.x | 0) + ', ' + (lastTc.targetPoint.y | 0)) : t('none2'));
+  // Render only the text length on the card — never the full
+  // target text. The user can read the active text in the
+  // scenario list / form anyway, and we don't want PII to leak
+  // through `Copy diagnostics`.
+  addCardRow(tcCard, t('targetTextPresent'),
+    (lastTc && typeof lastTc.text === 'string' && lastTc.text.length > 0) ? t('yes') : t('no'));
+  // Hard "always-on" simulation flags.
+  addCardRow(tcCard, t('textClickSimulationOnly'), t('flagEnabled'));
+  addCardRow(tcCard, t('realTextClickDisabled'),   t('flagEnabled'));
+  addCardRow(tcCard, t('realOcrDisabled'),         t('flagEnabled'));
+  c.appendChild(tcCard);
+
   // --- Step 31: Image Click Test Match diagnostics card ---
   // Surfaces the last Test Match invocation from the scenario form.
   // Test Match never clicks — these are debug numbers only.
@@ -1282,6 +1409,22 @@ async function copyDiagnostics() {
   const lastIcTargetX = (lastIcDiag && lastIcDiag.targetPoint) ? (lastIcDiag.targetPoint.x | 0) : 'none';
   const lastIcTargetY = (lastIcDiag && lastIcDiag.targetPoint) ? (lastIcDiag.targetPoint.y | 0) : 'none';
   const icLine = `Image click scenario: imageClickScenariosCount=${icCountDiag}, lastImageClickStatus=${lastIcStatus}, lastImageClickConfidence=${lastIcConfidence}, lastImageClickTargetPoint=${lastIcTargetX},${lastIcTargetY}, imageClickSimulationOnly=true, realImageClickEnabled=false, ocrImplemented=false`;
+  // Step 33: text_click scenario line. Numbers / metadata only —
+  // never the full target text, only its length.
+  let tcCountDiag = 0;
+  if (typeof getScenariosByType === 'function') {
+    tcCountDiag = getScenariosByType('text_click').length;
+  }
+  const lastTcDiag = (state.execution && state.execution.lastAction && state.execution.lastAction.type === 'text_click')
+    ? state.execution.lastAction : null;
+  const lastTcStatus     = lastTcDiag ? (lastTcDiag.status === 'no_match' ? 'no_match' : 'simulated') : 'none';
+  const lastTcConfidence = (lastTcDiag && typeof lastTcDiag.confidence === 'number') ? lastTcDiag.confidence : 'none';
+  const lastTcTargetX    = (lastTcDiag && lastTcDiag.targetPoint) ? (lastTcDiag.targetPoint.x | 0) : 'none';
+  const lastTcTargetY    = (lastTcDiag && lastTcDiag.targetPoint) ? (lastTcDiag.targetPoint.y | 0) : 'none';
+  const lastTcTextLen    = (lastTcDiag && typeof lastTcDiag.text === 'string') ? lastTcDiag.text.length : 0;
+  const lastTcLanguage   = lastTcDiag ? (lastTcDiag.language || 'none') : 'none';
+  const lastTcMatchMode  = lastTcDiag ? (lastTcDiag.matchMode || 'none') : 'none';
+  const tcLine = `Text click scenario: textClickScenariosCount=${tcCountDiag}, lastTextClickStatus=${lastTcStatus}, lastTextClickConfidence=${lastTcConfidence}, lastTextClickTargetPoint=${lastTcTargetX},${lastTcTargetY}, lastTextClickTextLen=${lastTcTextLen}, lastTextClickLanguage=${lastTcLanguage}, lastTextClickMatchMode=${lastTcMatchMode}, textClickSimulationOnly=true, realTextClickEnabled=false, realOcrEnabled=false, tesseractAvailable=false, ocrEngineImplemented=false`;
   // Step 31: Image Click Test Match line. Numbers and short
   // strings only — never base64, never imageDataUrl.
   let ictDiagStatus = null;
@@ -1320,7 +1463,7 @@ async function copyDiagnostics() {
   const ocrBlocksCnt   = ocrDiagStatus ? (ocrDiagStatus.lastOcrBlocksCount | 0) : 0;
   const ocrRegionUsed  = ocrDiagStatus ? !!ocrDiagStatus.lastOcrRegionUsed : false;
   const ocrLine = `OCR: ocrMockAvailable=${ocrMockAvail}, realOcrAvailable=${ocrRealAvail}, lastOcrRunAt=${ocrLastAt}, lastOcrMatched=${ocrLastMatched}, lastOcrConfidence=${ocrLastConf}, lastOcrDurationMs=${ocrLastDur}, ocrLanguage=${ocrLastLang}, ocrMatchMode=${ocrLastMode}, targetTextPresent=${ocrTargetLen > 0}, lastOcrBlocksCount=${ocrBlocksCnt}, regionUsed=${ocrRegionUsed}, realOcr=false, realClick=false, tesseractAvailable=false, ocrEngineImplemented=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\n${ictLine}\n${ocrLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\n${tcLine}\n${ictLine}\n${ocrLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();
@@ -1686,6 +1829,7 @@ function syncScenarioFormSections() {
   var type = (inputScenarioType && inputScenarioType.value) ? inputScenarioType.value : 'simple_click';
   if (formSectionSimple) formSectionSimple.classList.toggle('view-hidden', type !== 'simple_click');
   if (formSectionImage)  formSectionImage.classList.toggle('view-hidden',  type !== 'image_click');
+  if (formSectionText)   formSectionText.classList.toggle('view-hidden',   type !== 'text_click');
   // Step 31: keep the Test Match panel in sync with the visible
   // section. The panel itself lives inside the image_click section
   // so it auto-hides with it, but we still refresh its content so
@@ -1693,6 +1837,13 @@ function syncScenarioFormSections() {
   // they switch.
   if (type === 'image_click' && typeof refreshImageClickTestPanel === 'function') {
     refreshImageClickTestPanel();
+  }
+  // Step 33: refresh the text_click "no preview" warning whenever
+  // the user switches to text_click — preview state may have
+  // changed since the form was last open.
+  if (type === 'text_click') {
+    refreshTextClickPreviewWarning();
+    refreshTextClickRegionSummary();
   }
 }
 
@@ -1783,6 +1934,12 @@ function bindScenarioFormImageClickHandlers() {
       // Refresh the template list so a freshly-imported template
       // shows up if the user just switched to image_click.
       if (inputScenarioType.value === 'image_click') populateTemplateSelect(inputTemplateId ? inputTemplateId.value : '');
+      // Step 33: refresh the text_click warning + region summary
+      // when the user switches to text_click.
+      if (inputScenarioType.value === 'text_click') {
+        refreshTextClickPreviewWarning();
+        refreshTextClickRegionSummary();
+      }
     });
   }
   if (btnImageClickUseRegion) {
@@ -1804,10 +1961,72 @@ function bindScenarioFormImageClickHandlers() {
 }
 bindScenarioFormImageClickHandlers();
 
+// =====================================================================
+// Step 33 — text_click form helpers
+// =====================================================================
+
+// Render the region summary line — text only, never HTML.
+function refreshTextClickRegionSummary() {
+  if (!textClickRegionSummary) return;
+  if (_textClickFormRegion && typeof _textClickFormRegion === 'object') {
+    var r = _textClickFormRegion;
+    textClickRegionSummary.textContent = (r.x | 0) + ', ' + (r.y | 0) + ' · ' + (r.width | 0) + '×' + (r.height | 0);
+    textClickRegionSummary.classList.add('text-click-region-summary-active');
+  } else {
+    textClickRegionSummary.textContent = t('noRegionSelected') || 'No region selected';
+    textClickRegionSummary.classList.remove('text-click-region-summary-active');
+  }
+}
+
+// Show the "capture a screen preview first" warning whenever the
+// preview slice is empty AND the form is on the text_click branch.
+function refreshTextClickPreviewWarning() {
+  if (!textClickNoPreview) return;
+  var hasPreview = false;
+  if (typeof getState === 'function') {
+    var st = getState();
+    var p = st && st.screenCapture ? st.screenCapture.preview : null;
+    hasPreview = !!(p && typeof p.imageDataUrl === 'string' && p.imageDataUrl.indexOf('data:image/') === 0);
+  }
+  textClickNoPreview.classList.toggle('view-hidden', hasPreview);
+}
+
+// "Use selected region" — copies the current region-selector
+// state into the form. Numbers only — never an imageDataUrl.
+function applySelectedRegionToTextClickForm() {
+  if (typeof getState !== 'function') return;
+  var st = getState();
+  var r = st.regionSelector ? st.regionSelector.normalizedRegion : null;
+  if (!r) {
+    addLogEntry(createLog('warning', t('noRegionSelected') || 'No region selected'));
+    return;
+  }
+  _textClickFormRegion = {
+    x: r.x | 0, y: r.y | 0, width: r.width | 0, height: r.height | 0
+  };
+  refreshTextClickRegionSummary();
+}
+
+function clearTextClickFormRegion() {
+  _textClickFormRegion = null;
+  refreshTextClickRegionSummary();
+}
+
+function bindScenarioFormTextClickHandlers() {
+  if (btnTextClickUseRegion) {
+    btnTextClickUseRegion.addEventListener('click', applySelectedRegionToTextClickForm);
+  }
+  if (btnTextClickClearRegion) {
+    btnTextClickClearRegion.addEventListener('click', clearTextClickFormRegion);
+  }
+}
+bindScenarioFormTextClickHandlers();
+
 
 
 // Step 30 — short text summary of a scenario's settings for the
 // scenario list. Both types render via textContent only.
+// Step 33 — text_click summary line.
 function formatScenarioSettingsLine(sc) {
   if (!sc || !sc.settings) return '';
   if (sc.type === 'image_click') {
@@ -1815,6 +2034,19 @@ function formatScenarioSettingsLine(sc) {
     var thr = (typeof s.threshold === 'number') ? Math.round(s.threshold * 100) + '%' : '?';
     var hasRegion = !!s.region ? '·region' : '·full';
     return 'image_click ' + (s.templateId || '?') + ' · ' + thr + ' · step ' + (s.step | 0) + ' ' + hasRegion + ' · ' + (s.intervalMs | 0) + 'ms · ' + (s.repeatCount | 0) + '×';
+  }
+  if (sc.type === 'text_click') {
+    var ts = sc.settings;
+    // Truncate the target text inside the summary line so the
+    // scenario card doesn't grow on long inputs. Render via
+    // textContent only — never innerHTML.
+    var truncText = (typeof ts.targetText === 'string')
+      ? (ts.targetText.length > 24 ? ts.targetText.slice(0, 24) + '…' : ts.targetText)
+      : '?';
+    var hasReg = !!ts.region ? '·region' : '·full';
+    return 'text_click "' + truncText + '" · ' + (ts.language || '?') + ' · ' + (ts.matchMode || '?') +
+           (ts.caseSensitive ? ' · case' : '') + ' ' + hasReg +
+           ' · ' + (ts.intervalMs | 0) + 'ms · ' + (ts.repeatCount | 0) + '×';
   }
   return 'x:' + sc.settings.x + ' y:' + sc.settings.y + ' · ' + sc.settings.intervalMs + 'ms · ' + sc.settings.repeatCount + '× · ' + sc.settings.button;
 }

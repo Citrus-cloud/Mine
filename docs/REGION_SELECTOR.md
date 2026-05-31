@@ -354,3 +354,24 @@ intact (the user can re-run with a different region or with no
 region at all).
 
 See [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md).
+
+
+
+---
+
+## Step 33 — region can scope a `text_click` scenario
+
+[Step 33](./TEXT_CLICK_SCENARIO.md) introduces a new scenario
+type that accepts an optional region in `settings.region`. The
+form has a **"Use selected region"** button that copies the
+current Step-26 normalized region into the scenario, and a
+**"Clear scenario region"** button that drops it. The region
+remains preview-anchored numbers only — never an `imageDataUrl`,
+never a screenshot.
+
+When the scenario runs, `runTextClickScenario` passes the
+rectangle to the Step-32 mock OCR engine via `createOcrInput()`;
+the engine clamps every fabricated block inside the region.
+Without a region the mock searches the whole preview rectangle.
+
+See [`docs/TEXT_CLICK_SCENARIO.md`](./TEXT_CLICK_SCENARIO.md).

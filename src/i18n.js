@@ -718,7 +718,30 @@ const translations = {
     lastOcrBlocksCount: "Блоков в последнем OCR",
     targetTextPresent: "Указан целевой текст",
     regionUsed: "Используется область",
-    confidenceLabel: "Достоверность"
+    confidenceLabel: "Достоверность",
+
+    // Step 33: text_click scenario type
+    textClick: "Клик по тексту",
+    textClickScenario: "Сценарий text_click",
+    createTextClickScenario: "Создать сценарий text_click",
+    editTextClickScenario: "Редактировать сценарий text_click",
+    textClickSettings: "Настройки text_click",
+    clearScenarioRegion: "Очистить область сценария",
+    mockOcrOnlyNotice: "На этом этапе используется mock OCR. Настоящее распознавание текста пока не подключено.",
+    textClickSimulated: "text_click симулирован",
+    textClickNoMatch: "Текст не найден",
+    textClickMissingPreview: "Сначала получите screenshot preview.",
+    textClickMissingTargetText: "Введите целевой текст.",
+    mockOcrStarted: "Mock OCR запущен",
+    targetTextFound: "Целевой текст найден",
+    textClickTarget: "Цель text_click",
+    realTextClickDisabled: "Реальный text_click отключён",
+    lastTextClickResult: "Последний text_click",
+    textClickScenariosCount: "Сценариев text_click",
+    textClickSimulationOnly: "text_click только симуляция",
+    textClickScenarioCompleted: "Сценарий text_click завершён",
+    textClickScenarioFailed: "Сценарий text_click не завершился",
+    textClickRealOcrDisabled: "Реальный OCR отключён в text_click"
   },
   en: {
     // Main screen
@@ -1437,7 +1460,30 @@ const translations = {
     lastOcrBlocksCount: "Last OCR blocks count",
     targetTextPresent: "Target text present",
     regionUsed: "Region used",
-    confidenceLabel: "Confidence"
+    confidenceLabel: "Confidence",
+
+    // Step 33: text_click scenario type
+    textClick: "Text click",
+    textClickScenario: "text_click scenario",
+    createTextClickScenario: "Create text_click scenario",
+    editTextClickScenario: "Edit text_click scenario",
+    textClickSettings: "text_click settings",
+    clearScenarioRegion: "Clear scenario region",
+    mockOcrOnlyNotice: "This step uses mock OCR. Real text recognition is not connected yet.",
+    textClickSimulated: "text_click simulated",
+    textClickNoMatch: "Text not found",
+    textClickMissingPreview: "Capture a screen preview first.",
+    textClickMissingTargetText: "Target text is required.",
+    mockOcrStarted: "Mock OCR started",
+    targetTextFound: "Target text found",
+    textClickTarget: "text_click target",
+    realTextClickDisabled: "Real text_click disabled",
+    lastTextClickResult: "Last text_click",
+    textClickScenariosCount: "text_click scenarios count",
+    textClickSimulationOnly: "text_click is simulation-only",
+    textClickScenarioCompleted: "text_click scenario completed",
+    textClickScenarioFailed: "text_click scenario failed",
+    textClickRealOcrDisabled: "Real OCR disabled in text_click"
   }
 };
 

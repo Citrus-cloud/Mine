@@ -8,6 +8,206 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-33
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, the Step 24 final beta
+release preparation, the Step 25 Screen Capture Foundation, the
+Step 26 Region Selector Foundation, the Step 27 Template Asset
+Manager, the Step 28 Template Matching Mock / Dry-run, the
+Step 29 Real Template Matching Engine Foundation, the
+Step 30 Image Click Scenario Type Foundation, the
+Step 31 Image Click Scenario UX Polish + Visual Test Tools, the
+Step 32 OCR Foundation (mock only), and the
+**Step 33 Text Click Scenario Type Foundation** (new
+simulation-only scenario type that runs the Step-32 mock OCR every
+iteration and dispatches a SIMULATED `text_click` action through
+the existing action-pipeline; never recognises real text, never
+clicks, never opens a new IPC channel). **Still simulation-only.**
+
+### Added (Step 33 — Text Click Scenario Type Foundation)
+
+- `src/scenario-manager.js`:
+  - `validateTextClickScenario(input)` — validates name,
+    target text, language (`ru` / `en` / `ru+en`), match mode
+    (`contains` / `exact`), case-sensitive, optional region
+    (numbers only), `timeoutMs >= 1000`, `intervalMs >= 100`,
+    `repeatCount` 1..1000.
+  - `_buildTextClickScenarioFromInput(input, baseId)` — pure
+    helper that builds the text_click record with normalised
+    settings.
+  - `createTextClickScenario(input)`,
+    `updateTextClickScenario(id, updates)`,
+    `getTextClickScenarios()`.
+  - `createScenario` / `updateScenario` dispatch to the
+    text_click branch when `type === 'text_click'`. Missing
+    `type` is still treated as `simple_click` for backward
+    compatibility.
+  - `TEXT_CLICK_ALLOWED_LANGUAGES` and
+    `TEXT_CLICK_ALLOWED_MATCH_MODES` are tiny frozen-style
+    arrays so adding a new value requires a code change in
+    three places (engine + manager + i18n).
+- `src/click-engine.js`:
+  - `validateRunnableScenario` learns the third type. Routing:
+    `image_click` → `runImageClickScenario`,
+    `text_click` → `runTextClickScenario`,
+    everything else → simple_click validation.
+  - `runScenario` dispatches `text_click` to
+    `runTextClickScenario`.
+  - `runTextClickScenario(scenario, callbacks, options)` —
+    runs the full simulation-only flow:
+    1. validate target text and screen preview;
+    2. for each iteration: build OCR input via
+       `createOcrInput`, run Step-32 `runMockOcr`,
+       search recognised blocks via `findTextInOcrBlocks`,
+       and dispatch the simulated `text_click` action through
+       `executeAction(action, ctx)`;
+    3. emit `scenario.textClick.*` audit events with only
+       short metadata (NEVER the full target text);
+    4. honor `stopEngine()` and the user's safety bounds
+       (`safety.minIntervalMs`, `safety.maxRepeatCount`).
+- `src/action-pipeline.js`:
+  - `validateAction` accepts `text_click` actions with a
+    non-empty `text`, a valid `targetPoint`, and BOTH
+    `realClick: !== true` AND `realOcr: !== true`.
+  - The simulate path emits `action.textClick.simulated`
+    (payload carries `textLen`, NEVER the full text).
+  - `blockRealAction` emits `action.textClick.realBlocked`
+    with the exact reason in the payload (`reason:
+    "...realClick=true rejected"` or `"...realOcr=true
+    rejected"`).
+  - The mock desktop adapter is BYPASSED for `text_click`
+    (it only knows `click`); the legacy simulate path is
+    used. The dry-run sandbox does NOT consume `text_click`.
+  - A defensive double-check inside the simulate path
+    rejects `text_click` with `realClick: true` or
+    `realOcr: true` even if a buggy future caller bypasses
+    `validateAction`.
+- `src/safety-gates.js`:
+  - `validateActionSafety` learns the third action type with
+    the same `realClick: false` / `realOcr: false` invariants
+    as the action-pipeline.
+- `src/audit-events.js`:
+  - 9 new allowlisted event types:
+    `scenario.textClick.started`,
+    `scenario.textClick.ocr.started`,
+    `scenario.textClick.ocr.completed`,
+    `scenario.textClick.textFound`,
+    `scenario.textClick.noTextFound`,
+    `scenario.textClick.simulated`,
+    `scenario.textClick.failed`,
+    `action.textClick.simulated`,
+    `action.textClick.realBlocked`.
+- `src/i18n.js` — 22 new keys per language (RU + EN):
+  `textClick`, `textClickScenario`,
+  `createTextClickScenario`, `editTextClickScenario`,
+  `textClickSettings`, `clearScenarioRegion`,
+  `mockOcrOnlyNotice`, `textClickSimulated`,
+  `textClickNoMatch`, `textClickMissingPreview`,
+  `textClickMissingTargetText`, `mockOcrStarted`,
+  `targetTextFound`, `textClickTarget`,
+  `realTextClickDisabled`, `lastTextClickResult`,
+  `textClickScenariosCount`, `textClickSimulationOnly`,
+  `textClickScenarioCompleted`, `textClickScenarioFailed`,
+  `textClickRealOcrDisabled`. (`targetText`, `ocrLanguage`,
+  `matchMode`, `contains`, `exact`, `caseSensitive`,
+  `useSelectedRegion`, `realOcrDisabled`, `targetTextRequired`
+  are reused from Step 32.)
+- `src/index.html`:
+  - The scenario-type select now has three options:
+    `simple_click`, `image_click`, `text_click`.
+  - New `<div id="form-section-text-click" class="form-section
+    view-hidden">` with a yellow mock-OCR notice, a red
+    no-preview warning, target text input, language /
+    match-mode selects, case-sensitive checkbox, region
+    summary + Use selected region / Clear scenario region
+    buttons, timeout / interval / repeat inputs.
+- `src/renderer.js`:
+  - New DOM references for the text_click form fields.
+  - `getScenarioFormData()` / `fillScenarioForm()` /
+    `clearScenarioForm()` / `formatLastAction()` /
+    `formatScenarioSettingsLine()` learn the third type.
+  - `syncScenarioFormSections()` toggles the new
+    `form-section-text-click` and refreshes the warning + the
+    region summary.
+  - The run-scenario `onAction` callback logs `text_click`
+    events (text truncated to 60 chars in the log line).
+  - New **text_click scenario** diagnostics card in
+    `renderAdvancedSafety` with last-run rows + always-on
+    safety reminders.
+  - New `Text click scenario:` line in `Copy diagnostics`
+    (numeric / metadata only — `lastTextClickTextLen` instead
+    of the full text).
+  - `applySelectedRegionToTextClickForm`,
+    `clearTextClickFormRegion`,
+    `refreshTextClickRegionSummary`,
+    `refreshTextClickPreviewWarning`,
+    `bindScenarioFormTextClickHandlers`.
+- `src/styles.css` — new section "Step 33 — text_click
+  scenario type": `.text-click-mock-ocr-notice` (yellow
+  banner), `.text-click-no-preview` (red banner),
+  `.text-click-region-summary`,
+  `.text-click-region-summary-active`,
+  `.scenario-card-badge-text-click` (yellow),
+  `.form-row-checkboxes`, `.form-checkbox-label`. Dark theme
+  variants. Mobile fallback at `max-width: 760px`.
+- `docs/TEXT_CLICK_SCENARIO.md` — new doc covering purpose,
+  current status, scenario format, target text, OCR settings,
+  optional region, execution flow, simulation-only behavior,
+  what is not implemented, future real OCR integration, and
+  future real click integration.
+- `docs/ACTION_SCHEMA.md` — adds **Step 33 — `text_click`
+  action (simulation-only)** section with shape, validation,
+  routing, and audit.
+- `docs/REGION_SELECTOR.md` — adds note that the region can
+  scope a `text_click` scenario.
+- `docs/OCR_FOUNDATION.md` — adds note that the mock OCR
+  engine is now used by the `text_click` scenario.
+- `docs/SECURITY_CHECKLIST.md` — adds **text_click scenario
+  (Step 33)** section with behavioural / storage / pipeline /
+  audit / Electron-security invariants.
+- `docs/SMOKE_TESTS.md` — adds **Step 33 — Text Click Scenario
+  Type Foundation** smoke checks (#319–#336).
+- `docs/KNOWN_LIMITATIONS.md` — adds new section
+  **16. text_click uses mock OCR only (Step 33)** covering
+  "no real text recognition", "no real click from
+  text_click", "no `text_click` Test Match panel yet", "no
+  live-screen OCR".
+- `scripts/smoke-check.js` — Step 33 invariants (see below).
+
+### Safety invariants kept (Step 33)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `realMatching: false`, `realClick: false`, `realOcr: false`,
+  `ocrEngineImplemented: false`, `tesseractAvailable: false`,
+  `ocrMockAvailable: true` in every status response, audit
+  payload, and diagnostics line.
+- `text_click` scenarios run entirely in the renderer. They
+  never open a new IPC channel. `main.js` registers no
+  `scenario.textClick.*` / `action.textClick.*` handler;
+  `preload.js` exposes no `textClick.*` API.
+- The action-pipeline rejects `text_click` actions with
+  `realClick: true` AND `realOcr: true` AND
+  `executionMode: "real"`. Even a fake real-OCR-flag never
+  translates into a click. The mock desktop adapter and the
+  dry-run sandbox refuse to consume `text_click` outright.
+- `imageDataUrl` never enters scenarios, audit payloads, or
+  the diagnostics line. The full target text never enters
+  audit payloads or the diagnostics line either — only its
+  length (`textLen`).
+- No new dependencies (no `tesseract`, `tesseract.js`,
+  `tesseract-ocr`, `node-tesseract-ocr`, `opencv4nodejs`,
+  `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`,
+  `jimp`, `pixelmatch`, `looks-same`, `robotjs`, `nut-js`,
+  `iohook`, `uiohook-napi`).
+
 ## [Unreleased] — Steps 15-32
 
 Final stabilization of the simulation-only beta, design-only handoff

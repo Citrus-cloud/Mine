@@ -135,7 +135,23 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   OcrMockCompleted:                 'ocr.mock.completed',
   OcrMockFailed:                    'ocr.mock.failed',
   OcrMockCleared:                   'ocr.mock.cleared',
-  TextClickPreviewCreated:          'text.click.preview.created'
+  TextClickPreviewCreated:          'text.click.preview.created',
+  // Step 33: text_click scenario type. Payloads carry only ids,
+  // numeric metadata (confidence, target X / Y, durationMs),
+  // small enums (language, matchMode), and short reasons.
+  // Payloads NEVER carry the full target text — only `textLen`.
+  // Payloads NEVER carry an `imageDataUrl`, a thumbnail, or a
+  // screenshot. The "simulated" / "realBlocked" pair mirrors the
+  // image_click events.
+  ScenarioTextClickStarted:          'scenario.textClick.started',
+  ScenarioTextClickOcrStarted:       'scenario.textClick.ocr.started',
+  ScenarioTextClickOcrCompleted:     'scenario.textClick.ocr.completed',
+  ScenarioTextClickTextFound:        'scenario.textClick.textFound',
+  ScenarioTextClickNoTextFound:      'scenario.textClick.noTextFound',
+  ScenarioTextClickSimulated:        'scenario.textClick.simulated',
+  ScenarioTextClickFailed:           'scenario.textClick.failed',
+  ActionTextClickSimulated:          'action.textClick.simulated',
+  ActionTextClickRealBlocked:        'action.textClick.realBlocked'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

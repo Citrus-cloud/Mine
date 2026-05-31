@@ -3852,25 +3852,29 @@ record(
 
 // 204. The OCR mock does NOT register a text_click action with
 //      the click engine / action pipeline / safety gates.
-//      validateAction / validateScenario must NOT accept text_click
-//      as a real type at Step 32 (it stays preview-only).
+//      Step 33 update: text_click is NOW an accepted scenario /
+//      action type — but ONLY through the simulate path. The
+//      Step 32 invariant ("never accepted") evolves into the
+//      stronger Step 33 invariant: "accepted and simulation-only
+//      AND realClick: true / realOcr: true is rejected".
 var apTxt32 = readText('src/action-pipeline.js');
 record(
-  'action-pipeline.js does not accept "text_click" as an executable action type at step 32',
-  !/case\s+['"]text_click['"]/.test(apTxt32) &&
-  !/type\s*===\s*['"]text_click['"]/.test(apTxt32)
+  'action-pipeline.js accepts "text_click" as a simulation-only action type at step 33',
+  /action\.type\s*===\s*['"]text_click['"]/.test(apTxt32) &&
+  /text_click\s+realClick=true\s+is\s+blocked/.test(apTxt32) &&
+  /text_click\s+realOcr=true\s+is\s+blocked/.test(apTxt32)
 );
 var smTxt32 = readText('src/scenario-manager.js');
 record(
-  'scenario-manager.js does not accept "text_click" as a scenario type at step 32',
-  !/case\s+['"]text_click['"]/.test(smTxt32) &&
-  !/type\s*===\s*['"]text_click['"]/.test(smTxt32)
+  'scenario-manager.js accepts "text_click" as a scenario type at step 33',
+  smTxt32.indexOf('createTextClickScenario') !== -1 &&
+  smTxt32.indexOf('validateTextClickScenario') !== -1
 );
 var ceTxt32 = readText('src/click-engine.js');
 record(
-  'click-engine.js does not run text_click scenarios at step 32',
-  ceTxt32.indexOf("'text_click'") === -1 &&
-  ceTxt32.indexOf('"text_click"') === -1
+  'click-engine.js dispatches text_click scenarios at step 33 (simulation-only)',
+  ceTxt32.indexOf('runTextClickScenario') !== -1 &&
+  /scenario\.type\s*===\s*['"]text_click['"]/.test(ceTxt32)
 );
 
 // 205. main.js / index.html still hold the safety flags.
@@ -3932,6 +3936,371 @@ record(
   /ocr:\s*\{/.test(stateTxt32) &&
   /targetText:/.test(stateTxt32) &&
   /useSelectedRegion:/.test(stateTxt32)
+);
+
+// =====================================================================
+// Step 33 — Text Click Scenario Type Foundation
+// =====================================================================
+
+// 208. New documentation exists.
+record(
+  'docs/TEXT_CLICK_SCENARIO.md exists',
+  fileExists('docs/TEXT_CLICK_SCENARIO.md')
+);
+
+// 209. scenario-manager.js declares the documented function names.
+var smTxt33 = readText('src/scenario-manager.js');
+[
+  'function validateTextClickScenario',
+  'function createTextClickScenario',
+  'function updateTextClickScenario',
+  'function getTextClickScenarios'
+].forEach(function (sig) {
+  record(
+    'scenario-manager.js declares ' + sig,
+    smTxt33.indexOf(sig) !== -1
+  );
+});
+
+// 210. createScenario / updateScenario dispatch on text_click.
+record(
+  'scenario-manager.js createScenario dispatches on text_click',
+  /if\s*\(\s*t\s*===\s*['"]text_click['"]\s*\)/.test(smTxt33) ||
+  /createTextClickScenario\(/.test(smTxt33)
+);
+record(
+  'scenario-manager.js updateScenario dispatches on text_click',
+  smTxt33.indexOf('updateTextClickScenario') !== -1
+);
+
+// 211. click-engine.js has runTextClickScenario.
+var ceTxt33 = readText('src/click-engine.js');
+record(
+  'click-engine.js declares function runTextClickScenario',
+  ceTxt33.indexOf('function runTextClickScenario') !== -1
+);
+record(
+  'click-engine.js runScenario dispatches text_click to runTextClickScenario',
+  /scenario\.type\s*===\s*['"]text_click['"]/.test(ceTxt33) &&
+  ceTxt33.indexOf('runTextClickScenario(scenario') !== -1
+);
+record(
+  'click-engine.js validateRunnableScenario knows the text_click branch',
+  /text_click/.test(ceTxt33) &&
+  ceTxt33.indexOf('validateTextClickScenario') !== -1
+);
+
+// 212. action-pipeline.js validates text_click and rejects realClick=true / realOcr=true.
+var apTxt33 = readText('src/action-pipeline.js');
+record(
+  'action-pipeline.js validates text_click as a real action type',
+  /action\.type\s*===\s*['"]text_click['"]/.test(apTxt33)
+);
+record(
+  'action-pipeline.js rejects text_click realClick=true',
+  /text_click\s+realClick=true\s+is\s+blocked/.test(apTxt33)
+);
+record(
+  'action-pipeline.js rejects text_click realOcr=true',
+  /text_click\s+realOcr=true\s+is\s+blocked/.test(apTxt33)
+);
+record(
+  'action-pipeline.js requires non-empty text on text_click actions',
+  /text_click\s+requires\s+text/.test(apTxt33)
+);
+record(
+  'action-pipeline.js requires targetPoint on text_click actions',
+  /text_click\s+requires\s+targetPoint/.test(apTxt33)
+);
+
+// 213. action-pipeline.js routes text_click to the simulate path
+//      (mock adapter is bypassed) AND records action.textClick.simulated.
+record(
+  'action-pipeline.js routes text_click through the simulate path (no adapter)',
+  /action\.type\s*===\s*['"]text_click['"]\s*\)\s*\{[^}]*executeSimulatedAction/.test(apTxt33) ||
+  /action\.type\s*===\s*['"]text_click['"][\s\S]{0,400}executeSimulatedAction/.test(apTxt33)
+);
+record(
+  'action-pipeline.js records action.textClick.simulated',
+  apTxt33.indexOf("'action.textClick.simulated'") !== -1
+);
+record(
+  'action-pipeline.js records action.textClick.realBlocked',
+  apTxt33.indexOf("'action.textClick.realBlocked'") !== -1
+);
+
+// 214. safety-gates.js validates text_click (mirrors action-pipeline).
+var sgTxt33 = readText('src/safety-gates.js');
+record(
+  'safety-gates.js validates text_click action',
+  /action\.type\s*===\s*['"]text_click['"]/.test(sgTxt33)
+);
+record(
+  'safety-gates.js rejects text_click realClick=true',
+  /text_click\s+never\s+carries\s+realClick=true/.test(sgTxt33)
+);
+record(
+  'safety-gates.js rejects text_click realOcr=true',
+  /text_click\s+never\s+carries\s+realOcr=true/.test(sgTxt33)
+);
+
+// 215. Audit allowlist contains the 9 new types.
+var auditTxt33 = readText('src/audit-events.js');
+[
+  'scenario.textClick.started',
+  'scenario.textClick.ocr.started',
+  'scenario.textClick.ocr.completed',
+  'scenario.textClick.textFound',
+  'scenario.textClick.noTextFound',
+  'scenario.textClick.simulated',
+  'scenario.textClick.failed',
+  'action.textClick.simulated',
+  'action.textClick.realBlocked'
+].forEach(function (eventType) {
+  record(
+    'audit-events.js allowlists ' + eventType,
+    auditTxt33.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 216. i18n.js declares the new keys in BOTH locales.
+var i18nTxt33 = readText('src/i18n.js');
+var step33I18nKeys = [
+  'textClick',
+  'textClickScenario',
+  'createTextClickScenario',
+  'editTextClickScenario',
+  'textClickSettings',
+  'clearScenarioRegion',
+  'mockOcrOnlyNotice',
+  'textClickSimulated',
+  'textClickNoMatch',
+  'textClickMissingPreview',
+  'textClickMissingTargetText',
+  'textClickTarget',
+  'realTextClickDisabled',
+  'lastTextClickResult',
+  'textClickScenariosCount',
+  'textClickSimulationOnly'
+];
+step33I18nKeys.forEach(function (key) {
+  var pattern = new RegExp('\\b' + key + '\\s*:', 'g');
+  var matches = i18nTxt33.match(pattern) || [];
+  record(
+    'i18n.js defines key "' + key + '" in both RU and EN',
+    matches.length >= 2,
+    matches.length === 0 ? 'missing entirely' : 'only ' + matches.length + ' occurrence(s)'
+  );
+});
+
+// 217. index.html has the new option + form section.
+var htmlTxt33 = readText('src/index.html');
+record(
+  'index.html has a text_click option in the scenario type select',
+  /<option[^>]*value=['"]text_click['"]/.test(htmlTxt33)
+);
+record(
+  'index.html has a form-section-text-click section',
+  htmlTxt33.indexOf('id="form-section-text-click"') !== -1
+);
+record(
+  'index.html has a target-text input',
+  htmlTxt33.indexOf('id="input-text-target"') !== -1
+);
+record(
+  'index.html has the mock-OCR notice inside the text_click form',
+  /text-click-mock-ocr-notice/.test(htmlTxt33)
+);
+
+// 218. README and PROJECT_CONTEXT mention text_click.
+var readmeTxt33  = readText('README.md');
+var contextTxt33 = readText('PROJECT_CONTEXT.md');
+record(
+  'README.md mentions text_click or text click',
+  /text_click|text click|Клик по тексту/i.test(readmeTxt33)
+);
+record(
+  'PROJECT_CONTEXT.md mentions text_click or text click',
+  /text_click|text click|Клик по тексту/i.test(contextTxt33)
+);
+record(
+  'README or PROJECT_CONTEXT mentions step 33',
+  /шаг\s*33|step\s*33/i.test(readmeTxt33 + '\n' + contextTxt33)
+);
+
+// 219. docs/TEXT_CLICK_SCENARIO.md asserts simulation-only,
+//      no Tesseract, no real click, no real OCR.
+var tcDoc = readText('docs/TEXT_CLICK_SCENARIO.md');
+record(
+  'docs/TEXT_CLICK_SCENARIO.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(tcDoc)
+);
+record(
+  'docs/TEXT_CLICK_SCENARIO.md asserts no real click',
+  /(does\s+not\s+click|never\s+clicks?|never moves the cursor|no real click)/i.test(tcDoc)
+);
+record(
+  'docs/TEXT_CLICK_SCENARIO.md asserts mock OCR / no Tesseract',
+  /(mock OCR|no Tesseract|tesseract is not connected|tesseract is not added)/i.test(tcDoc)
+);
+record(
+  'docs/TEXT_CLICK_SCENARIO.md describes scenario format / execution flow',
+  /Scenario format/i.test(tcDoc) && /Execution flow/i.test(tcDoc)
+);
+
+// 220. SECURITY_CHECKLIST has a "text_click scenario (Step 33)" section.
+var tcSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has text_click scenario (Step 33) section',
+  /text_click\s+scenario\s*\(?step\s*33/i.test(tcSec) ||
+  /## text_click scenario/i.test(tcSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts text_click simulation only / OCR mock only',
+  /text_click simulation only/i.test(tcSec) &&
+  /OCR mock only/i.test(tcSec)
+);
+
+// 221. SMOKE_TESTS doc has a Step 33 text_click block.
+var stTxt33 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 33 Text Click Scenario block',
+  /Step\s*33\s*[—-]\s*Text Click Scenario/i.test(stTxt33) ||
+  /Step 33.*Text Click Scenario/i.test(stTxt33)
+);
+
+// 222. KNOWN_LIMITATIONS has a text_click section (Step 33).
+var klTxt33 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has a text_click section (Step 33)',
+  /text_click uses mock OCR only|##\s*16\.\s*text_click uses mock OCR only/i.test(klTxt33)
+);
+
+// 223. CHANGELOG mentions Step 33.
+var chTxt33 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 33 — Text Click Scenario Type Foundation',
+  /Step\s*33.*Text Click Scenario Type Foundation/i.test(chTxt33) ||
+  /Шаг\s*33.*Text Click Scenario/i.test(chTxt33) ||
+  /Text Click Scenario Type Foundation/i.test(chTxt33)
+);
+
+// 224. package.json STILL declares no OCR / OpenCV / image-matching
+//      / real-input modules at step 33.
+if (pkg) {
+  var allDeps33 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step33Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps33, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 33',
+    step33Forbidden.length === 0,
+    step33Forbidden.length ? step33Forbidden.join(', ') : ''
+  );
+}
+
+// 225. Step-33 source files don't import OCR / OpenCV / real-input.
+var step33SourceFiles = [
+  'main.js', 'preload.js',
+  'src/scenario-manager.js',
+  'src/click-engine.js',
+  'src/action-pipeline.js',
+  'src/safety-gates.js'
+];
+var step33ForbiddenImports = [
+  'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+  'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep33Imports = [];
+step33SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step33ForbiddenImports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep33Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 33 source files',
+  foundStep33Imports.length === 0,
+  foundStep33Imports.length ? foundStep33Imports.join(', ') : ''
+);
+
+// 226. Step 33 introduces no new IPC channel (renderer-only).
+record(
+  'main.js does not register any scenario.textClick.* IPC handler at step 33',
+  !/ipcMain\.handle\(['"]scenario\.textClick/.test(mainTxt) &&
+  !/ipcMain\.on\(['"]scenario\.textClick/.test(mainTxt)
+);
+record(
+  'main.js does not register any action.textClick.* IPC handler at step 33',
+  !/ipcMain\.handle\(['"]action\.textClick/.test(mainTxt) &&
+  !/ipcMain\.on\(['"]action\.textClick/.test(mainTxt)
+);
+record(
+  'preload.js does not expose any textClick.* API at step 33',
+  preloadTxt.indexOf("'scenario.textClick.") === -1 &&
+  preloadTxt.indexOf('"scenario.textClick.') === -1 &&
+  preloadTxt.indexOf("'action.textClick.") === -1 &&
+  preloadTxt.indexOf('"action.textClick.') === -1
+);
+
+// 227. main.js / index.html still hold the safety flags at step 33.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 33)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 33)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 33 (no unsafe-inline / unsafe-eval)',
+  htmlTxt33.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt33.indexOf('unsafe-inline') === -1 &&
+  htmlTxt33.indexOf('unsafe-eval') === -1
+);
+
+// 228. renderer.js wires the new diagnostics card and Copy diagnostics line.
+var rendererTxt33 = readText('src/renderer.js');
+record(
+  'renderer.js Copy diagnostics has a `Text click scenario:` line',
+  /Text click scenario:/.test(rendererTxt33) &&
+  /textClickSimulationOnly=true/.test(rendererTxt33) &&
+  /realTextClickEnabled=false/.test(rendererTxt33) &&
+  /realOcrEnabled=false/.test(rendererTxt33) &&
+  /tesseractAvailable=false/.test(rendererTxt33) &&
+  /ocrEngineImplemented=false/.test(rendererTxt33)
+);
+record(
+  'renderer.js diagnostics card uses textClickScenario i18n key',
+  rendererTxt33.indexOf("t('textClickScenario')") !== -1
+);
+record(
+  'renderer.js form helpers handle text_click branch',
+  rendererTxt33.indexOf('formSectionText') !== -1 &&
+  rendererTxt33.indexOf('input-text-target') !== -1 &&
+  rendererTxt33.indexOf('runTextClickScenario') === -1 // it's the click-engine that calls it; renderer just calls runScenario
+);
+record(
+  'renderer.js form helpers wire the text_click region buttons',
+  rendererTxt33.indexOf('applySelectedRegionToTextClickForm') !== -1 &&
+  rendererTxt33.indexOf('clearTextClickFormRegion') !== -1
 );
 
 // --- Report ---

@@ -36,8 +36,10 @@ function createScenario(input) {
   // Step 30: dispatch on `type`. Default is `simple_click` for
   // backward compatibility — old callers don't pass a `type`
   // field and they keep working unchanged.
+  // Step 33: text_click joins the dispatcher.
   var t = (input && typeof input.type === 'string') ? input.type : 'simple_click';
   if (t === 'image_click') return createImageClickScenario(input);
+  if (t === 'text_click')  return createTextClickScenario(input);
   const validation = validateScenario(input);
   if (!validation.valid) return { success: false, error: validation.error };
   const now = new Date().toISOString();
@@ -58,10 +60,14 @@ function updateScenario(id, updates) {
   if (index === -1) return { success: false, error: 'Сценарий не найден' };
   // Step 30: route to the image_click branch when either the
   // updates or the existing scenario is an image_click.
+  // Step 33: text_click joins the dispatcher.
   var existingType = scenarios[index] && scenarios[index].type;
   var updatesType = (updates && typeof updates.type === 'string') ? updates.type : existingType;
   if (updatesType === 'image_click' || existingType === 'image_click') {
     return updateImageClickScenario(id, updates);
+  }
+  if (updatesType === 'text_click' || existingType === 'text_click') {
+    return updateTextClickScenario(id, updates);
   }
   const validation = validateScenario(updates);
   if (!validation.valid) return { success: false, error: validation.error };
@@ -399,4 +405,162 @@ function getScenariosByType(type) {
     var st = (s && typeof s.type === 'string') ? s.type : 'simple_click';
     return st === type;
   });
+}
+
+
+
+// =====================================================================
+// Step 33 — Text Click Scenario Type
+// ---------------------------------------------------------------------
+// New scenario type `text_click` that uses the Step 32 mock OCR engine
+// to find a target text on the captured screen preview and then
+// dispatches a SIMULATED `text_click` action through the action
+// pipeline. The full execution flow lives in click-engine.js. Here we
+// only own the data shape and validation.
+//
+// HARD GUARANTEES (Step 33):
+//   - `text_click` scenarios NEVER carry an `imageDataUrl` or any
+//     pixel buffer. Only `targetText`, `language`, `matchMode`,
+//     `caseSensitive`, optional `region` (numbers only),
+//     `timeoutMs`, `intervalMs`, and `repeatCount` are persisted.
+//   - The shape is forward-compatible with the planned real OCR
+//     scenario action — when (and only when) a future
+//     `REAL_ACTIONS_GO_NO_GO.md` review approves real text
+//     recognition, the same scenario shape will work without
+//     migration.
+//   - simple_click and image_click scenarios are unchanged.
+//   - Invalid scenarios are rejected at validation time; the click
+//     engine never runs an invalid `text_click` scenario.
+//   - The scenario type does NOT enable real clicks. The action
+//     pipeline rejects `realClick: true` on `text_click` outright.
+// =====================================================================
+
+// Allowed OCR languages and match modes — kept tiny on purpose.
+// New values must be added here AND in i18n.js AND in
+// ocr-mock-engine.js.
+var TEXT_CLICK_ALLOWED_LANGUAGES   = ['ru', 'en', 'ru+en'];
+var TEXT_CLICK_ALLOWED_MATCH_MODES = ['contains', 'exact'];
+
+// Pure validation. Returns { valid: bool, error: string|null }.
+// Mirrors `validateScenario`'s contract so the form can render the
+// error straight to the user.
+function validateTextClickScenario(input) {
+  if (!input || typeof input !== 'object') {
+    return { valid: false, error: 'Ввод обязателен' };
+  }
+  if (!input.name || String(input.name).trim().length === 0) {
+    return { valid: false, error: 'Название обязательно' };
+  }
+  if (typeof input.targetText !== 'string' || input.targetText.trim().length === 0) {
+    return { valid: false, error: 'Целевой текст обязателен' };
+  }
+  var language = (typeof input.language === 'string') ? input.language.toLowerCase() : '';
+  if (TEXT_CLICK_ALLOWED_LANGUAGES.indexOf(language) === -1) {
+    return { valid: false, error: 'Язык OCR должен быть ru, en или ru+en' };
+  }
+  var matchMode = (typeof input.matchMode === 'string') ? input.matchMode.toLowerCase() : '';
+  if (TEXT_CLICK_ALLOWED_MATCH_MODES.indexOf(matchMode) === -1) {
+    return { valid: false, error: 'Режим поиска должен быть contains или exact' };
+  }
+  if (typeof input.caseSensitive !== 'boolean' && input.caseSensitive !== undefined && input.caseSensitive !== null) {
+    // Accept truthy/falsy too, but the form always passes booleans.
+    // A non-bool / non-null value is treated as a programmer bug.
+    return { valid: false, error: 'caseSensitive должен быть boolean' };
+  }
+  var timeoutMs = Number(input.timeoutMs);
+  if (!isFinite(timeoutMs) || timeoutMs < 1000) {
+    return { valid: false, error: 'Таймаут должен быть >= 1000 мс' };
+  }
+  var intervalMs = Number(input.intervalMs);
+  if (!isFinite(intervalMs) || intervalMs < 100) {
+    return { valid: false, error: 'Интервал должен быть >= 100 мс' };
+  }
+  var repeatCount = Number(input.repeatCount);
+  if (!isFinite(repeatCount) || repeatCount < 1 || repeatCount > 1000) {
+    return { valid: false, error: 'Повторы: от 1 до 1000' };
+  }
+  // Region is optional; if present it must be a valid rectangle.
+  if (input.region !== null && input.region !== undefined) {
+    var rv = validateRegionSettings(input.region);
+    if (!rv.valid) return { valid: false, error: rv.error || 'Неверная область' };
+  }
+  return { valid: true, error: null };
+}
+
+// Build a fresh text_click scenario record. Pure helper — does
+// NOT mutate the scenarios array. createTextClickScenario below
+// takes care of the push + the meta timestamps.
+function _buildTextClickScenarioFromInput(input, baseId) {
+  var now = new Date().toISOString();
+  var region = null;
+  if (input.region && typeof input.region === 'object') {
+    region = {
+      x:      Math.round(Number(input.region.x)),
+      y:      Math.round(Number(input.region.y)),
+      width:  Math.round(Number(input.region.width)),
+      height: Math.round(Number(input.region.height))
+    };
+  }
+  return {
+    id:          baseId || createScenarioId(),
+    name:        String(input.name).trim(),
+    type:        'text_click',
+    description: input.description ? String(input.description).trim() : '',
+    settings: {
+      targetText:    String(input.targetText).trim(),
+      language:      String(input.language).toLowerCase(),
+      matchMode:     String(input.matchMode).toLowerCase(),
+      caseSensitive: !!input.caseSensitive,
+      region:        region,
+      timeoutMs:     Number(input.timeoutMs)   | 0,
+      intervalMs:    Number(input.intervalMs)  | 0,
+      repeatCount:   Number(input.repeatCount) | 0
+    },
+    meta: { createdAt: now, updatedAt: now, isDefault: false }
+  };
+}
+
+function createTextClickScenario(input) {
+  var v = validateTextClickScenario(input);
+  if (!v.valid) return { success: false, error: v.error };
+  var fresh = _buildTextClickScenarioFromInput(input, null);
+  scenarios.push(fresh);
+  return { success: true, scenario: fresh };
+}
+
+// Update an existing text_click scenario by id. Refuses to flip
+// the type from simple_click → text_click without all the new
+// fields (validation will fail early). The reverse direction is
+// handled by updateScenario's dispatcher.
+function updateTextClickScenario(id, updates) {
+  if (typeof id !== 'string' || id.length === 0) {
+    return { success: false, error: 'scenarioId is required' };
+  }
+  var index = scenarios.findIndex(function (s) { return s.id === id; });
+  if (index === -1) return { success: false, error: 'Сценарий не найден' };
+  var v = validateTextClickScenario(updates);
+  if (!v.valid) return { success: false, error: v.error };
+  var existing = scenarios[index];
+  var nextSettings = _buildTextClickScenarioFromInput(updates, existing.id).settings;
+  scenarios[index] = {
+    ...existing,
+    name:        String(updates.name).trim(),
+    type:        'text_click',
+    description: updates.description ? String(updates.description).trim() : '',
+    settings:    nextSettings,
+    meta: {
+      ...(existing.meta || {}),
+      updatedAt: new Date().toISOString()
+    }
+  };
+  return { success: true, scenario: scenarios[index] };
+}
+
+// Convenience helper — `getTextClickScenarios()` is just a
+// thin wrapper around `getScenariosByType('text_click')`.
+function getTextClickScenarios() {
+  if (typeof getScenariosByType === 'function') {
+    return getScenariosByType('text_click');
+  }
+  return scenarios.filter(function (s) { return s && s.type === 'text_click'; });
 }
