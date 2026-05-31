@@ -7,6 +7,57 @@
 
 ## Текущий шаг
 
+**Шаг 32 завершён.** OCR Foundation (mock only). Проект остаётся
+в стадии `0.1.0-beta` (simulation-only). На шаге 32 добавлен
+новый Advanced → **OCR** таб + новый mock-движок
+[`src/ocr-mock-engine.js`](./src/ocr-mock-engine.js) + UI-модуль
+[`src/ocr-ui.js`](./src/ocr-ui.js). Пользователь вводит target
+text, выбирает language (`ru` / `en` / `ru+en`), match mode
+(`contains` / `exact`), case-sensitive флаг и опциональный
+region; кнопка **Run mock OCR** запускает mock-движок, который
+фабрикует список recognized blocks (target block + 1–3
+surrounding labels `OK` / `Cancel` / `Settings`) из метаданных
+preview, выбирает best match и строит **`text_click` action
+preview** (`type: "text_click"`, `mode: "preview"`,
+`realClick: false`, `realOcr: false`). Render: цветной headline
+(matched / failed / no-match), метрики, recognized blocks list
+(matched row подсвечен), debug overlay (region — пунктирный
+синий, blocks — оранжевые dashed, matched — сплошной зелёный с
+label, target point — красная точка), action preview JSON через
+`<pre>.textContent`. Добавлен `appState.ocr` slice + 11 setters,
+5 новых allowlisted audit-типов
+(`ocr.mock.requested/completed/failed/cleared`,
+`text.click.preview.created`), 56 новых i18n-ключей RU + EN, 25+
+новых CSS-классов под `.ocr-*`, новая карточка **OCR
+diagnostics** в Advanced → Safety и новая строка
+`OCR: ocrMockAvailable=…, realOcrAvailable=false, …,
+tesseractAvailable=false, ocrEngineImplemented=false` в
+`Copy diagnostics`. Создан
+[`docs/OCR_FOUNDATION.md`](./docs/OCR_FOUNDATION.md); обновлены
+[`docs/ACTION_SCHEMA.md`](./docs/ACTION_SCHEMA.md) (planned
+`text_click` preview-only entry),
+[`docs/SCREEN_CAPTURE.md`](./docs/SCREEN_CAPTURE.md),
+[`docs/REGION_SELECTOR.md`](./docs/REGION_SELECTOR.md),
+[`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md),
+[`docs/SMOKE_TESTS.md`](./docs/SMOKE_TESTS.md) (Step 32 checks
+#299–#318), [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md)
+(новый раздел «15. OCR is mock only»),
+[`README.md`](./README.md), [`CHANGELOG.md`](./CHANGELOG.md).
+Smoke-check расширен Step-32-инвариантами.
+**Реальный OCR / Tesseract / tesseract.js / OpenCV / opencv4nodejs /
+@u4/opencv4nodejs / opencv.js / opencv-js / sharp / jimp /
+pixelmatch / looks-same / robotjs / nut.js / iohook / uiohook-napi
+по-прежнему не реализованы.** Mock OCR никогда не выполняет
+настоящее распознавание, никогда не выполняет click, никогда не
+открывает новый IPC канал, никогда не пишет screenshot / blocks /
+result на диск, никогда не сохраняет `imageDataUrl` в OCR slice
+/ audit / diagnostics. **`realDesktopActions=false`,
+`simulationOnly=true`, `ocrEngineImplemented=false`,
+`tesseractAvailable=false`, `contextIsolation: true`,
+`nodeIntegration: false`, CSP — без изменений.**
+
+## Прошлый шаг
+
 **Шаг 31 завершён.** Image Click Scenario UX Polish + Visual
 Test Tools. Проект остаётся в стадии `0.1.0-beta`
 (simulation-only). На шаге 31 в форму `image_click` сценария
@@ -53,7 +104,7 @@ uiohook-napi по-прежнему не реализованы. realDesktopActio
 simulationOnly=true, contextIsolation: true, nodeIntegration:
 false, CSP — без изменений.**
 
-## Прошлый шаг
+## Шаги 25–30 (компактно)
 
 **Шаг 26 завершён.** Region Selector Foundation. Проект остаётся
 в стадии `0.1.0-beta` (simulation-only). На шаге 26 поверх
@@ -865,6 +916,7 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
 | 29 | Real Template Matching Engine Foundation (renderer-side plain-JS template matching producing a real confidence score against the captured preview — not the live screen, not a real click): new `src/template-matching-engine.js` (`loadImageFromDataUrl`, `imageToCanvas`, `getImageDataFromDataUrl`, `cropImageData`, `resizeImageDataIfNeeded`, `runTemplateMatch`, `findBestMatch`, `calculatePatchScore`, `createTemplateMatchResult`, `getTemplateMatchEngineStatus`, `estimateSearchCost`). Mock mode from Step 28 is **kept**. The Template Matching tab gains a Match-mode selector (Mock / Real preview), a Threshold input (default `0.75`), and a Step selector (`1 / 2 / 4 / 8 / 16`, default `4`). Algorithm: mean RGB absolute difference over a regular grid (`step` pixels apart) with a per-template sub-step (`1 / 2 / 3 / 4` depending on template area). Big previews are downscaled to ≤ 1200×800; big templates are downscaled to ≤ 320×320; the bounding box is mapped back to the original preview coordinates. Cost guard raises the effective step when the estimate exceeds 16 M comparisons and emits a `template.match.engine.warning` audit event. `appState.templateMatching` gains `mode` / `threshold` / `step` + three setters (`setTemplateMatchingMode`, `setTemplateMatchingThreshold`, `setTemplateMatchingStep`). `_cloneTemplateMatchResult` carries the new `threshold / durationMs / step / requestedStep / pixelStep / scannedPositions / downscaledSearch / downscaledTemplate` fields. Five new audit-event types (`template.match.realPreview.requested/completed/failed`, `template.match.lowConfidence`, `template.match.engine.warning`). Result card gains a `Match found` / `Low confidence — showing best candidate` headline; the visual overlay paints solid green for matches and dashed for low-confidence candidates. Diagnostics card gains `Match mode`, `Threshold`, `Step`, `Duration`, `Engine available`, `Search region used`. `Copy diagnostics` line is broadened to `Template matching: …, mode=…, threshold=…, step=…, engineAvailable=…, lastDurationMs=…, lastMode=…, realMatching=false, realClick=false, ocrImplemented=false, opencvAvailable=false, matcherImplemented=true, imageClickScenarioImplemented=false`. 27 new RU + EN i18n keys. `docs/TEMPLATE_MATCHING_ENGINE.md`. **The engine analyses the captured preview, NOT the live screen. No real cursor movement, no real click, no OCR, no OpenCV / opencv.js / opencv-js / sharp / jimp / pixelmatch / looks-same / robotjs / nut.js / iohook / uiohook-napi. The `image_click` action preview is still rendered through `<pre>.textContent` and never reaches the click engine, the action pipeline, the mock adapter, or the dry-run sandbox. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
 | 30 | Image Click Scenario Type Foundation (new scenario type `image_click` orchestrating the Step 25–29 building blocks into a simulation-only end-to-end flow — features themselves still not implemented): `src/scenario-manager.js` gains `validateImageClickScenario`, `createImageClickScenario`, `updateImageClickScenario`, `getScenariosByType`. `createScenario` / `updateScenario` dispatch on `type`; missing `type` is treated as `simple_click` for backward compatibility. `src/click-engine.js` gains `runImageClickScenario(scenario, callbacks, options)` (capture preview → run Step-29 matcher → simulated `image_click` action via the action-pipeline). The dispatcher in `runScenario` routes by `scenario.type`. `src/action-pipeline.js` learns the `image_click` action shape; `validateAction` accepts `{ type: 'image_click', templateId, targetPoint: {x>=0, y>=0}, boundingBox?, confidence?, realClick: false }`; `realClick: true` is rejected outright. `image_click` flows through the legacy simulate path (the mock adapter only knows `click`) and emits `action.imageClick.simulated`. `src/safety-gates.js` mirrors the validation. New scenario form: `Scenario type` select (`Coordinate click` / `Image click`); image_click-only fields (template select, region summary + Use selected region / Clear region buttons, threshold, step, timeoutMs, intervalMs, repeatCount). The form auto-detects scenario type on edit and renders the right section. `formatLastAction(action)` renders both types. New scenario card badge `image_click`. New 9 audit-event types (`scenario.imageClick.started / stopped / match.started / match.completed / noMatch / simulated / failed`, `action.imageClick.simulated`, `action.imageClick.realBlocked`); payloads carry only ids / numeric metadata. New compact `image_click scenario` diagnostics card + new `Image click scenario: …, imageClickSimulationOnly=true, realImageClickEnabled=false, ocrImplemented=false` line in `Copy diagnostics`. 26 new RU + EN i18n keys. `docs/IMAGE_CLICK_SCENARIO.md`. **simple_click scenarios unchanged. No real cursor movement, no real click, no OCR / Tesseract, no OpenCV / opencv.js / opencv-js / sharp / jimp / pixelmatch / looks-same / robotjs / nut-js / iohook / uiohook-napi. `realClick: true` on `image_click` is always blocked. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
 | 31 | Image Click Scenario UX Polish + Visual Test Tools (Test Match flow inside the `image_click` scenario form — never executes the scenario, never clicks): two new pure renderer modules. `src/image-click-test-tools.js` is pure logic (`buildImageClickTestInput(formData, appState)`, `validateImageClickTestInput(input)`, `runImageClickTest(input)`, `createImageClickDebugResult(matchResult, input)`, `clearImageClickTestResult()`, `getImageClickTestStatus()`, `getLastImageClickTestResult()`). Stable error IDs map to localised strings (`noTemplateSelected`, `templateImageMissing`, `captureScreenPreviewFirst`, `invalidRegion`, `templateLargerThanSearchArea`, `matchingTookTooLong`, `matchingEngineUnavailable`, `thresholdInvalid`, `stepInvalid`). Stable warning IDs (`matchBelowThreshold`, `searchAreaCostHigh`, `stepRaisedByEngine`, `templateDownscaled`, `searchAreaDownscaled`). Soft 8-second timeout cap on top of the engine's own cost guards. Module-local `_lastTestResult` + `_diagnostics` (`lastImageClickTestAt / Matched / Confidence / DurationMs / TemplateId / ErrorsCount`) — never `imageDataUrl`, never thumbnails. `src/image-click-test-ui.js` is the DOM/UI layer (`initImageClickTestUi`, `refreshImageClickTestPanel`, `renderImageClickTemplatePreview`, `renderImageClickScreenPreviewStatus`, `renderImageClickRegionSummary`, `runImageClickTestFromForm`, `renderImageClickTestResult`, `clearImageClickTestResultUi`, `renderImageClickDebugOverlay`, `renderImageClickActionPreview`). The panel sits inside `#form-section-image-click` with: header + Test-Match-does-not-click subtitle, three quick navigation buttons (Open Templates / Open Screen Capture / Open Region Selector → `setAdvancedTab(tab)`), three info cards (template preview / screen preview status / region summary), Run Test Match (primary) + Clear result buttons, errors block (red), warnings block (yellow), result panel with coloured headline (matched=green / failed=red / no-match=yellow) and metric rows, debug overlay (region=dashed blue, bbox=solid green or dashed orange "candidate", confidence badge, target dot — all percentage-positioned over the preview `<img>`), action preview (`<pre>.textContent`, `realClick: false`). All user-visible text via `textContent`; image previews via `<img>.src` only; `innerHTML` only as `= ''`. Result mirrors into `appState.templateMatching.lastResult` (numbers / ids only) so the existing Template Matching tab and the Advanced → Safety diagnostics card see the same numbers. New 5 audit-event types (`imageClick.test.started / completed / failed / lowConfidence / cleared`); payloads carry only ids and numeric metadata. New compact **Image click test diagnostics** card in Advanced → Safety with `Last test at`, `Last test matched`, `Last test confidence`, `Last test duration`, `Last test template`, `Last test errors`, `Test Match does not click = enabled`, `Real matching disabled = enabled`, `Real click disabled = enabled`. New `Image click test: …, testDoesNotClick=true, realMatching=false, realClick=false` line in `Copy diagnostics` (numeric / metadata only — never base64). New `docs/IMAGE_CLICK_TEST_TOOLS.md`. Updated `docs/IMAGE_CLICK_SCENARIO.md` (new Test Match section), `docs/TEMPLATE_MATCHING_ENGINE.md` (engine is also used by Test Match), `docs/SECURITY_CHECKLIST.md` (new "image_click test tools (Step 31)" section), `docs/SMOKE_TESTS.md` (Step 31 smoke checks #278–#298). 47 new RU + EN i18n keys. **Test Match never executes the scenario, never moves the cursor, never clicks, never opens a new IPC channel, never persists the screenshot or the debug result on disk. The action preview is always `mode: "preview"`, `realClick: false`, `realMatching: false` and is never consumed by the click engine, the action pipeline, the mock adapter, or the dry-run sandbox. No OCR / OpenCV / Tesseract / robotjs / nut.js / iohook / uiohook-napi. realDesktopActions=false, simulationOnly=true, contextIsolation: true, nodeIntegration: false — unchanged.** |
+| 32 | OCR Foundation (mock only — renderer-side mock OCR engine + Advanced → OCR tab + `text_click` action PREVIEW; no real text recognition, no Tesseract, no OpenCV, no real click): new `src/ocr-mock-engine.js` (pure logic — `createOcrInput(screenPreview, region, options)`, `validateOcrInput(input)`, `runMockOcr(input)`, `createMockOcrBlocks(input)`, `findTextInOcrBlocks(blocks, targetText, matchMode, opts)`, `createOcrResult(input, blocks, match, runMeta)`, `createTextClickActionPreview(match, input)`, `getOcrMockStatus()`, `clearOcrMockResult()`, `getLastOcrMockResult()`). Stable error IDs (`captureScreenPreviewFirst`, `targetTextRequired`, `invalidOcrLanguage`, `invalidMatchMode`, `invalidRegion`). Mock blocks: target block centred inside the region (or near the centre of the preview) with the user's target text + 1–3 surrounding labels (`OK` / `Cancel` / `Settings`). Confidences in `[0.80, 0.95]`. New `src/ocr-ui.js` (DOM/UI — `renderOcrTab`, `renderOcrScreenPreviewStatus`, `renderOcrSettings`, `renderOcrRegionSummary`, `runMockOcrFromUi`, `clearOcrResultUi`, `renderOcrResult`, `renderOcrBlocks`, `renderOcrOverlay`, `renderTextClickActionPreview`, `buildOcrInputFromState`). New Advanced → **OCR** tab with: yellow MOCK notice ("Real text recognition is not connected yet."), Screen preview status card, OCR settings card (target text input, language select `ru` / `en` / `ru+en`, match mode select `contains` / `exact`, case-sensitive checkbox, use-selected-region checkbox), Region summary card, Run mock OCR / Clear result / Open Screen Capture / Open Region Selector buttons, result card with coloured headline (matched=green / failed=red / no-match=yellow) and metric rows, recognised-blocks list (matched row highlighted), debug overlay (preview `<img>` + dashed blue region + yellow-dashed candidate blocks + green solid matched block with label + red target dot), `text_click` action preview (`<pre>.textContent`, `mode: "preview"`, `realClick: false`, `realOcr: false`, `note: "Preview only…"`). New `appState.ocr` slice (`targetText`, `language`, `matchMode`, `caseSensitive`, `useSelectedRegion`, `lastInput`, `lastResult`, `isRunning`, `lastError`, `lastRunAt`) with setters (`setOcrTargetText`, `setOcrLanguage`, `setOcrMatchMode`, `setOcrCaseSensitive`, `setOcrUseSelectedRegion`, `setOcrRunning`, `setOcrInput`, `setOcrResult`, `setOcrError`, `clearOcrResult`, `resetOcrState`); cloning helpers strip `imageDataUrl` defensively. New 5 audit-event types (`ocr.mock.requested / completed / failed / cleared`, `text.click.preview.created`); payloads carry only short metadata (matchMode, language, hasRegion, blocksCount, durationMs, target text length — never the full target text). New compact **OCR diagnostics** card in Advanced → Safety with `Mock OCR available`, `Real OCR available`, `Last OCR run at`, `Last OCR matched`, `Last OCR confidence`, `Last OCR duration`, `Last OCR language`, `Last OCR match mode`, `Last OCR blocks count`, `Target text present`, `Region used`, `Real OCR disabled = enabled`, `Text recognition is not implemented yet = enabled`, `Real click disabled = enabled`. New `OCR: ocrMockAvailable=…, realOcrAvailable=false, lastOcrRunAt=…, lastOcrMatched=…, lastOcrConfidence=…, lastOcrDurationMs=…, ocrLanguage=…, ocrMatchMode=…, targetTextPresent=…, lastOcrBlocksCount=…, regionUsed=…, realOcr=false, realClick=false, tesseractAvailable=false, ocrEngineImplemented=false` line in `Copy diagnostics` (metadata only — never base64). 56 new RU + EN i18n keys (ocr / mockOcr / runMockOcr / clearOcrResult / ocrResult / realOcrNotConnected / targetText / targetTextPlaceholder / ocrLanguage / matchMode / contains / exact / caseSensitive / useSelectedRegion / recognizedBlocks / matchedText / textClickPreview / realOcrDisabled / textRecognitionNotImplemented / ocrMockNotice / noOcrResult / ocrMatched / ocrNoMatch / ocrConfidence / ocrBlocks / ocrDiagnostics / realOcrAvailable / ocrMockAvailable / targetTextRequired / invalidOcrLanguage / invalidMatchMode / ocrMockBadge / languageRu / languageEn / languageRuEn / matchModeContains / matchModeExact / lastOcrRunAt / lastOcrMatched / lastOcrConfidence / lastOcrDurationMs / lastOcrLanguage / lastOcrMatchMode / lastOcrBlocksCount / targetTextPresent / regionUsed / textClickActionPreview / textClickNotExecuted / ocrSettings / ocrTabTitle / ocrFoundation / ocrRunStarted / ocrRunCompleted / ocrRunFailed / ocrRunCleared / confidenceLabel). New `docs/OCR_FOUNDATION.md`. Updated `docs/ACTION_SCHEMA.md` (planned `text_click` preview-only entry), `docs/SCREEN_CAPTURE.md` (preview is also consumed by the OCR mock), `docs/REGION_SELECTOR.md` (region can scope the OCR mock), `docs/SECURITY_CHECKLIST.md` (new "OCR Foundation (Step 32)" section), `docs/SMOKE_TESTS.md` (Step 32 smoke checks #299–#318), `docs/KNOWN_LIMITATIONS.md` (new "15. OCR is mock only" section). **Mock OCR never recognises real text. The `text_click` action preview is rendered via `<pre>.textContent` and is rejected by the click engine, the action pipeline, the mock adapter, and the dry-run sandbox. No `text_click` scenario type — `validateScenario` still accepts only `simple_click` and `image_click`. No new IPC channel — `main.js` registers no `ocr.*` handler, `preload.js` exposes no `ocr.*` API. No Tesseract / tesseract.js / OpenCV / robotjs / nut.js / iohook / uiohook-napi. `imageDataUrl` never enters the OCR slice, the audit payloads, or the diagnostics line. realDesktopActions=false, simulationOnly=true, ocrEngineImplemented=false, tesseractAvailable=false, contextIsolation: true, nodeIntegration: false — unchanged.** |
 
 ## Что логично делать после шага 31
 
@@ -891,6 +943,34 @@ QA + tick `PRE_RELEASE_CHECKLIST.md` + Release decision
   [`docs/REAL_ACTIONS_GO_NO_GO.md`](./docs/REAL_ACTIONS_GO_NO_GO.md).
 - **Visual scenario builder** — drag-drop конструктор image_click
   / region / template-набора в одну сцену. **Не** в `0.1.x` линии.
+
+## Что логично делать после шага 32
+
+- **Шаг 33 — `text_click` simulation-only scenario type.**
+  Логичные кандидаты на шаг 33 (выбрать **один**):
+  1. **`text_click` scenario type (simulation-only).** Тот же
+     путь, что и `image_click` на шагах 30–31: новый тип
+     сценария с настройками `targetText` / `language` /
+     `matchMode` / `caseSensitive` / опциональной `region`,
+     `validateTextClickScenario` в `scenario-manager.js`,
+     `runTextClickScenario` в `click-engine.js` который вызывает
+     mock OCR и эмитит **симулированный** `text_click` action
+     через action-pipeline. Реального клика по-прежнему нет.
+  2. **OCR Test Match (по аналогии со Step 31).** Внутри будущей
+     формы `text_click` — кнопка Run mock OCR без сохранения
+     сценария.
+  3. **OCR multi-match.** Top-N кандидатов с убывающим
+     confidence на overlay; mock возвращает несколько blocks.
+  4. **Persistent OCR mock log** в Advanced → OCR.
+- **Real OCR engine (Tesseract / native)** — отдельная
+  safety-gated линия. До начала интеграции обязательно пройти
+  [`docs/REAL_ACTIONS_GO_NO_GO.md`](./docs/REAL_ACTIONS_GO_NO_GO.md)
+  с фокусом на text recognition: какие документы / сайты /
+  приложения OCR может видеть, как обращаться с PII в
+  распознанном тексте, какой контракт `text_click` execution.
+- **Visual scenario builder** — drag-drop конструктор image_click
+  / text_click / region / template-набора в одну сцену. **Не** в
+  `0.1.x` линии.
 
 - **Шаг 28 — Template gallery / matcher prep (всё ещё simulation-only).**
   Активный шаблон уже выбирается, но никуда не «прикрепляется».

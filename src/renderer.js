@@ -405,6 +405,7 @@ function renderAdvancedDashboard() {
     case 'screenCapture': if (typeof renderScreenCapture === 'function') renderScreenCapture(); break;
     case 'templates': if (typeof renderTemplatesTab === 'function') renderTemplatesTab(); break;
     case 'templateMatching': if (typeof renderTemplateMatchingTab === 'function') renderTemplateMatchingTab(); break;
+    case 'ocr': if (typeof renderOcrTab === 'function') renderOcrTab(); break;
     case 'future': renderAdvancedFuture(); break;
   }
 }
@@ -985,6 +986,47 @@ function renderAdvancedSafety() {
   addCardRow(ictCard, t('realClickDisabled'),        t('flagEnabled'));
   c.appendChild(ictCard);
 
+  // --- Step 32: OCR Foundation diagnostics card ---
+  // Surfaces the last mock OCR run from the Advanced → OCR tab.
+  // Real OCR is NOT connected at Step 32 — these are debug
+  // numbers from the deterministic mock engine.
+  const ocrCard = document.createElement('div'); ocrCard.className = 'adv-card';
+  const ocrTitle = document.createElement('div'); ocrTitle.className = 'adv-card-title';
+  ocrTitle.textContent = t('ocrDiagnostics');
+  ocrCard.appendChild(ocrTitle);
+  let ocrStatus = null;
+  if (typeof getOcrMockStatus === 'function') {
+    try { ocrStatus = getOcrMockStatus(); } catch (e) { ocrStatus = null; }
+  }
+  if (ocrStatus) {
+    addCardRow(ocrCard, t('ocrMockAvailable'),   ocrStatus.ocrMockAvailable ? t('flagEnabled') : t('flagDisabled'));
+    addCardRow(ocrCard, t('realOcrAvailable'),   ocrStatus.realOcrAvailable ? t('flagEnabled') : t('flagDisabled'));
+    addCardRow(ocrCard, t('lastOcrRunAt'),       ocrStatus.lastOcrRunAt || t('none2'));
+    addCardRow(ocrCard, t('lastOcrMatched'),
+      ocrStatus.lastOcrMatched === null ? t('none2') : (ocrStatus.lastOcrMatched ? t('yes') : t('no')));
+    addCardRow(ocrCard, t('lastOcrConfidence'),
+      (typeof ocrStatus.lastOcrConfidence === 'number')
+        ? (Math.round(ocrStatus.lastOcrConfidence * 1000) / 10).toFixed(1) + '%'
+        : t('none2'));
+    addCardRow(ocrCard, t('lastOcrDurationMs'),
+      (typeof ocrStatus.lastOcrDurationMs === 'number')
+        ? ocrStatus.lastOcrDurationMs + ' ms'
+        : t('none2'));
+    addCardRow(ocrCard, t('lastOcrLanguage'),    ocrStatus.lastOcrLanguage  || t('none2'));
+    addCardRow(ocrCard, t('lastOcrMatchMode'),   ocrStatus.lastOcrMatchMode || t('none2'));
+    addCardRow(ocrCard, t('lastOcrBlocksCount'), String(ocrStatus.lastOcrBlocksCount | 0));
+    addCardRow(ocrCard, t('targetTextPresent'),
+      (ocrStatus.lastOcrTargetTextLen | 0) > 0 ? t('yes') : t('no'));
+    addCardRow(ocrCard, t('regionUsed'),         ocrStatus.lastOcrRegionUsed ? t('yes') : t('no'));
+  } else {
+    addCardRow(ocrCard, '', t('noData'));
+  }
+  // Always-on safety reminders.
+  addCardRow(ocrCard, t('realOcrDisabled'),                 t('flagEnabled'));
+  addCardRow(ocrCard, t('textRecognitionNotImplemented'),   t('flagEnabled'));
+  addCardRow(ocrCard, t('realClickDisabled'),               t('flagEnabled'));
+  c.appendChild(ocrCard);
+
   // --- Step 18: Desktop adapter status ---
   const adCard = document.createElement('div'); adCard.className = 'adv-card';
   const adTitle = document.createElement('div'); adTitle.className = 'adv-card-title'; adTitle.textContent = t('desktopAdapterStatus'); adCard.appendChild(adTitle);
@@ -1256,7 +1298,29 @@ async function copyDiagnostics() {
   const ictTemplateId    = ictDiagStatus ? (ictDiagStatus.lastImageClickTestTemplateId || 'none') : 'none';
   const ictErrors        = ictDiagStatus ? (ictDiagStatus.lastImageClickTestErrorsCount | 0) : 0;
   const ictLine = `Image click test: hasResult=${ictHasResult}, lastImageClickTestAt=${ictAt}, lastImageClickTestMatched=${ictMatched}, lastImageClickTestConfidence=${ictConfidence}, lastImageClickTestDurationMs=${ictDuration}, lastImageClickTestTemplateId=${ictTemplateId}, lastImageClickTestErrorsCount=${ictErrors}, testDoesNotClick=true, realMatching=false, realClick=false`;
-  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\n${ictLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
+  // Step 32: OCR Foundation line. Numbers / metadata only — never
+  // base64, never imageDataUrl, never the full target text.
+  let ocrDiagStatus = null;
+  if (typeof getOcrMockStatus === 'function') {
+    try { ocrDiagStatus = getOcrMockStatus(); } catch (e) { ocrDiagStatus = null; }
+  }
+  const ocrMockAvail   = ocrDiagStatus ? !!ocrDiagStatus.ocrMockAvailable : true;
+  const ocrRealAvail   = ocrDiagStatus ? !!ocrDiagStatus.realOcrAvailable : false;
+  const ocrLastAt      = ocrDiagStatus ? (ocrDiagStatus.lastOcrRunAt || 'none') : 'none';
+  const ocrLastMatched = ocrDiagStatus
+    ? (ocrDiagStatus.lastOcrMatched === null ? 'none' : !!ocrDiagStatus.lastOcrMatched)
+    : 'none';
+  const ocrLastConf    = ocrDiagStatus && (typeof ocrDiagStatus.lastOcrConfidence === 'number')
+    ? ocrDiagStatus.lastOcrConfidence : 'none';
+  const ocrLastDur     = ocrDiagStatus && (typeof ocrDiagStatus.lastOcrDurationMs === 'number')
+    ? ocrDiagStatus.lastOcrDurationMs : 'none';
+  const ocrLastLang    = ocrDiagStatus ? (ocrDiagStatus.lastOcrLanguage || 'none') : 'none';
+  const ocrLastMode    = ocrDiagStatus ? (ocrDiagStatus.lastOcrMatchMode || 'none') : 'none';
+  const ocrTargetLen   = ocrDiagStatus ? (ocrDiagStatus.lastOcrTargetTextLen | 0) : 0;
+  const ocrBlocksCnt   = ocrDiagStatus ? (ocrDiagStatus.lastOcrBlocksCount | 0) : 0;
+  const ocrRegionUsed  = ocrDiagStatus ? !!ocrDiagStatus.lastOcrRegionUsed : false;
+  const ocrLine = `OCR: ocrMockAvailable=${ocrMockAvail}, realOcrAvailable=${ocrRealAvail}, lastOcrRunAt=${ocrLastAt}, lastOcrMatched=${ocrLastMatched}, lastOcrConfidence=${ocrLastConf}, lastOcrDurationMs=${ocrLastDur}, ocrLanguage=${ocrLastLang}, ocrMatchMode=${ocrLastMode}, targetTextPresent=${ocrTargetLen > 0}, lastOcrBlocksCount=${ocrBlocksCnt}, regionUsed=${ocrRegionUsed}, realOcr=false, realClick=false, tesseractAvailable=false, ocrEngineImplemented=false`;
+  const text = `ClickFlow Diagnostics\nVersion: ${window.clickflow.version}\nElectron: ${sysInfo.electronVersion || '?'}\nPlatform: ${sysInfo.platform || '?'} (${sysInfo.arch || '?'})\nPackaged: ${sysInfo.isPackaged || false}\nLanguage: ${state.settings.language}\nTheme: ${state.settings.theme}\nScenarios: ${getScenarios().length}\nProfiles: ${getProfileCount()}\nLogs: ${state.logs.length}\nErrors: ${getErrorCount()}\nSafe mode: ${state.settings.safety.safeMode}\nGlobal hotkeys: ${sysInfo.globalHotkeysRegistered || false}\nTray: ${sysInfo.trayAvailable || false}\nExecution: ${state.execution.isRunning ? 'running' : 'idle'}\nSimulation only: true\n${ffLine}\n${apLine}\n${sgLine}\n${auLine}\n${adLine}\n${sbLine}\n${scLine}\n${rsLine}\n${tplLine}\n${tmLine}\n${icLine}\n${ictLine}\n${ocrLine}\nBeta health: docsReady=${!!betaHealth.docsReady}, packagingConfigured=${!!betaHealth.packagingConfigured}, securityChecklistPresent=${!!betaHealth.securityChecklistPresent}, actionSchemaPresent=${!!betaHealth.actionSchemaPresent}\nRelease: appVersion=${releaseStatus.appVersion || '?'}, releaseTarget=${releaseStatus.releaseTarget || '0.1.0-beta'}, beta=${!!releaseStatus.beta}, smokeCheckScript=${!!releaseStatus.smokeCheckScript}, packagingConfigured=${!!releaseStatus.packagingConfigured}, releaseChecklistPresent=${!!releaseStatus.releaseChecklistPresent}, buildArtifactsPresent=${!!releaseStatus.buildArtifactsPresent}, githubReleaseDraftPresent=${!!releaseStatus.githubReleaseDraftPresent}, versioningPresent=${!!releaseStatus.versioningPresent}, changelogPresent=${!!releaseStatus.changelogPresent}, releaseNotesPresent=${!!releaseStatus.releaseNotesPresent}, releaseFinalCheckPresent=${!!releaseStatus.releaseFinalCheckPresent}, tagAndReleaseGuidePresent=${!!releaseStatus.tagAndReleaseGuidePresent}, releaseBlockersPresent=${!!releaseStatus.releaseBlockersPresent}, packagedAppQaPresent=${!!releaseStatus.packagedAppQaPresent}, finalReleaseSummaryPresent=${!!releaseStatus.finalReleaseSummaryPresent}, preReleaseChecklistPresent=${!!releaseStatus.preReleaseChecklistPresent}, releaseTagPlanPresent=${!!releaseStatus.releaseTagPlanPresent}, releaseCommitMessagePresent=${!!releaseStatus.releaseCommitMessagePresent}, packagedAppTested=${!!releaseStatus.packagedAppTested}, readyAfterManualQa=${!!releaseStatus.readyAfterManualQa}, readyForPreReleaseAfterManualQa=${!!releaseStatus.readyForPreReleaseAfterManualQa}, releaseDocsReady=${!!releaseStatus.releaseDocsReady}, readyForManualRelease=${!!releaseStatus.readyForManualRelease}`;
   try { await navigator.clipboard.writeText(text); addLogEntry(createLog('success', t('diagnosticsCopied'))); }
   catch (e) { addLogEntry(createLog('warning', t('diagnosticsCopyFailed'))); }
   renderState();

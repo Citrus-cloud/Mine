@@ -544,3 +544,51 @@ real click**.
   `action.imageClick.realBlocked`. Any future real
   integration will require explicit code changes behind
   [`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md).
+
+
+
+## 15. OCR is mock only (Step 32)
+
+Step 32 ships the **OCR Foundation** as a mock-only renderer
+feature.
+
+### 15.1 The OCR engine is fake
+- `src/ocr-mock-engine.js` fabricates OCR blocks from the
+  captured screen-preview metadata (width / height / region /
+  target text). It NEVER decodes pixel data and NEVER recognises
+  real text.
+- `package.json` declares zero of `tesseract`, `tesseract.js`,
+  `tesseract-ocr`, `node-tesseract-ocr`, `opencv4nodejs`,
+  `@u4/opencv4nodejs`, `opencv.js`, `opencv-js`, `sharp`, `jimp`.
+  The mock engine never `require()`s anything.
+- The recognised-block confidences (`0.80`–`0.95`) are
+  deterministic and have no relationship to the actual content
+  of the preview.
+
+### 15.2 No `text_click` scenario yet
+- The mock engine builds a `text_click` ACTION PREVIEW
+  (`type: "text_click"`, `mode: "preview"`, `realClick: false`,
+  `realOcr: false`). The click engine, the action pipeline, the
+  mock adapter, and the dry-run sandbox refuse to consume it.
+- There is no `text_click` scenario type. `validateScenario`
+  still accepts only `simple_click` and `image_click`.
+- Saving an `image_click` scenario does NOT pull in any text /
+  OCR settings — the OCR slice and the scenarios slice are
+  independent.
+
+### 15.3 No real cursor / click from OCR
+- Even when a match is found, ClickFlow performs no system
+  action. The cursor never moves. No key is pressed. No window
+  is focused.
+- Future real `text_click` integration is gated behind a
+  separate go/no-go review (see
+  [`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md)).
+
+### 15.4 No live-screen OCR
+- Mock OCR only sees the preview the user explicitly captured
+  in Step 25. It never opens a new screenshot session, never
+  reads the live screen, never streams.
+
+See [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md) for the
+full description, the data shapes, the troubleshooting list,
+and the safety contract.

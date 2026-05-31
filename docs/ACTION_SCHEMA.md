@@ -469,3 +469,60 @@ integration in `0.1.x`.
 | Action Type    | Status                                                                                          |
 |----------------|-------------------------------------------------------------------------------------------------|
 | `image_click`  | ✅ Simulation-only (Step 30). Real click integration gated behind `REAL_ACTIONS_GO_NO_GO.md`.   |
+
+
+
+---
+
+## Step 32 — `text_click` (planned, preview only)
+
+[Step 32](./OCR_FOUNDATION.md) introduces the `text_click`
+action shape as a **preview only**. The mock OCR engine
+(`ocr-mock-engine.js`) builds a `text_click` action preview
+from the matched OCR block; the renderer renders it through
+`<pre>.textContent`. **The click engine, the action pipeline,
+the mock adapter, and the dry-run sandbox NEVER consume this
+preview at Step 32.** No `text_click` scenario type exists; the
+click engine continues to know only `simple_click` and
+`image_click`.
+
+### Planned `text_click` action shape (preview-only at Step 32)
+
+```json
+{
+  "type":          "text_click",
+  "mode":          "preview",
+  "text":          "Continue",
+  "targetPoint":   { "x": 440, "y": 266 },
+  "boundingBox":   { "x": 380, "y": 252, "width": 120, "height": 28 },
+  "confidence":    0.91,
+  "language":      "ru+en",
+  "matchMode":     "contains",
+  "caseSensitive": false,
+  "usedRegion":    { "x": 100, "y": 60, "width": 600, "height": 400 },
+  "realClick":     false,
+  "realOcr":       false,
+  "note":          "Preview only. Real OCR is not connected. text_click action is not executed."
+}
+```
+
+### Invariants that `text_click` will keep when it lands
+
+- The action validates `targetPoint` the same way `image_click`
+  does (`x >= 0`, `y >= 0`, finite numbers).
+- `realClick: true` is rejected outright by `validateAction` —
+  the same contract `image_click` uses today.
+- The first real implementation will go through the legacy
+  simulate branch and emit `action.textClick.simulated`. Real
+  execution lands only after a separate go/no-go review (see
+  [`REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md)).
+- The action pipeline will refuse the action while
+  `ocrEngineImplemented === false` so a missing-engine state
+  cannot translate into a click.
+- No `text_click` scenario can carry an `imageDataUrl`, a
+  thumbnail, or pixel data — the same storage rule as
+  `image_click`.
+
+| Action Type | Status                                                                                       |
+|-------------|----------------------------------------------------------------------------------------------|
+| `text_click` | Planned — preview-only at Step 32, blocked from execution. Future scenario type gated behind a separate OCR go/no-go review. |

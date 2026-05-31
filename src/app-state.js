@@ -81,6 +81,27 @@ const appState = {
     threshold: 0.75,
     step: 4
   },
+  // Step 32 — OCR Foundation (mock only). Renderer-side memory
+  // only. `lastInput` and `lastResult` carry plain-data metadata
+  // produced by `ocr-mock-engine.js` — no `imageDataUrl`, no
+  // pixel buffers, no PII. Real OCR is NOT implemented at Step 32:
+  // there is no Tesseract dependency, no OCR engine, no live-
+  // screen analysis. The only thing the engine does is fabricate
+  // mock OCR blocks and a `text_click` action PREVIEW. Nothing
+  // here is persisted to disk; the source of truth for the
+  // running OCR draft is this slice.
+  ocr: {
+    targetText:        '',
+    language:          'ru+en',
+    matchMode:         'contains',
+    caseSensitive:     false,
+    useSelectedRegion: true,
+    lastInput:         null,
+    lastResult:        null,
+    isRunning:         false,
+    lastError:         null,
+    lastRunAt:         null
+  },
   settings: {
     language: "ru",
     theme: "system",
@@ -135,6 +156,18 @@ function getState() {
       mode:       appState.templateMatching.mode,
       threshold:  appState.templateMatching.threshold,
       step:       appState.templateMatching.step
+    },
+    ocr: {
+      targetText:        appState.ocr.targetText,
+      language:          appState.ocr.language,
+      matchMode:         appState.ocr.matchMode,
+      caseSensitive:     appState.ocr.caseSensitive,
+      useSelectedRegion: appState.ocr.useSelectedRegion,
+      lastInput:         appState.ocr.lastInput  ? _cloneOcrSliceInput(appState.ocr.lastInput)   : null,
+      lastResult:        appState.ocr.lastResult ? _cloneOcrSliceResult(appState.ocr.lastResult) : null,
+      isRunning:         appState.ocr.isRunning,
+      lastError:         appState.ocr.lastError,
+      lastRunAt:         appState.ocr.lastRunAt
     },
     settings: {
       ...appState.settings,
@@ -500,5 +533,153 @@ function _cloneTemplateMatchResult(result) {
     createdAt:    typeof result.createdAt === 'string' ? result.createdAt : '',
     realMatching: false,
     realClick:    false
+  };
+}
+
+
+
+// --- Step 32: OCR Foundation state (renderer memory only) ---
+// All mutators accept loose / null inputs and never throw; invalid
+// values collapse to safe defaults. The renderer is the only writer
+// and goes through these helpers (it never touches appState.ocr
+// directly) so the slice stays serialisable. The slice never holds
+// an imageDataUrl, never a pixel buffer, and is never persisted to
+// disk. Real OCR is NOT connected at Step 32.
+
+function setOcrTargetText(text) {
+  appState.ocr.targetText = (typeof text === 'string') ? text : '';
+}
+function setOcrLanguage(language) {
+  if (language === 'ru' || language === 'en' || language === 'ru+en') {
+    appState.ocr.language = language;
+  }
+}
+function setOcrMatchMode(mode) {
+  if (mode === 'contains' || mode === 'exact') {
+    appState.ocr.matchMode = mode;
+  }
+}
+function setOcrCaseSensitive(value) {
+  appState.ocr.caseSensitive = !!value;
+}
+function setOcrUseSelectedRegion(value) {
+  appState.ocr.useSelectedRegion = !!value;
+}
+function setOcrRunning(isRunning) {
+  appState.ocr.isRunning = !!isRunning;
+}
+function setOcrInput(input) {
+  appState.ocr.lastInput = input ? _cloneOcrSliceInput(input) : null;
+}
+function setOcrResult(result) {
+  if (result && typeof result === 'object') {
+    appState.ocr.lastResult = _cloneOcrSliceResult(result);
+    appState.ocr.lastRunAt  = (typeof result.createdAt === 'string' && result.createdAt.length > 0)
+      ? result.createdAt
+      : new Date().toISOString();
+    appState.ocr.lastError  = null;
+  } else {
+    appState.ocr.lastResult = null;
+  }
+}
+function setOcrError(error) {
+  appState.ocr.lastError = (typeof error === 'string' && error.length > 0) ? error : null;
+}
+function clearOcrResult() {
+  appState.ocr.lastResult = null;
+  appState.ocr.lastError  = null;
+}
+function resetOcrState() {
+  appState.ocr.targetText        = '';
+  appState.ocr.language          = 'ru+en';
+  appState.ocr.matchMode         = 'contains';
+  appState.ocr.caseSensitive     = false;
+  appState.ocr.useSelectedRegion = true;
+  appState.ocr.lastInput         = null;
+  appState.ocr.lastResult        = null;
+  appState.ocr.isRunning         = false;
+  appState.ocr.lastError         = null;
+  appState.ocr.lastRunAt         = null;
+}
+
+// Defensive clones — strip pixel data even if a buggy caller
+// somehow attached `imageDataUrl` to the input or the result.
+function _cloneOcrSliceInput(input) {
+  if (!input || typeof input !== 'object') return null;
+  return {
+    screenPreview: input.screenPreview ? {
+      sourceId:   typeof input.screenPreview.sourceId === 'string' ? input.screenPreview.sourceId : '',
+      name:       typeof input.screenPreview.name === 'string' ? input.screenPreview.name : '',
+      width:      Number(input.screenPreview.width)  || 0,
+      height:     Number(input.screenPreview.height) || 0,
+      capturedAt: typeof input.screenPreview.capturedAt === 'string' ? input.screenPreview.capturedAt : ''
+    } : null,
+    region: input.region ? {
+      x:      Number(input.region.x)      || 0,
+      y:      Number(input.region.y)      || 0,
+      width:  Number(input.region.width)  || 0,
+      height: Number(input.region.height) || 0
+    } : null,
+    options: input.options ? {
+      language:      typeof input.options.language === 'string' ? input.options.language : 'ru+en',
+      targetText:    typeof input.options.targetText === 'string' ? input.options.targetText : '',
+      matchMode:     typeof input.options.matchMode === 'string' ? input.options.matchMode : 'contains',
+      caseSensitive: !!input.options.caseSensitive
+    } : null
+  };
+}
+
+function _cloneOcrSliceResult(result) {
+  if (!result || typeof result !== 'object') return null;
+  return {
+    id:               typeof result.id === 'string' ? result.id : '',
+    mode:             typeof result.mode === 'string' ? result.mode : 'mock',
+    realOcr:          false,
+    realClick:        false,
+    success:          !!result.success,
+    matched:          !!result.matched,
+    targetText:       typeof result.targetText === 'string' ? result.targetText : '',
+    language:         typeof result.language === 'string' ? result.language : 'ru+en',
+    matchMode:        typeof result.matchMode === 'string' ? result.matchMode : 'contains',
+    caseSensitive:    !!result.caseSensitive,
+    region:           result.region ? { ...result.region } : null,
+    screenSourceId:   typeof result.screenSourceId === 'string' ? result.screenSourceId : '',
+    screenSourceName: typeof result.screenSourceName === 'string' ? result.screenSourceName : '',
+    previewSize:      result.previewSize ? { ...result.previewSize } : null,
+    blocks:           Array.isArray(result.blocks) ? result.blocks.map(function (b) {
+      return b ? {
+        id:          typeof b.id === 'string' ? b.id : '',
+        text:        typeof b.text === 'string' ? b.text : '',
+        confidence:  typeof b.confidence === 'number' ? b.confidence : 0,
+        boundingBox: b.boundingBox ? { ...b.boundingBox } : null,
+        targetPoint: b.targetPoint ? { ...b.targetPoint } : null
+      } : null;
+    }).filter(Boolean) : [],
+    match: result.match ? {
+      id:          typeof result.match.id === 'string' ? result.match.id : '',
+      text:        typeof result.match.text === 'string' ? result.match.text : '',
+      confidence:  typeof result.match.confidence === 'number' ? result.match.confidence : 0,
+      boundingBox: result.match.boundingBox ? { ...result.match.boundingBox } : null,
+      targetPoint: result.match.targetPoint ? { ...result.match.targetPoint } : null
+    } : null,
+    actionPreview: result.actionPreview ? {
+      type:          'text_click',
+      mode:          'preview',
+      text:          typeof result.actionPreview.text === 'string' ? result.actionPreview.text : '',
+      targetPoint:   result.actionPreview.targetPoint ? { ...result.actionPreview.targetPoint } : null,
+      boundingBox:   result.actionPreview.boundingBox ? { ...result.actionPreview.boundingBox } : null,
+      confidence:    typeof result.actionPreview.confidence === 'number' ? result.actionPreview.confidence : 0,
+      language:      typeof result.actionPreview.language === 'string' ? result.actionPreview.language : 'ru+en',
+      matchMode:     typeof result.actionPreview.matchMode === 'string' ? result.actionPreview.matchMode : 'contains',
+      caseSensitive: !!result.actionPreview.caseSensitive,
+      usedRegion:    result.actionPreview.usedRegion ? { ...result.actionPreview.usedRegion } : null,
+      realClick:     false,
+      realOcr:       false,
+      note:          typeof result.actionPreview.note === 'string' ? result.actionPreview.note : ''
+    } : null,
+    errors:           Array.isArray(result.errors)   ? result.errors.slice()   : [],
+    warnings:         Array.isArray(result.warnings) ? result.warnings.slice() : [],
+    durationMs:       typeof result.durationMs === 'number' ? result.durationMs : 0,
+    createdAt:        typeof result.createdAt === 'string' ? result.createdAt : ''
   };
 }

@@ -8,6 +8,254 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-32
+
+Final stabilization of the simulation-only beta, design-only handoff
+to the future real-input release line, the Step 17 architectural
+scaffolding, the Step 18 desktop adapter interface plus mock
+adapter, the Step 19 real-action sandbox with dry-run preview, the
+Step 20 final beta QA pass, the Step 21 beta release packaging
+pass, the Step 22 GitHub beta release finalization, the Step 23
+post-pack QA and release blocker pass, the Step 24 final beta
+release preparation, the Step 25 Screen Capture Foundation, the
+Step 26 Region Selector Foundation, the Step 27 Template Asset
+Manager, the Step 28 Template Matching Mock / Dry-run, the
+Step 29 Real Template Matching Engine Foundation, the
+Step 30 Image Click Scenario Type Foundation, the
+Step 31 Image Click Scenario UX Polish + Visual Test Tools, and
+the **Step 32 OCR Foundation** (mock OCR engine + Advanced → OCR
+tab + `text_click` action PREVIEW; never recognises real text,
+never clicks, never opens a new IPC channel). **Still simulation-only.**
+
+### Added (Step 32 — OCR Foundation)
+
+- `src/ocr-mock-engine.js` (new pure-renderer module):
+  - `createOcrInput(screenPreview, region, options)` — sanitises
+    every input. The `screenPreview` carries only metadata
+    (`sourceId` / `name` / `width` / `height` / `capturedAt`);
+    pixel buffers never enter the engine.
+  - `validateOcrInput(input)` — returns
+    `{ valid, errors: [stableId], warnings: [stableId] }`.
+    Stable error IDs: `captureScreenPreviewFirst`,
+    `targetTextRequired`, `invalidOcrLanguage`,
+    `invalidMatchMode`, `invalidRegion`.
+  - `runMockOcr(input)` — synchronous, validates, fabricates
+    blocks via `createMockOcrBlocks`, picks the best match via
+    `findTextInOcrBlocks`, builds the result via
+    `createOcrResult`, attaches a `text_click` action preview
+    via `createTextClickActionPreview`. Records
+    `ocr.mock.requested` / `ocr.mock.completed` /
+    `ocr.mock.failed` / `text.click.preview.created` audit
+    events. Never calls `runScenario`, `runImageClickScenario`,
+    `executeAction` real branch, the mock adapter, or the
+    dry-run sandbox.
+  - `createMockOcrBlocks(input)` — fabricates a target block
+    centred inside the region (or near the centre of the
+    preview) with the user's target text + 1–3 surrounding
+    labels (`OK` / `Cancel` / `Settings`) stacked underneath.
+    Confidences in `[0.80, 0.95]`. Block heights derived from
+    the search rectangle so the overlay scales across
+    resolutions. Bounding boxes always lie inside the search
+    rectangle.
+  - `findTextInOcrBlocks(blocks, targetText, matchMode, opts)`
+    — `contains` / `exact` mode, `caseSensitive` flag. Returns
+    the highest-confidence matching block or `null`.
+  - `createOcrResult(input, blocks, match, runMeta)` — builds
+    the structured plain-data result (success, matched,
+    targetText, language, matchMode, caseSensitive, region,
+    screenSourceId / Name, previewSize, blocks, match,
+    actionPreview, errors, warnings, durationMs, createdAt,
+    `realOcr: false`, `realClick: false`).
+  - `createTextClickActionPreview(match, input)` — builds a
+    plain-data preview of the planned `text_click` action.
+    Always carries `mode: "preview"`, `realClick: false`,
+    `realOcr: false`, and a "Preview only…" note. The click
+    engine, the action pipeline, the mock adapter, and the
+    dry-run sandbox all refuse to consume it.
+  - `getOcrMockStatus()` — diagnostics snapshot
+    (`ocrMockAvailable: true`, `realOcrAvailable: false`,
+    `lastOcrRunAt`, `lastOcrMatched`, `lastOcrConfidence`,
+    `lastOcrDurationMs`, `lastOcrLanguage`, `lastOcrMatchMode`,
+    `lastOcrTargetTextLen`, `lastOcrBlocksCount`,
+    `lastOcrRegionUsed`, `realClick: false`, `realOcr: false`,
+    `hasResult`).
+  - `clearOcrMockResult()` — wipes module-local state and
+    emits `ocr.mock.cleared`.
+  - `getLastOcrMockResult()` — shallow copy.
+  - All identifiers, errors, languages, and match modes are
+    Object.freeze-locked allowlists so the engine cannot
+    silently extend its surface.
+- `src/ocr-ui.js` (new renderer UI module):
+  - `renderOcrTab()` — builds the OCR section content.
+  - `renderOcrScreenPreviewStatus()` — Screen preview status
+    card (source name, image size, capturedAt, "Preview only =
+    enabled").
+  - `renderOcrSettings()` — target text input, language select
+    (`ru` / `en` / `ru+en`), match mode select (`contains` /
+    `exact`), case-sensitive checkbox, use-selected-region
+    checkbox.
+  - `renderOcrRegionSummary()` — region from
+    `appState.regionSelector.normalizedRegion` when "use
+    selected region" is on.
+  - `runMockOcrFromUi()` — collects state via
+    `buildOcrInputFromState()`, runs the mock engine, sets the
+    result on the OCR slice, logs.
+  - `renderOcrResult()` — coloured headline (matched=green /
+    failed=red / no-match=yellow), metric rows.
+  - `renderOcrBlocks()` — recognised-blocks list with matched
+    row highlight.
+  - `renderOcrOverlay()` — preview `<img>` + dashed blue
+    region rectangle + yellow-dashed candidate rectangles +
+    green solid matched rectangle (with tiny text label) + red
+    target dot. CSS percentage positioning so the overlay
+    scales correctly.
+  - `renderTextClickActionPreview()` — JSON of the planned
+    `text_click` action via `<pre>.textContent` (no HTML
+    interpolation, never executed).
+  - `clearOcrResultUi()` — collapses every block.
+  - Quick navigation buttons: Open Screen Capture / Open
+    Region Selector → `setAdvancedTab('screenCapture')`.
+- `src/app-state.js`:
+  - New `ocr: { targetText, language, matchMode, caseSensitive,
+    useSelectedRegion, lastInput, lastResult, isRunning,
+    lastError, lastRunAt }` slice.
+  - 11 new setters: `setOcrTargetText`, `setOcrLanguage`,
+    `setOcrMatchMode`, `setOcrCaseSensitive`,
+    `setOcrUseSelectedRegion`, `setOcrRunning`, `setOcrInput`,
+    `setOcrResult`, `setOcrError`, `clearOcrResult`,
+    `resetOcrState`.
+  - `_cloneOcrSliceInput(input)` and
+    `_cloneOcrSliceResult(result)` strip `imageDataUrl`
+    defensively even if a buggy caller attaches one. The slice
+    only carries metadata.
+  - `getState()` returns a defensive copy of the OCR slice.
+- `src/audit-events.js` — 5 new allowlisted event types:
+  `ocr.mock.requested`, `ocr.mock.completed`, `ocr.mock.failed`,
+  `ocr.mock.cleared`, `text.click.preview.created`. Payloads
+  carry only short metadata (matchMode, language, hasRegion,
+  blocksCount, durationMs, target text length — never the full
+  target text, never an `imageDataUrl`, never PII).
+- `src/i18n.js` — 56 new keys per language (RU + EN):
+  `ocr`, `ocrFoundation`, `mockOcr`, `runMockOcr`,
+  `clearOcrResult`, `ocrResult`, `realOcrNotConnected`,
+  `targetText`, `targetTextPlaceholder`, `ocrLanguage`,
+  `matchMode`, `contains`, `exact`, `caseSensitive`,
+  `useSelectedRegion`, `recognizedBlocks`, `matchedText`,
+  `textClickPreview`, `realOcrDisabled`,
+  `textRecognitionNotImplemented`, `ocrMockNotice`,
+  `noOcrResult`, `ocrMatched`, `ocrNoMatch`, `ocrConfidence`,
+  `ocrBlocks`, `ocrDiagnostics`, `realOcrAvailable`,
+  `ocrMockAvailable`, `targetTextRequired`,
+  `invalidOcrLanguage`, `invalidMatchMode`, `ocrTabTitle`,
+  `ocrSettings`, `ocrRunStarted`, `ocrRunCompleted`,
+  `ocrRunFailed`, `ocrRunCleared`, `textClickActionPreview`,
+  `textClickNotExecuted`, `ocrMockBadge`, `languageRu`,
+  `languageEn`, `languageRuEn`, `matchModeContains`,
+  `matchModeExact`, `lastOcrRunAt`, `lastOcrMatched`,
+  `lastOcrConfidence`, `lastOcrDurationMs`, `lastOcrLanguage`,
+  `lastOcrMatchMode`, `lastOcrBlocksCount`, `targetTextPresent`,
+  `regionUsed`, `confidenceLabel`.
+- `src/index.html`:
+  - New tab button `data-advanced-tab="ocr"` next to **Поиск
+    шаблона**.
+  - New `<section id="advanced-tab-ocr"
+    class="adv-section adv-section-hidden">`.
+  - Loads `ocr-mock-engine.js` and `ocr-ui.js` between
+    `image-click-test-ui.js` and `renderer.js`. CSP unchanged.
+- `src/renderer.js`:
+  - `renderAdvancedDashboard` dispatches `case 'ocr':
+    renderOcrTab()`.
+  - New **OCR diagnostics** card in `renderAdvancedSafety` with
+    last-run rows + always-on safety reminders (`Real OCR
+    disabled = enabled`, `Text recognition is not implemented
+    yet = enabled`, `Real click disabled = enabled`).
+  - New `OCR: ocrMockAvailable=…, realOcrAvailable=false,
+    lastOcrRunAt=…, lastOcrMatched=…, lastOcrConfidence=…,
+    lastOcrDurationMs=…, ocrLanguage=…, ocrMatchMode=…,
+    targetTextPresent=…, lastOcrBlocksCount=…, regionUsed=…,
+    realOcr=false, realClick=false, tesseractAvailable=false,
+    ocrEngineImplemented=false` line in `Copy diagnostics`.
+    Numeric / metadata only — never base64, never the full
+    target text.
+- `src/styles.css` — new section "Step 32 — OCR Foundation":
+  `.ocr-notice` (yellow MOCK banner), `.ocr-notice-badge`,
+  `.ocr-screen-card`, `.ocr-settings-card`, `.ocr-region-card`,
+  `.ocr-empty`, `.ocr-setting-row`, `.ocr-setting-label`,
+  `.ocr-input`, `.ocr-select`, `.ocr-checkbox-label`,
+  `.ocr-buttons`, `.ocr-run-button`, `.ocr-clear-button`,
+  `.ocr-nav-button`, `.ocr-result-host`, `.ocr-result-card`,
+  `.ocr-result-headline` with three coloured variants
+  (matched=green, failed=red, no-match=yellow),
+  `.ocr-result-subtitle`, `.ocr-errors`, `.ocr-blocks-card`,
+  `.ocr-blocks-list`, `.ocr-block-row`,
+  `.ocr-block-row-matched`, `.ocr-block-index`,
+  `.ocr-block-text`, `.ocr-block-confidence`,
+  `.ocr-block-bbox`, `.ocr-overlay-card`,
+  `.ocr-overlay-wrapper`, `.ocr-overlay-image`
+  (`max-width: 100%`), `.ocr-overlay-region` (dashed blue),
+  `.ocr-overlay-block` (yellow-dashed candidate),
+  `.ocr-overlay-block-matched` (solid green),
+  `.ocr-overlay-block-label`, `.ocr-overlay-target` (red dot
+  with white halo), `.ocr-overlay-note`,
+  `.ocr-action-preview-card`, `.ocr-action-preview-note`,
+  `.ocr-action-preview-json` (max-height 280 px, monospace,
+  `<pre>.textContent` only). Dark-theme tweaks via
+  `[data-theme="dark"]`. Mobile fallback at `max-width: 760px`.
+- `docs/OCR_FOUNDATION.md` — new doc covering purpose,
+  current status, mock OCR flow, input format, result format,
+  `text_click` action preview, region support, what is not
+  implemented, future Tesseract integration, safety notes.
+- `docs/ACTION_SCHEMA.md` — adds **Step 32 — `text_click`
+  (planned, preview only)** section with the planned action
+  shape and the invariants `text_click` will keep when it lands.
+- `docs/SCREEN_CAPTURE.md` — adds note that the preview is also
+  consumed by the OCR mock (metadata only).
+- `docs/REGION_SELECTOR.md` — adds note that the region can
+  scope the OCR mock.
+- `docs/SECURITY_CHECKLIST.md` — adds **OCR Foundation (Step 32)**
+  section with behavioural / storage / pipeline / Electron-
+  security invariants.
+- `docs/SMOKE_TESTS.md` — adds **Step 32 — OCR Foundation
+  (mock only)** smoke checks (#299–#318).
+- `docs/KNOWN_LIMITATIONS.md` — adds new section
+  **15. OCR is mock only (Step 32)** covering "the OCR engine
+  is fake", "no `text_click` scenario yet", "no real cursor /
+  click from OCR", "no live-screen OCR".
+- `scripts/smoke-check.js` — Step 32 invariants (see below).
+
+### Safety invariants kept (Step 32)
+
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- `simulationOnly: true`, `realActionsImplemented: false`,
+  `realMatching: false`, `realClick: false`,
+  `realOcr: false`, `ocrEngineImplemented: false`,
+  `tesseractAvailable: false`, `ocrMockAvailable: true` in
+  every status response, audit payload, and diagnostics line.
+- The OCR Foundation runs entirely in the renderer. It never
+  opens a new IPC channel, never imports `electron`,
+  `ipcRenderer`, `fs`, or `localStorage`.
+  `ocr-mock-engine.js` and `ocr-ui.js` contain no `require()`
+  of any prohibited module (`tesseract` / `tesseract.js` /
+  `tesseract-ocr` / `node-tesseract-ocr` / `opencv4nodejs` /
+  `@u4/opencv4nodejs` / `opencv.js` / `opencv-js` / `sharp` /
+  `jimp` / `pixelmatch` / `looks-same` / `robotjs` / `nut-js` /
+  `nutjs` / `@nut-tree/nut-js` / `iohook` / `uiohook-napi` /
+  `node-key-sender`).
+- The action preview is rendered through `<pre>.textContent`.
+  No HTML interpolation. The click engine, the action
+  pipeline, the mock adapter, and the dry-run sandbox do not
+  consume `mode: "preview"` actions, and there is no
+  `text_click` scenario type at Step 32.
+- The screenshot is never persisted on disk by the OCR mock.
+  The result is never written into `scenarios.json`,
+  `settings.json`, `profiles.json`, `templates.json`, or
+  `localStorage`. Module-local `_lastOcrResult` /
+  `_ocrDiagnostics` live in renderer memory and are cleared
+  on `clearOcrMockResult()` / `clearOcrResult()`.
+- Audit payloads carry only ids and short metadata. No
+  `imageDataUrl`, no thumbnails, no full target text, no PII.
+
 ## [Unreleased] — Steps 15-31
 
 Final stabilization of the simulation-only beta, design-only handoff

@@ -333,3 +333,24 @@ the scenario. The region remains preview-anchored numbers
 only — never an `imageDataUrl`, never a screenshot.
 
 See [`docs/IMAGE_CLICK_SCENARIO.md`](./IMAGE_CLICK_SCENARIO.md).
+
+
+
+---
+
+## Step 32 — region can scope the OCR mock
+
+[Step 32](./OCR_FOUNDATION.md) ships the Advanced → **OCR** tab
+with a `Use selected region` checkbox (default on). When the
+checkbox is on and a Step-26 normalized region exists, the OCR
+mock engine receives the rectangle and clamps every fabricated
+block inside it. When the checkbox is off the mock works against
+the whole preview rectangle.
+
+The region remains preview-anchored numbers only — never an
+`imageDataUrl`, never a screenshot. Clearing the region clears
+the OCR debug overlay's region rectangle but leaves the result
+intact (the user can re-run with a different region or with no
+region at all).
+
+See [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md).

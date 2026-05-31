@@ -3460,6 +3460,480 @@ record(
   ictUi.indexOf("'image-click-test-panel'") !== -1 ||
   ictUi.indexOf('"image-click-test-panel"') !== -1
 );
+// =====================================================================
+// Step 32 — OCR Foundation (mock only)
+// =====================================================================
+
+// 183. New source files exist.
+record(
+  'src/ocr-mock-engine.js exists',
+  fileExists('src/ocr-mock-engine.js')
+);
+record(
+  'src/ocr-ui.js exists',
+  fileExists('src/ocr-ui.js')
+);
+
+// 184. New documentation exists.
+record(
+  'docs/OCR_FOUNDATION.md exists',
+  fileExists('docs/OCR_FOUNDATION.md')
+);
+
+// 185. ocr-mock-engine.js declares the documented function names.
+var ocrEngine = readText('src/ocr-mock-engine.js');
+[
+  'function createOcrInput',
+  'function validateOcrInput',
+  'function runMockOcr',
+  'function createMockOcrBlocks',
+  'function findTextInOcrBlocks',
+  'function createOcrResult',
+  'function createTextClickActionPreview',
+  'function getOcrMockStatus',
+  'function clearOcrMockResult'
+].forEach(function (sig) {
+  record(
+    'ocr-mock-engine.js declares ' + sig,
+    ocrEngine.indexOf(sig) !== -1
+  );
+});
+
+// 186. ocr-ui.js declares the documented function names.
+var ocrUiTxt = readText('src/ocr-ui.js');
+[
+  'function renderOcrTab',
+  'function renderOcrScreenPreviewStatus',
+  'function renderOcrSettings',
+  'function renderOcrRegionSummary',
+  'function runMockOcrFromUi',
+  'function clearOcrResultUi',
+  'function renderOcrResult',
+  'function renderOcrBlocks',
+  'function renderOcrOverlay',
+  'function renderTextClickActionPreview',
+  'function buildOcrInputFromState'
+].forEach(function (sig) {
+  record(
+    'ocr-ui.js declares ' + sig,
+    ocrUiTxt.indexOf(sig) !== -1
+  );
+});
+
+// 187. Both Step-32 modules are pure-renderer code: no `require()`,
+//      no electron / ipcRenderer / fs / localStorage usage.
+//      We use `_stripJsComments` (defined in the Step 31 block
+//      above) so doc strings that LITERALLY describe the
+//      invariants don't trigger false positives.
+[
+  ['src/ocr-mock-engine.js', _stripJsComments(ocrEngine)],
+  ['src/ocr-ui.js',          _stripJsComments(ocrUiTxt)]
+].forEach(function (pair) {
+  var rel = pair[0]; var txt = pair[1];
+  record(
+    rel + ' does not require() anything',
+    !/\brequire\s*\(/.test(txt)
+  );
+  record(
+    rel + ' does not import electron',
+    txt.indexOf("require('electron')") === -1 &&
+    txt.indexOf('require("electron")') === -1 &&
+    txt.indexOf("from 'electron'") === -1
+  );
+  record(
+    rel + ' does not use ipcRenderer',
+    txt.indexOf('ipcRenderer') === -1
+  );
+  record(
+    rel + ' does not use fs',
+    !/\brequire\s*\(\s*['"]fs['"]\s*\)/.test(txt)
+  );
+  record(
+    rel + ' does not use localStorage',
+    txt.indexOf('localStorage') === -1
+  );
+});
+
+// 188. Both Step-32 modules contain no innerHTML on user data.
+[
+  ['src/ocr-mock-engine.js', ocrEngine],
+  ['src/ocr-ui.js',          ocrUiTxt]
+].forEach(function (pair) {
+  var rel = pair[0]; var txt = pair[1];
+  var lines = txt.split(/\r?\n/);
+  var bad = [];
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    if (ln.indexOf('innerHTML') === -1) continue;
+    var cleaned = ln.replace(/\/\/.*$/, '');
+    if (cleaned.indexOf('innerHTML') === -1) continue;
+    if (/innerHTML\s*=\s*(''|"")\s*;?\s*$/.test(cleaned)) continue;
+    bad.push((i + 1) + ': ' + ln.trim());
+  }
+  record(
+    rel + ' uses innerHTML only as `= \'\'` (container clear)',
+    bad.length === 0,
+    bad.length ? bad.slice(0, 3).join(' | ') : ''
+  );
+});
+
+// 189. The action preview is rendered through <pre>.textContent.
+record(
+  'ocr-ui.js renders text_click action preview via <pre>.textContent',
+  /createElement\(['"]pre['"]\)/.test(ocrUiTxt) &&
+  /\.textContent\s*=\s*JSON\.stringify/.test(ocrUiTxt)
+);
+
+// 190. The OCR mock does not call runScenario / runImageClickScenario / executeAction.
+var ocrEngineClean = _stripJsComments(ocrEngine);
+var ocrUiClean     = _stripJsComments(ocrUiTxt);
+record(
+  'ocr-mock-engine.js does not call runScenario',
+  ocrEngineClean.indexOf('runScenario(') === -1
+);
+record(
+  'ocr-mock-engine.js does not call runImageClickScenario',
+  ocrEngineClean.indexOf('runImageClickScenario(') === -1
+);
+record(
+  'ocr-mock-engine.js does not call executeAction with executionMode: "real"',
+  !/executeAction\s*\([^)]*executionMode:\s*['"]real['"]/.test(ocrEngineClean)
+);
+record(
+  'ocr-ui.js does not call runScenario',
+  ocrUiClean.indexOf('runScenario(') === -1
+);
+record(
+  'ocr-ui.js does not call runImageClickScenario',
+  ocrUiClean.indexOf('runImageClickScenario(') === -1
+);
+
+// 191. Both modules stamp realClick: false / realOcr: false.
+record(
+  'ocr-mock-engine.js stamps realClick: false',
+  /realClick:\s*false/.test(ocrEngine)
+);
+record(
+  'ocr-mock-engine.js stamps realOcr: false',
+  /realOcr:\s*false/.test(ocrEngine)
+);
+
+// 192. Audit allowlist contains the 5 new types.
+var auditTxt32 = readText('src/audit-events.js');
+[
+  'ocr.mock.requested',
+  'ocr.mock.completed',
+  'ocr.mock.failed',
+  'ocr.mock.cleared',
+  'text.click.preview.created'
+].forEach(function (eventType) {
+  record(
+    'audit-events.js allowlists ' + eventType,
+    auditTxt32.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 193. i18n.js declares the key set in BOTH locales.
+var i18nTxt32 = readText('src/i18n.js');
+var step32I18nKeys = [
+  'ocr',
+  'mockOcr',
+  'runMockOcr',
+  'clearOcrResult',
+  'ocrResult',
+  'realOcrNotConnected',
+  'targetText',
+  'targetTextPlaceholder',
+  'ocrLanguage',
+  'matchMode',
+  'contains',
+  'exact',
+  'caseSensitive',
+  'useSelectedRegion',
+  'recognizedBlocks',
+  'matchedText',
+  'textClickPreview',
+  'realOcrDisabled',
+  'textRecognitionNotImplemented',
+  'ocrMockNotice',
+  'noOcrResult',
+  'ocrMatched',
+  'ocrNoMatch',
+  'ocrConfidence',
+  'ocrBlocks',
+  'ocrDiagnostics',
+  'realOcrAvailable',
+  'ocrMockAvailable',
+  'targetTextRequired'
+];
+step32I18nKeys.forEach(function (key) {
+  var pattern = new RegExp('\\b' + key + '\\s*:', 'g');
+  var matches = i18nTxt32.match(pattern) || [];
+  record(
+    'i18n.js defines key "' + key + '" in both RU and EN',
+    matches.length >= 2,
+    matches.length === 0 ? 'missing entirely' : 'only ' + matches.length + ' occurrence(s)'
+  );
+});
+
+// 194. index.html loads the new scripts AFTER ocr-mock-engine.js
+//      and BEFORE renderer.js, and registers the new tab.
+var htmlTxt32 = readText('src/index.html');
+record(
+  'index.html loads ocr-mock-engine.js',
+  /<script\s+src=["']ocr-mock-engine\.js["']/.test(htmlTxt32)
+);
+record(
+  'index.html loads ocr-ui.js',
+  /<script\s+src=["']ocr-ui\.js["']/.test(htmlTxt32)
+);
+(function () {
+  var enginePos   = htmlTxt32.indexOf('ocr-mock-engine.js');
+  var uiPos       = htmlTxt32.indexOf('ocr-ui.js');
+  var rendererPos = htmlTxt32.indexOf('renderer.js');
+  record(
+    'index.html loads ocr-mock-engine.js before ocr-ui.js',
+    enginePos !== -1 && uiPos !== -1 && enginePos < uiPos
+  );
+  record(
+    'index.html loads ocr-ui.js before renderer.js',
+    uiPos !== -1 && rendererPos !== -1 && uiPos < rendererPos
+  );
+})();
+record(
+  'index.html has an OCR advanced tab button',
+  /data-advanced-tab=['"]ocr['"]/.test(htmlTxt32)
+);
+record(
+  'index.html has the OCR advanced section',
+  htmlTxt32.indexOf('id="advanced-tab-ocr"') !== -1
+);
+
+// 195. README and PROJECT_CONTEXT mention OCR Foundation / mock OCR.
+var readmeTxt32  = readText('README.md');
+var contextTxt32 = readText('PROJECT_CONTEXT.md');
+record(
+  'README.md mentions OCR Foundation or mock OCR',
+  /OCR Foundation|mock OCR|Mock OCR|OCR mock/i.test(readmeTxt32)
+);
+record(
+  'PROJECT_CONTEXT.md mentions OCR Foundation or mock OCR',
+  /OCR Foundation|mock OCR|Mock OCR|OCR mock/i.test(contextTxt32)
+);
+record(
+  'README or PROJECT_CONTEXT mentions step 32',
+  /шаг\s*32|step\s*32/i.test(readmeTxt32 + '\n' + contextTxt32)
+);
+
+// 196. docs/OCR_FOUNDATION.md asserts mock-only / no Tesseract /
+//      no real click.
+var ocrDoc = readText('docs/OCR_FOUNDATION.md');
+record(
+  'docs/OCR_FOUNDATION.md asserts mock only / simulation-only',
+  /mock only|mock-only|simulation-only/i.test(ocrDoc)
+);
+record(
+  'docs/OCR_FOUNDATION.md asserts no Tesseract',
+  /no Tesseract|Tesseract.*not connected|tesseract\.js/i.test(ocrDoc)
+);
+record(
+  'docs/OCR_FOUNDATION.md asserts no real click',
+  /(does\s+not\s+click|never\s+clicks|never moves the cursor|no real click)/i.test(ocrDoc)
+);
+record(
+  'docs/OCR_FOUNDATION.md describes Mock OCR flow / result format',
+  /Mock OCR flow/i.test(ocrDoc) && /Result format/i.test(ocrDoc)
+);
+
+// 197. SECURITY_CHECKLIST has an "OCR Foundation (Step 32)" section.
+var ocrSec = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has OCR Foundation (Step 32) section',
+  /OCR\s+Foundation\s*\(?step\s*32/i.test(ocrSec) ||
+  /## OCR Foundation/i.test(ocrSec)
+);
+record(
+  'docs/SECURITY_CHECKLIST.md asserts OCR mock only / no Tesseract',
+  /OCR mock only/i.test(ocrSec) &&
+  /No Tesseract/i.test(ocrSec)
+);
+
+// 198. SMOKE_TESTS doc has a Step 32 OCR Foundation block.
+var stTxt32 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Step 32 OCR Foundation block',
+  /Step\s*32\s*[—-]\s*OCR Foundation/i.test(stTxt32) ||
+  /Step 32.*OCR Foundation/i.test(stTxt32)
+);
+
+// 199. KNOWN_LIMITATIONS has an OCR section (Step 32).
+var klTxt32 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has an OCR section (Step 32)',
+  /OCR is mock only|##\s*15\.\s*OCR is mock only/i.test(klTxt32)
+);
+
+// 200. CHANGELOG mentions Step 32.
+var chTxt32 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 32 — OCR Foundation',
+  /Step\s*32.*OCR Foundation/i.test(chTxt32) ||
+  /Шаг\s*32.*OCR Foundation/i.test(chTxt32) ||
+  /OCR Foundation/i.test(chTxt32)
+);
+
+// 201. package.json STILL declares no OCR / OpenCV / image-matching
+//      / real-input modules at step 32.
+if (pkg) {
+  var allDeps32 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var step32Forbidden = [
+    'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same'
+  ].filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDeps32, m);
+  });
+  record(
+    'package.json declares no OCR / OpenCV / image-matching / real-input modules at step 32',
+    step32Forbidden.length === 0,
+    step32Forbidden.length ? step32Forbidden.join(', ') : ''
+  );
+}
+
+// 202. Step-32 source files don't import OCR / OpenCV / real-input.
+var step32SourceFiles = [
+  'main.js', 'preload.js',
+  'src/ocr-mock-engine.js',
+  'src/ocr-ui.js'
+];
+var step32ForbiddenImports = [
+  'tesseract.js', 'tesseract', 'tesseract-ocr', 'node-tesseract-ocr',
+  'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+  'sharp', 'jimp', 'pixelmatch', 'looks-same',
+  'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+  'iohook', 'uiohook-napi'
+];
+var foundStep32Imports = [];
+step32SourceFiles.forEach(function (rel) {
+  var txt = readText(rel);
+  step32ForbiddenImports.forEach(function (mod) {
+    if (txt.indexOf("require('" + mod + "')") !== -1 ||
+        txt.indexOf('require("' + mod + '")') !== -1) {
+      foundStep32Imports.push(mod + ' in ' + rel);
+    }
+  });
+});
+record(
+  'no OCR / OpenCV / image-matching / real-input modules required in step 32 source files',
+  foundStep32Imports.length === 0,
+  foundStep32Imports.length ? foundStep32Imports.join(', ') : ''
+);
+
+// 203. Step 32 introduces no new IPC channel (renderer-only).
+record(
+  'main.js does not register any ocr.* IPC handler at step 32',
+  !/ipcMain\.handle\(['"]ocr\./.test(mainTxt) &&
+  !/ipcMain\.on\(['"]ocr\./.test(mainTxt)
+);
+record(
+  'preload.js does not expose any ocr.* API at step 32',
+  preloadTxt.indexOf("'ocr.") === -1 &&
+  preloadTxt.indexOf('"ocr.') === -1 &&
+  preloadTxt.indexOf('ocrMock') === -1 &&
+  preloadTxt.indexOf('runOcr') === -1
+);
+
+// 204. The OCR mock does NOT register a text_click action with
+//      the click engine / action pipeline / safety gates.
+//      validateAction / validateScenario must NOT accept text_click
+//      as a real type at Step 32 (it stays preview-only).
+var apTxt32 = readText('src/action-pipeline.js');
+record(
+  'action-pipeline.js does not accept "text_click" as an executable action type at step 32',
+  !/case\s+['"]text_click['"]/.test(apTxt32) &&
+  !/type\s*===\s*['"]text_click['"]/.test(apTxt32)
+);
+var smTxt32 = readText('src/scenario-manager.js');
+record(
+  'scenario-manager.js does not accept "text_click" as a scenario type at step 32',
+  !/case\s+['"]text_click['"]/.test(smTxt32) &&
+  !/type\s*===\s*['"]text_click['"]/.test(smTxt32)
+);
+var ceTxt32 = readText('src/click-engine.js');
+record(
+  'click-engine.js does not run text_click scenarios at step 32',
+  ceTxt32.indexOf("'text_click'") === -1 &&
+  ceTxt32.indexOf('"text_click"') === -1
+);
+
+// 205. main.js / index.html still hold the safety flags.
+record(
+  'main.js still sets contextIsolation: true (re-checked at step 32)',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'main.js still sets nodeIntegration: false (re-checked at step 32)',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'src/index.html CSP unchanged at step 32 (no unsafe-inline / unsafe-eval)',
+  htmlTxt32.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt32.indexOf('unsafe-inline') === -1 &&
+  htmlTxt32.indexOf('unsafe-eval') === -1
+);
+
+// 206. renderer.js wires renderOcrTab() and the diagnostics line.
+var rendererTxt32 = readText('src/renderer.js');
+record(
+  'renderer.js dispatches the ocr advanced tab to renderOcrTab()',
+  rendererTxt32.indexOf('renderOcrTab') !== -1
+);
+record(
+  'renderer.js Copy diagnostics has an `OCR:` line',
+  /OCR:\s*ocrMockAvailable=/.test(rendererTxt32) &&
+  /tesseractAvailable=false/.test(rendererTxt32) &&
+  /ocrEngineImplemented=false/.test(rendererTxt32) &&
+  /realOcr=false/.test(rendererTxt32) &&
+  /realClick=false/.test(rendererTxt32)
+);
+record(
+  'renderer.js diagnostics card uses ocrDiagnostics i18n key',
+  rendererTxt32.indexOf("t('ocrDiagnostics')") !== -1
+);
+
+// 207. app-state.js exposes the OCR slice and setters.
+var stateTxt32 = readText('src/app-state.js');
+[
+  'function setOcrTargetText',
+  'function setOcrLanguage',
+  'function setOcrMatchMode',
+  'function setOcrCaseSensitive',
+  'function setOcrUseSelectedRegion',
+  'function setOcrRunning',
+  'function setOcrResult',
+  'function setOcrError',
+  'function clearOcrResult',
+  'function resetOcrState'
+].forEach(function (sig) {
+  record(
+    'app-state.js declares ' + sig,
+    stateTxt32.indexOf(sig) !== -1
+  );
+});
+record(
+  'app-state.js exposes the ocr slice via getState()',
+  /ocr:\s*\{/.test(stateTxt32) &&
+  /targetText:/.test(stateTxt32) &&
+  /useSelectedRegion:/.test(stateTxt32)
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

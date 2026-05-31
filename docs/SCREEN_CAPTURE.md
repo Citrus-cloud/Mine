@@ -249,3 +249,27 @@ Clearing the preview clears the matching result too — preview-
 space coordinates are no longer meaningful without an image.
 
 See [`docs/TEMPLATE_MATCHING_MOCK.md`](./TEMPLATE_MATCHING_MOCK.md).
+
+
+
+---
+
+## Step 32 — preview is also consumed by the OCR mock
+
+[Step 32](./OCR_FOUNDATION.md) ships an OCR mock engine inside
+the Advanced → **OCR** tab. The mock reads the same screen
+preview slice (`appState.screenCapture.preview`) — only the
+metadata (`sourceId`, `name`, `width`, `height`, `capturedAt`),
+never the `imageDataUrl` — to fabricate plausible OCR blocks
+inside the preview rectangle (or inside the optional region).
+
+The renderer reuses the preview `<img>.src` for the OCR debug
+overlay so the user sees the recognised blocks and the target
+point on the same image they captured. The OCR mock does **not**
+analyse pixels and does **not** add Tesseract / OpenCV. Real
+OCR is not connected at Step 32.
+
+Clearing the preview also clears the OCR debug overlay — the
+preview is the only visual anchor.
+
+See [`docs/OCR_FOUNDATION.md`](./OCR_FOUNDATION.md).
