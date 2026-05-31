@@ -29,9 +29,9 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation).
+- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager).
 - Версия: **`0.1.0-beta`**.
-- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлены read-only **Screen Capture Foundation** (Step 25 — preview only) и **Region Selector Foundation** (Step 26 — rectangular selection on the preview, без OCR / image matching / real clicks).
+- Состояние: simulation-only MVP, **v0.1.0-beta pre-release preparation готов** + добавлены read-only **Screen Capture Foundation** (Step 25 — preview only), **Region Selector Foundation** (Step 26 — rectangular selection on the preview) и **Template Asset Manager** (Step 27 — image assets storage only). Поиск шаблонов на скриншоте, OCR, image matching и реальные клики **по-прежнему не реализованы**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
@@ -236,6 +236,66 @@ safety review).
     iohook по-прежнему отсутствуют. realDesktopActions=false,
     simulationOnly=true, contextIsolation: true, nodeIntegration:
     false — без изменений.**
+  - **Шаг 27 — Template Asset Manager (продолжение линии умных
+    визуальных функций — только assets, без поиска):**
+    добавлен менеджер картинок-шаблонов, которые позже будут
+    использоваться для поиска на скриншоте. Сами умные функции
+    (image matching, OCR, клик по картинке/тексту, визуальный
+    конструктор) **по-прежнему не реализованы** — это только
+    хранилище. Новый main-модуль
+    [`main/template-assets.js`](./main/template-assets.js)
+    добавляет 6 IPC-обработчиков (`templates:load`,
+    `templates:import-image`, `templates:save-metadata`,
+    `templates:delete`, `templates:reset`,
+    `templates:get-stats`) с allow-list `png/jpg/jpeg/webp`,
+    magic-bytes-проверкой, размером ≤ 16 MiB, header-only
+    парсингом ширины/высоты (без декодирования пикселей) и
+    quarantine-fallback на повреждённый JSON. В `preload.js` —
+    namespace `window.clickflow.templates` (через
+    `contextBridge`, без прямого `ipcRenderer`). Добавлены два
+    renderer-модуля: [`src/template-manager.js`](./src/template-manager.js)
+    (`initTemplates`, `getTemplates`, `getTemplateById`,
+    `getActiveTemplate`, `setActiveTemplate`,
+    `importTemplateImage`, `updateTemplateMetadata`,
+    `deleteTemplate`, `resetTemplates`, `validateTemplateMetadata`)
+    и [`src/template-ui.js`](./src/template-ui.js)
+    (`renderTemplatesTab`, `renderTemplateList`,
+    `renderTemplateCard`, `renderActiveTemplate`,
+    `openTemplateImport`, `openTemplateEdit`, `saveTemplateEdit`,
+    `cancelTemplateEdit`, `deleteTemplateById`,
+    `resetTemplateAssets`, `refreshTemplates`).
+    В `src/app-state.js` — slice `templates`
+    (`items`, `activeTemplateId`, `isLoading`, `lastError`)
+    с 5 мутаторами. В `src/audit-events.js` — 8 новых
+    allowlisted типов
+    (`template.import.requested/completed/cleansed/failed`,
+    `template.metadata.updated`, `template.selected`,
+    `template.deleted`, `template.reset`); payload содержит
+    только id и короткие метаданные, **никогда** base64 или
+    pixel-данные. В Advanced появилась **девятая вкладка
+    Templates / Шаблоны**: header «Image Templates / Шаблоны
+    изображений», safety-notice, кнопки Import / Reset / Refresh,
+    список карточек с preview, name, description, original
+    filename, размером в пикселях, размером файла, createdAt и
+    кнопками Select / Edit / Delete; inline-форма редактирования
+    name/description с валидацией (`name required`,
+    `name ≤ 80`, `description ≤ 300`). В Advanced → Safety —
+    компактная карточка **Image templates** + новая строка
+    `Templates: …` в `Copy diagnostics`.
+    Добавлен документ
+    [`docs/TEMPLATE_ASSETS.md`](./docs/TEMPLATE_ASSETS.md);
+    обновлены `docs/SECURITY_CHECKLIST.md`,
+    `docs/KNOWN_LIMITATIONS.md`, `docs/SMOKE_TESTS.md`,
+    `docs/ACTION_SCHEMA.md` (planned `image_click`).
+    Smoke-check расширен Step-27-инвариантами. Добавлено 27
+    новых i18n-ключей RU + EN. **Реальные клики / OCR / image
+    recognition / template matching / OpenCV / robotjs / nut.js /
+    iohook / sharp / jimp / pixelmatch по-прежнему отсутствуют.
+    `previewDataUrl` живёт только в памяти renderer и никогда не
+    попадает в `templates.json`, `settings.json`,
+    `scenarios.json`, `profiles.json`. realDesktopActions=false,
+    simulationOnly=true, contextIsolation: true, nodeIntegration:
+    false — без изменений.**
 
 ---
 
@@ -261,8 +321,9 @@ safety review).
 - Импорт / экспорт / сброс настроек.
 
 ### Расширенный режим
-Восемь вкладок: Overview, Scenarios, Execution, Logs, Settings,
-Safety, **Screen Capture** (Step 25 — preview only), Future.
+Девять вкладок: Overview, Scenarios, Execution, Logs, Settings,
+Safety, **Screen Capture** (Step 25 — preview only),
+**Templates / Шаблоны** (Step 27 — assets only), Future.
 Diagnostics, история ошибок, профили, импорт /
 экспорт, readiness-чеклист desktop-адаптера, **Beta health card**
 (Step 15), **Feature flags card** (Step 16), **Next safety milestone**
@@ -286,6 +347,13 @@ permission checklist и blocked reasons.
 можно привязать к активному сценарию как `settings.region`
 (image-space координаты, опциональное поле, старые сценарии
 работают как раньше).
+**Step 27:** новая вкладка **Templates / Шаблоны** с импортом
+PNG/JPG/JPEG/WebP через `dialog.showOpenDialog`, preview, именем,
+описанием, выбором активного шаблона и удалением + компактная
+карточка **Image templates** в Advanced → Safety
+(`templatesCount`, `activeTemplateId`, `activeTemplateName`,
+`templatesStorageReady`, `lastError`). **Поиск шаблонов на
+скриншоте, OCR и клики по найденному не выполняются.**
 
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
@@ -506,6 +574,7 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) — manual checklist перед тэгом (Step 24).
 - [`docs/RELEASE_TAG_PLAN.md`](./docs/RELEASE_TAG_PLAN.md) — manual git/GitHub command sequence для tag/push/publish (Step 24).
 - [`docs/RELEASE_COMMIT_MESSAGE.md`](./docs/RELEASE_COMMIT_MESSAGE.md) — recommended commit message для release-prep commit (Step 24).
+- [`docs/TEMPLATE_ASSETS.md`](./docs/TEMPLATE_ASSETS.md) — описание Template Asset Manager: модель хранения, формат метаданных, privacy/safety-инварианты, что **не** реализовано, planned `image_click` (Step 27).
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и
@@ -566,6 +635,9 @@ npm run dist     # релизные артефакты в dist/
 | 22 | GitHub beta release finalization | `docs/RELEASE_FINAL_CHECK.md`, `docs/TAG_AND_RELEASE_GUIDE.md`, finalized `RELEASE_NOTES.md` / `GITHUB_RELEASE_DRAFT.md`, expanded Release status card, smoke-check at 137 checks. Tag and publication remain manual. |
 | 23 | Post-pack QA and release blocker pass | `docs/RELEASE_BLOCKERS.md`, `docs/PACKAGED_APP_QA.md`, expanded Release status card (14 rows, 2 new rows), smoke-check at 168 checks. Manual packaged-app QA remains the last gate. |
 | 24 | Final beta release preparation | `docs/FINAL_RELEASE_SUMMARY.md`, `docs/PRE_RELEASE_CHECKLIST.md`, `docs/RELEASE_TAG_PLAN.md`, `docs/RELEASE_COMMIT_MESSAGE.md`, expanded Release status card (18 rows + ready-for-pre-release-after-manual-QA badge), smoke-check at 193 checks. Tag and publication remain manual; explicit list of forbidden commit body lines. |
+| 25 | Screen Capture Foundation | Three IPC handlers via `desktopCapturer`, safe `window.clickflow.screenCapture` preload API, `screen-capture-client.js`, `screen-capture-ui.js` (new Advanced → Screen Capture tab with safety notice, sources grid with thumbnails, preview card), `appState.screenCapture` slice, six new audit-event types, compact Screen capture status diagnostics card, 24 RU + EN i18n keys, `docs/SCREEN_CAPTURE.md`. Screenshots never written to disk. **Real clicks / OCR / image recognition / template matching / OpenCV / robotjs / nut.js / iohook still absent.** |
+| 26 | Region Selector Foundation | Pure-logic `region-selector.js` (`createRegion`, `validateRegion`, `scaleRegionToImage` / `scaleRegionToPreview`, `getRegionArea`, `formatRegion`, `createEmptyRegionState`), `region-selector-ui.js` (drag overlay; mousemove/mouseup bound only during drag), `appState.regionSelector` slice + 8 mutators, optional `scenario.settings.region` via new scenario-manager helpers (`validateRegionSettings`, `updateScenarioRegion`, `clearScenarioRegion`; old scenarios untouched), six new audit-event types, compact Region selector status diagnostics card + new `Region selector: …` line in Copy diagnostics, 22 RU + EN i18n keys, `docs/REGION_SELECTOR.md`. **Real clicks / OCR / image matching still absent.** |
+| 27 | Template Asset Manager | New `main/template-assets.js` with five `templates:*` IPC handlers (`load` / `import-image` / `save-metadata` / `delete` / `reset`) + `templates:get-stats`; png/jpg/jpeg/webp allow-list with magic-bytes verification, ≤16 MiB cap, header-only width/height parsing; `userData/templates/templates.json` + `userData/templates/images/` storage. `preload.js` `window.clickflow.templates`. New `src/template-manager.js` and `src/template-ui.js`. `appState.templates` slice + 5 mutators. Eight new `template.*` audit-event types. New 9th Advanced tab **Templates / Шаблоны** + compact **Image templates** diagnostics card + new `Templates: …` line in Copy diagnostics. 27 new RU + EN i18n keys. `docs/TEMPLATE_ASSETS.md`. **Image matching / OCR / template matching / real clicks / OpenCV / robotjs / nut.js / iohook / sharp / jimp / pixelmatch still absent. Templates are stored ASSETS only.** |
 
 ---
 

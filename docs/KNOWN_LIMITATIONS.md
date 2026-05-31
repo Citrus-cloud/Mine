@@ -308,3 +308,72 @@ find text, template matching, OCR, visual scenario builder) are
 - Only the explicit **Attach to active scenario** action stores
   the rectangle, and only inside the scenario JSON
   (numbers only — no pixels).
+
+
+
+---
+
+## 11. Template asset manager (Step 27)
+
+Step 27 introduces a **Template Asset Manager**: a storage layer
+for the small reference images (icons, button captures, etc.)
+that *future* steps will use for image search / OCR / template-
+anchored clicks. The MVP intentionally stops at storage.
+
+### 11.1 Foundation only — assets, not a matcher
+- Templates are stored ASSETS. ClickFlow does **not** match a
+  template against the screenshot, run OCR, or trigger any
+  click on a matched location.
+- Step 27 adds nothing to the click engine, the action pipeline,
+  the mock adapter, or any safety gate.
+- The "Active template" selection is a UI hint — no scenario
+  reads it, no automation step uses it.
+
+### 11.2 Single rectangle ≠ template region
+- Step 26 lets the user draw a region on top of the screen-
+  capture preview. Step 27 templates are **not** projected onto
+  that region. The two foundations exist side by side; the
+  matcher that connects them is future work.
+
+### 11.3 Templates are stored but not matched yet
+- Imported templates live in
+  `userData/templates/templates.json` and
+  `userData/templates/images/template-<id>.<ext>`.
+- The matcher and the planned `image_click` action type are
+  blocked by the existing safety contract; future work goes
+  through [`docs/REAL_ACTIONS_GO_NO_GO.md`](./REAL_ACTIONS_GO_NO_GO.md).
+
+### 11.4 Supported formats only
+- The importer accepts only `png`, `jpg`, `jpeg`, `webp`. Other
+  formats — including BMP, GIF, TIFF, AVIF, SVG, HEIC — are
+  rejected at the dialog filter level AND at the magic-bytes
+  level.
+- Maximum image size is **16 MiB** per file. Larger images are
+  refused with a generic error message.
+
+### 11.5 Header-only width / height
+- Pixel dimensions come from format-header parsing only. We
+  never decode pixels in Step 27. For exotic but valid header
+  layouts the parser may report `0 × 0`; this never blocks the
+  import — the metadata is still saved.
+
+### 11.6 No drag-and-drop import
+- The only entry point is the **Import template** button, which
+  opens `dialog.showOpenDialog`. Drag-and-drop import,
+  clipboard import, and URL import are out of scope for `0.1.x`.
+
+### 11.7 No export / import bundle
+- Templates are not part of the existing scenarios export /
+  import flow. A `templates:export-bundle` / `import-bundle`
+  pair is a candidate for a future step.
+
+### 11.8 No persistence of `previewDataUrl`
+- The data URL needed to draw a preview lives only in the
+  renderer's process memory. It is **never** written back to
+  `templates.json`, `settings.json`, `scenarios.json`,
+  `profiles.json`, or `localStorage`. It is regenerated every
+  time `templates:load` reads `templates.json`.
+
+### 11.9 No mobile platforms
+- Templates remain a desktop-only feature, in line with the
+  rest of the app.

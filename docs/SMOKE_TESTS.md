@@ -306,3 +306,36 @@ foundation.
 | 186  | No real clicks                        | While the Screen Capture tab is open, draw / save / attach / clear a region. Watch the cursor and a focused text editor for 30 s. Cursor unchanged; editor receives no input. |
 | 187  | Switch language                       | Settings → English → Save. Walk #170–#185. All Region Selector strings appear in English. Switch back to Russian. |
 | 188  | Hard guarantees                       | DevTools console: `getState().regionSelector.selectedRegion` reflects the live rectangle; `validateRegionSettings({x:-1,y:0,width:10,height:10})` returns `{valid:false, error:…}`. `setActiveAdapter('real-desktop')` still returns `{ success: false, blocked: true, ... }` — Step 26 did not flip any safety flag. |
+
+
+
+## Step 27 — Template Asset Manager smoke checks
+
+These manual checks verify the new **Templates** tab in the
+Advanced dashboard. They never expect image matching, OCR, or a
+real click — Step 27 only adds the storage layer.
+
+| #    | Step                                  | Expected                                                                                                          |
+|------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| 200  | Open Templates tab                    | Advanced → Templates. Header "Image Templates / Шаблоны изображений", safety notice, three buttons (Import / Reset / Refresh), Active template card with empty state, Templates list card with "No templates yet." |
+| 201  | Verify safety notice                  | Notice text contains "Templates are stored as image assets only" / "Шаблоны пока используются только как сохранённые изображения". No "real click" / "OCR" / "image matching" verbs anywhere on the page. |
+| 202  | Import a PNG template                 | Click **Import template**. Pick a PNG. Card appears in the grid: preview, the file's basename as default name, original filename, image size in pixels (e.g. 128 × 64), file size, createdAt timestamp. Active template is auto-selected. Log: `Template imported: <name>`. |
+| 203  | Import a JPG template                 | Repeat with a JPG. New card appears below the first. previewDataUrl renders. mimeType is `image/jpeg`. |
+| 204  | Import a WebP template                | Repeat with a WebP. previewDataUrl renders. mimeType is `image/webp`. |
+| 205  | Reject a non-image                    | Try to pick a `.txt` (rename it to `.png` first). The dialog filter limits visible files to png/jpg/jpeg/webp; even if the renamed file passes the filter the import fails with "File is not a supported image" and no card is added. |
+| 206  | Reject an oversized image             | Try to pick a > 16 MiB image. Import fails with "Image is too large". No partial copy in `userData/templates/images/`. |
+| 207  | Cancel the import                     | Click **Import template**, then Cancel in the dialog. Log: `Template import cancelled`. No card added, no error toast. |
+| 208  | Select a different template           | Click **Select** on a non-active card. Selected badge moves; Active template card on the right updates. Log: `Template selected`. |
+| 209  | Edit metadata                         | Click **Edit** on any card. Inline form replaces the card. Change name to "Submit button" and description. Click **Save**. Form collapses, name and description update. Log: `Template metadata saved`. |
+| 210  | Validate empty name                   | Edit any card. Clear the name field. Click **Save**. Inline error: "Template name is required" / "Название шаблона обязательно". No IPC call made. |
+| 211  | Validate too-long name                | Edit any card. Paste 81+ chars into the name field. Click **Save**. Inline error: "Template name is too long". |
+| 212  | Validate too-long description         | Edit any card. Paste 301+ chars into the description. Click **Save**. Inline error: "Template description is too long". |
+| 213  | Cancel an edit                        | Edit any card, change values, click **Cancel**. Form collapses. Card values remain unchanged. |
+| 214  | Delete a template                     | Click **Delete** on any card. Confirm in the OS dialog. Card disappears. Image file under `userData/templates/images/` is also removed. Log: `Template deleted`. If the deleted template was active, no template is active any more. |
+| 215  | Reset templates                       | Click **Reset templates** → Confirm. All cards disappear. Empty state returns. `userData/templates/templates.json` is removed. `userData/templates/images/template-*.{png,jpg,webp}` files are removed. Other folders are left alone. |
+| 216  | Diagnostics card                      | Advanced → Safety. **Image templates** card visible: `Templates count`, `activeTemplateId`, `Active template`, `Templates storage ready`, `lastError`, `Screen matching not implemented = disabled`, `Template matching planned = planned`. |
+| 217  | Copy diagnostics line                 | Advanced → Safety → Copy diagnostics → paste. Output contains `Templates: count=…, storageCount=…, storageReady=true, activeTemplateId=…, activeTemplateName=…, lastError=none, screenMatchingImplemented=false, ocrImplemented=false, realClicksImplemented=false`. |
+| 218  | Restart preserves metadata            | Quit. Relaunch. Open Templates tab. Cards re-appear with previews (read from disk on `templates:load`). Active template id survives if the file still exists. |
+| 219  | Corrupted templates.json fallback     | Quit. Manually corrupt `userData/templates/templates.json` (write `{not json`). Relaunch. App boots; Templates tab shows the empty state; broken file renamed to `templates.json.broken-<timestamp>`. |
+| 220  | No real click happens                 | While the active scenario is running for 60 s and during a fresh import, watch the cursor and a focused text editor. Cursor unchanged, editor receives no input. **Templates do not trigger any real click in Step 27.** |
+| 221  | No OCR / image matching               | Confirm there is no "Find on screen" / "Match" / "Search" button anywhere on the Templates tab. The diagnostics line still says `screenMatchingImplemented=false, ocrImplemented=false`. |
