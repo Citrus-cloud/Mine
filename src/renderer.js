@@ -64,6 +64,8 @@ const inputTextCaseSensitive  = document.getElementById('input-text-case-sensiti
 const inputTextTimeout        = document.getElementById('input-text-timeout');
 const inputTextInterval       = document.getElementById('input-text-interval');
 const inputTextRepeat         = document.getElementById('input-text-repeat');
+// Step 41 — text_click OCR provider selector. Mock by default.
+const inputTextOcrProvider    = document.getElementById('input-text-ocr-provider');
 const textClickRegionSummary  = document.getElementById('text-click-region-summary');
 const textClickNoPreview      = document.getElementById('text-click-no-preview');
 const btnTextClickUseRegion   = document.getElementById('btn-text-click-use-region');
@@ -291,6 +293,8 @@ function getScenarioFormData() {
       language:      inputTextLanguage     ? inputTextLanguage.value     : 'ru+en',
       matchMode:     inputTextMatchMode    ? inputTextMatchMode.value    : 'contains',
       caseSensitive: inputTextCaseSensitive ? !!inputTextCaseSensitive.checked : false,
+      // Step 41 — desired OCR provider. Persisted per scenario.
+      ocrProvider:   inputTextOcrProvider  ? inputTextOcrProvider.value : 'mock',
       region:        _textClickFormRegion ? { ..._textClickFormRegion } : null,
       timeoutMs:     inputTextTimeout      ? Number(inputTextTimeout.value)  : 10000,
       intervalMs:    inputTextInterval     ? Number(inputTextInterval.value) : 1000,
@@ -337,6 +341,11 @@ function fillScenarioForm(sc) {
     if (inputTextTimeout)       inputTextTimeout.value       = (typeof ts.timeoutMs === 'number') ? ts.timeoutMs : 10000;
     if (inputTextInterval)      inputTextInterval.value      = (typeof ts.intervalMs === 'number') ? ts.intervalMs : 1000;
     if (inputTextRepeat)        inputTextRepeat.value        = (typeof ts.repeatCount === 'number') ? ts.repeatCount : 1;
+    // Step 41 — restore ocrProvider; fall back to mock for legacy scenarios.
+    if (inputTextOcrProvider) {
+      var savedProv = (typeof ts.ocrProvider === 'string' && (ts.ocrProvider === 'mock' || ts.ocrProvider === 'tesseract')) ? ts.ocrProvider : 'mock';
+      inputTextOcrProvider.value = savedProv;
+    }
     _textClickFormRegion = (ts.region && typeof ts.region === 'object') ? { ...ts.region } : null;
     refreshTextClickRegionSummary();
     refreshTextClickPreviewWarning();
@@ -373,6 +382,8 @@ function clearScenarioForm() {
   if (inputTextTimeout)       inputTextTimeout.value       = '10000';
   if (inputTextInterval)      inputTextInterval.value      = '1000';
   if (inputTextRepeat)        inputTextRepeat.value        = '1';
+  // Step 41 — reset OCR provider to mock on every fresh form open.
+  if (inputTextOcrProvider)   inputTextOcrProvider.value   = 'mock';
   refreshTextClickRegionSummary();
   refreshTextClickPreviewWarning();
   syncScenarioFormSections();

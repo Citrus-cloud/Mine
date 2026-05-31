@@ -352,7 +352,7 @@ function renderTextClickOcrSettings() {
 // runTextClickTestFromForm()
 // ---------------------------------------------------------------------
 
-function runTextClickTestFromForm() {
+async function runTextClickTestFromForm() {
   if (_tcteIsRunning) return;
   if (typeof getScenarioFormData !== 'function') return;
   if (typeof buildTextClickTestInput !== 'function' ||
@@ -371,12 +371,14 @@ function runTextClickTestFromForm() {
   _tcteIsRunning = true;
   _tcteSetButtonsBusy(true);
   if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
-    addLogEntry(createLog('info', _tcteT('textClickTestStarted', 'Text click test started')));
+    addLogEntry(createLog('info',
+      _tcteT('textClickTestStarted', 'Text click test started') +
+      ' · provider=' + (input && input.ocrProvider ? input.ocrProvider : 'mock')));
   }
 
   var debug;
   try {
-    debug = runTextClickTest(input);
+    debug = await runTextClickTest(input);
   } catch (err) {
     debug = createTextClickDebugResult(null, input, {
       success:    false,

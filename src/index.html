@@ -207,6 +207,20 @@
               <span data-i18n="caseSensitive">Учитывать регистр</span>
             </label>
           </div>
+          <!-- Step 41: OCR provider select. Persisted per scenario.
+               Choosing "Tesseract OCR" does NOT auto-enable real
+               OCR — the click-engine still re-checks the runtime
+               feature flags. -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="ocrProviderSelect">OCR provider</label>
+            <select class="form-select" id="input-text-ocr-provider">
+              <option value="mock" selected data-i18n="useMockOcr">Use Mock OCR</option>
+              <option value="tesseract" data-i18n="useTesseractOcr">Use Tesseract OCR</option>
+            </select>
+            <div class="form-hint text-click-ocr-provider-hint" id="text-click-ocr-provider-hint" data-i18n="tesseractMustBeEnabled">
+              Tesseract must be enabled for this session before running.
+            </div>
+          </div>
           <div class="form-group form-group-region">
             <label class="form-label" data-i18n="usedRegion">Использованная область</label>
             <div class="text-click-region-summary" id="text-click-region-summary" data-i18n="noRegionSelected">
@@ -362,6 +376,12 @@
   <script src="image-click-test-ui.js"></script>
   <script src="ocr-mock-engine.js"></script>
   <script src="ocr-provider-interface.js"></script>
+  <!-- Step 40: best-effort load of tesseract.js if `npm install`
+       has been run. Falls back silently when the file is missing —
+       the provider's defensive engine resolver simply reports the
+       provider as unavailable and the mock continues to back every
+       OCR consumer. -->
+  <script src="../node_modules/tesseract.js/dist/tesseract.min.js"></script>
   <script src="tesseract-ocr-provider.js"></script>
   <script src="ocr-provider-registry.js"></script>
   <script src="ocr-ui.js"></script>

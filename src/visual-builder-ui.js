@@ -546,7 +546,14 @@ function _renderDraftPreview(state) {
   _draftRow(grid, _t('scenarioName'),     d.name);
   _draftRow(grid, _t('source'),           d.source);
   _draftRow(grid, _t('realClicksLabel'),  String(false));
-  if (d.type === 'text_click') _draftRow(grid, _t('realOcrLabel'), String(false));
+  // Step 41 — surface the OCR provider chosen for the draft and
+  // whether the source was real OCR. Both rows are visualisation
+  // only; the real-OCR check still happens at runtime.
+  if (d.type === 'text_click') {
+    var draftProv = (d.settings && d.settings.ocrProvider) ? d.settings.ocrProvider : 'mock';
+    _draftRow(grid, _t('ocrProviderUsed'), draftProv);
+    _draftRow(grid, _t('realOcrLabel'),    String(draftProv === 'tesseract'));
+  }
   _draftRow(grid, _t('settingsSummary'),  _formatDraftSettingsLine(d));
   card.appendChild(grid);
 
@@ -641,6 +648,13 @@ function _fillScenarioFormFromDraft(draft) {
     if (mm && s.matchMode)   mm.value = s.matchMode;
     var cs = document.getElementById('input-text-case-sensitive');
     if (cs) cs.checked = !!s.caseSensitive;
+    // Step 41 — propagate the draft's OCR provider into the form.
+    var prov = document.getElementById('input-text-ocr-provider');
+    if (prov && (s.ocrProvider === 'mock' || s.ocrProvider === 'tesseract')) {
+      prov.value = s.ocrProvider;
+    } else if (prov) {
+      prov.value = 'mock';
+    }
     _setVal('input-text-timeout',  s.timeoutMs);
     _setVal('input-text-interval', s.intervalMs);
     _setVal('input-text-repeat',   s.repeatCount);

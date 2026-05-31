@@ -651,6 +651,23 @@ async function runTextClickScenario(scenario, callbacks, options) {
     return _failOut('missing-target-text', 'Введите целевой текст.');
   }
 
+  // Step 41 — pick the OCR provider for this scenario. Default
+  // mock so existing scenarios keep working unchanged. If the
+  // scenario asks for `tesseract`, we still re-check the runtime
+  // feature flags below; without the runtime opt-in we refuse
+  // before any iteration runs.
+  var desiredOcrProvider = (sSettings.ocrProvider === 'tesseract') ? 'tesseract' : 'mock';
+  var ocrFeatureStatus = (typeof getOcrFeatureStatus === 'function') ? getOcrFeatureStatus() : null;
+  var realOcrEnabledForSession = !!(ocrFeatureStatus && ocrFeatureStatus.realOcrEnabledForSession);
+  if (desiredOcrProvider === 'tesseract' && !realOcrEnabledForSession) {
+    return _failOut('tesseract-disabled-by-flag',
+      'Tesseract OCR is disabled. Enable it for this session or use mock OCR.');
+  }
+  if (desiredOcrProvider === 'tesseract' && typeof recognizeTextWithTesseract !== 'function') {
+    return _failOut('tesseract-engine-unavailable',
+      'Tesseract OCR engine is not available in this build.');
+  }
+
   // 3. Screen preview must exist with an imageDataUrl in memory.
   //    (We don't read the imageDataUrl in the engine itself —
   //    the mock OCR engine only consumes metadata — but the user
@@ -677,7 +694,8 @@ async function runTextClickScenario(scenario, callbacks, options) {
 
       if (typeof recordAuditEvent === 'function') {
         recordAuditEvent('scenario.textClick.ocr.started', {
-          scenarioId: scenario.id, iteration: i, total: total
+          scenarioId: scenario.id, iteration: i, total: total,
+          ocrProvider: desiredOcrProvider
         });
       }
 
@@ -699,33 +717,77 @@ async function runTextClickScenario(scenario, callbacks, options) {
         return _failOut('ocr-input-failed', 'Не удалось построить OCR input.');
       }
 
-      // 5. Run mock OCR. The engine NEVER recognises real text —
-      //    it fabricates plausible blocks from preview metadata.
+      // 5. Run OCR. Branch on the desired provider:
+      //    - mock      → Step-32 deterministic engine.
+      //    - tesseract → Step-40 real provider, gated by runtime
+      //                  feature flags. Returns a unified envelope
+      //                  shape (`{ success, blocks, match, ... }`)
+      //                  via `recognizeTextWithTesseract`.
       var ocrResult;
-      try {
-        ocrResult = deps.runMockOcr(ocrInput);
-      } catch (err) {
-        return _failOut('ocr-engine-exception', 'Ошибка mock OCR: ' + (err && err.message ? err.message : 'unknown'));
+      var sourceIsRealOcr = false;
+      if (desiredOcrProvider === 'tesseract') {
+        try {
+          var tessRes = await recognizeTextWithTesseract({
+            imageDataUrl: preview.imageDataUrl,
+            region: sSettings.region || null,
+            options: {
+              language:      sSettings.language || 'ru+en',
+              targetText:    targetText,
+              matchMode:     sSettings.matchMode || 'contains',
+              caseSensitive: !!sSettings.caseSensitive
+            }
+          }, {});
+          if (!tessRes || tessRes.success === false) {
+            var tErr = tessRes && tessRes.error ? tessRes.error : 'tesseract-failed';
+            return _failOut('tesseract-ocr-failed-' + tErr, 'Real OCR failed: ' + tErr);
+          }
+          // Adapt to the legacy mock-engine shape.
+          ocrResult = {
+            success: true,
+            blocks: tessRes.blocks || [],
+            match: tessRes.match || null,
+            matched: !!tessRes.matched,
+            language: tessRes.language || sSettings.language,
+            matchMode: tessRes.matchMode || sSettings.matchMode,
+            durationMs: typeof tessRes.durationMs === 'number' ? tessRes.durationMs : 0,
+            providerId: 'tesseract',
+            realOcr: true
+          };
+          sourceIsRealOcr = true;
+        } catch (err) {
+          return _failOut('tesseract-engine-exception',
+            'Ошибка Tesseract OCR: ' + (err && err.message ? err.message : 'unknown'));
+        }
+      } else {
+        try {
+          ocrResult = deps.runMockOcr(ocrInput);
+        } catch (err) {
+          return _failOut('ocr-engine-exception', 'Ошибка mock OCR: ' + (err && err.message ? err.message : 'unknown'));
+        }
       }
 
       if (!ocrResult) {
-        return _failOut('ocr-engine-empty', 'Mock OCR не вернул результат.');
+        return _failOut('ocr-engine-empty',
+          desiredOcrProvider === 'tesseract' ? 'Tesseract OCR не вернул результат.' : 'Mock OCR не вернул результат.');
       }
 
       if (ocrResult.success === false) {
         var firstErr = (Array.isArray(ocrResult.errors) && ocrResult.errors.length > 0) ? ocrResult.errors[0] : 'ocr-failed';
-        return _failOut('ocr-validation-failed-' + firstErr, 'Mock OCR не выполнен: ' + firstErr);
+        return _failOut('ocr-validation-failed-' + firstErr,
+          (desiredOcrProvider === 'tesseract' ? 'Tesseract' : 'Mock') + ' OCR не выполнен: ' + firstErr);
       }
 
       if (typeof recordAuditEvent === 'function') {
         recordAuditEvent('scenario.textClick.ocr.completed', {
           scenarioId:    scenario.id, iteration: i, total: total,
+          ocrProvider:   desiredOcrProvider,
           blocksCount:   Array.isArray(ocrResult.blocks) ? ocrResult.blocks.length : 0,
           durationMs:    typeof ocrResult.durationMs === 'number' ? ocrResult.durationMs : 0,
           matched:       !!ocrResult.matched,
           confidence:    ocrResult.match && typeof ocrResult.match.confidence === 'number' ? ocrResult.match.confidence : null,
           language:      ocrResult.language || null,
-          matchMode:     ocrResult.matchMode || null
+          matchMode:     ocrResult.matchMode || null,
+          realOcr:       !!sourceIsRealOcr
         });
       }
 
@@ -737,7 +799,8 @@ async function runTextClickScenario(scenario, callbacks, options) {
             scenarioId: scenario.id, iteration: i, total: total,
             language:   sSettings.language,
             matchMode:  sSettings.matchMode,
-            hasRegion:  !!sSettings.region
+            hasRegion:  !!sSettings.region,
+            ocrProvider: desiredOcrProvider
           });
         }
         // Surface as an action with status no_match so the
@@ -750,8 +813,9 @@ async function runTextClickScenario(scenario, callbacks, options) {
           language:      sSettings.language,
           matchMode:     sSettings.matchMode,
           caseSensitive: !!sSettings.caseSensitive,
+          ocrProvider:   desiredOcrProvider,
           realClick:     false,
-          realOcr:       false,
+          realOcr:       !!sourceIsRealOcr,
           simulated:     true
         };
         if (cb.onAction) cb.onAction(noMatchAction, i, total);
@@ -762,15 +826,17 @@ async function runTextClickScenario(scenario, callbacks, options) {
 
       // 6. Build the simulated `text_click` action and route it
       //    through the action-pipeline. The pipeline will block
-      //    any caller that asks for `executionMode: 'real'`,
-      //    `realClick: true`, or `realOcr: true`.
+      //    any caller that asks for `realClick: true`. `realOcr`
+      //    is allowed as a SOURCE marker — the action stays
+      //    simulation-only either way.
       if (typeof recordAuditEvent === 'function') {
         recordAuditEvent('scenario.textClick.textFound', {
           scenarioId: scenario.id, iteration: i, total: total,
           confidence: match.confidence,
           targetX:    match.targetPoint ? match.targetPoint.x : null,
           targetY:    match.targetPoint ? match.targetPoint.y : null,
-          textLen:    typeof match.text === 'string' ? match.text.length : 0
+          textLen:    typeof match.text === 'string' ? match.text.length : 0,
+          ocrProvider: desiredOcrProvider
         });
       }
 
@@ -786,8 +852,9 @@ async function runTextClickScenario(scenario, callbacks, options) {
         language:      sSettings.language,
         matchMode:     sSettings.matchMode,
         caseSensitive: !!sSettings.caseSensitive,
+        ocrProvider:   desiredOcrProvider,
         realClick:     false,
-        realOcr:       false,
+        realOcr:       !!sourceIsRealOcr,
         simulated:     true
       };
 

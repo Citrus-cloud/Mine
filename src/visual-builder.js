@@ -226,11 +226,23 @@ function buildDraftPreviewFromState(state, type, options) {
     };
   } else {
     // text_click
+    // Step 41 — Visual Builder draft also remembers the OCR
+    // provider that backed the match. When the renderer state
+    // exposes an active provider via the registry we copy it; we
+    // never auto-enable real OCR. Default `mock`.
+    var draftProvider = 'mock';
+    if (typeof getActiveOcrProvider === 'function') {
+      try {
+        var ap = getActiveOcrProvider();
+        if (ap && ap.id === 'tesseract') draftProvider = 'tesseract';
+      } catch (_e) { /* swallow */ }
+    }
     settings = {
       targetText:    typeof visualCtx.matchedText === 'string' ? visualCtx.matchedText : '',
       language:      visualCtx.ocrLanguage || 'ru+en',
       matchMode:     visualCtx.matchMode   || 'contains',
       caseSensitive: typeof visualCtx.caseSensitive === 'boolean' ? visualCtx.caseSensitive : false,
+      ocrProvider:   draftProvider,
       region:        visualCtx.region || null,
       timeoutMs:  10000,
       intervalMs: 1000,

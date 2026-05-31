@@ -67,13 +67,17 @@ var _textClickTestDiagnostics = {
 // Stable error / warning IDs. The UI maps these to localised
 // strings via `i18n.js`.
 var TEXT_CLICK_TEST_ERROR_IDS = Object.freeze({
-  TargetTextRequired:        'targetTextRequired',
-  CaptureScreenPreviewFirst: 'captureScreenPreviewFirst',
-  InvalidRegion:             'invalidRegion',
-  InvalidOcrLanguage:        'invalidOcrLanguage',
-  InvalidMatchMode:          'invalidMatchMode',
-  MockOcrEngineUnavailable:  'mockOcrEngineUnavailable',
-  TargetTextNotFound:        'targetTextWasNotFound'
+  TargetTextRequired:               'targetTextRequired',
+  CaptureScreenPreviewFirst:        'captureScreenPreviewFirst',
+  InvalidRegion:                    'invalidRegion',
+  InvalidOcrLanguage:               'invalidOcrLanguage',
+  InvalidMatchMode:                 'invalidMatchMode',
+  MockOcrEngineUnavailable:         'mockOcrEngineUnavailable',
+  TargetTextNotFound:               'targetTextWasNotFound',
+  // Step 41 — extra error ids surfaced by the Tesseract path.
+  TesseractDisabledByFeatureFlag:   'tesseractDisabledByFeatureFlag',
+  TesseractEngineUnavailable:       'tesseractEngineUnavailable',
+  TesseractEngineThrew:              'tesseractEngineThrew'
 });
 
 // Allowed languages and match modes — kept in lock-step with
@@ -123,6 +127,11 @@ function buildTextClickTestInput(formData, appState) {
 
   return {
     scenarioDraftName: (fd.name ? String(fd.name).trim() : ''),
+    // Step 41 — propagate the desired OCR provider so the
+    // run helper can dispatch to either the mock engine or
+    // the Tesseract provider. The default is `mock` (matches
+    // the form's safe default).
+    ocrProvider: (fd.ocrProvider === 'tesseract') ? 'tesseract' : 'mock',
     screenPreview: preview ? {
       sourceId:   typeof preview.sourceId === 'string' ? preview.sourceId : '',
       name:       typeof preview.name === 'string' ? preview.name : '',
@@ -207,10 +216,19 @@ function validateTextClickTestInput(input) {
     }
   }
 
-  // Mock engine availability.
-  if (typeof createOcrInput !== 'function' ||
-      typeof runMockOcr     !== 'function') {
-    errors.push(TEXT_CLICK_TEST_ERROR_IDS.MockOcrEngineUnavailable);
+  // Engine availability. The mock path always needs `runMockOcr`;
+  // the Tesseract path needs `recognizeTextWithTesseract`. We
+  // accept either as long as one is present, so a build with only
+  // tesseract.js loaded would still validate.
+  var providerWanted = (input && input.ocrProvider === 'tesseract') ? 'tesseract' : 'mock';
+  if (providerWanted === 'tesseract') {
+    if (typeof recognizeTextWithTesseract !== 'function') {
+      errors.push(TEXT_CLICK_TEST_ERROR_IDS.TesseractEngineUnavailable);
+    }
+  } else {
+    if (typeof createOcrInput !== 'function' || typeof runMockOcr !== 'function') {
+      errors.push(TEXT_CLICK_TEST_ERROR_IDS.MockOcrEngineUnavailable);
+    }
   }
 
   // Dedupe.
@@ -234,8 +252,11 @@ function validateTextClickTestInput(input) {
 // for real execution. It only builds a `text_click` ACTION
 // PREVIEW (Step 32) for display.
 
-function runTextClickTest(input) {
+async function runTextClickTest(input) {
   var startedAt = Date.now();
+
+  // Step 41 — desired OCR provider for this test run. Default mock.
+  var desiredProvider = (input && input.ocrProvider === 'tesseract') ? 'tesseract' : 'mock';
 
   if (typeof recordAuditEvent === 'function') {
     recordAuditEvent('textClick.test.started', {
@@ -244,7 +265,8 @@ function runTextClickTest(input) {
       matchMode:    input && input.options ? input.options.matchMode : null,
       caseSensitive: !!(input && input.options && input.options.caseSensitive),
       targetTextLen: input && input.options && typeof input.options.targetText === 'string'
-        ? input.options.targetText.length : 0
+        ? input.options.targetText.length : 0,
+      ocrProvider:   desiredProvider
     });
   }
 
@@ -260,58 +282,169 @@ function runTextClickTest(input) {
     if (typeof recordAuditEvent === 'function') {
       recordAuditEvent('textClick.test.failed', {
         errorsCount: failedResult.errors.length,
-        durationMs:  failedResult.durationMs
+        durationMs:  failedResult.durationMs,
+        ocrProvider: desiredProvider
       });
     }
     return failedResult;
   }
 
-  // Run the mock engine. We assume `runMockOcr` is the Step-32
-  // helper loaded earlier in `index.html`. The mock engine never
-  // performs real OCR — it fabricates blocks from preview
-  // metadata.
-  var ocrInput;
-  try {
-    ocrInput = createOcrInput(
-      input.screenPreview,
-      input.region,
-      input.options
-    );
-  } catch (err) {
-    var inputErr = createTextClickDebugResult(null, input, {
-      success:    false,
-      errors:     [TEXT_CLICK_TEST_ERROR_IDS.MockOcrEngineUnavailable],
-      warnings:   [],
-      durationMs: Date.now() - startedAt
-    });
-    _commitTextClickTestResult(inputErr);
-    if (typeof recordAuditEvent === 'function') {
-      recordAuditEvent('textClick.test.failed', {
-        errorsCount: inputErr.errors.length,
-        durationMs:  inputErr.durationMs
+  // Step 41 — Tesseract path: re-check runtime feature flags. The
+  // user must have clicked "Enable Tesseract for this session" in
+  // the OCR tab. Without it we refuse cleanly.
+  if (desiredProvider === 'tesseract') {
+    var ocrFlags = (typeof getOcrFeatureStatus === 'function') ? getOcrFeatureStatus() : null;
+    var sessionEnabled = !!(ocrFlags && ocrFlags.realOcrEnabledForSession);
+    if (!sessionEnabled) {
+      var blockedResult = createTextClickDebugResult(null, input, {
+        success:    false,
+        errors:     [TEXT_CLICK_TEST_ERROR_IDS.TesseractDisabledByFeatureFlag || 'tesseractDisabledByFeatureFlag'],
+        warnings:   [],
+        durationMs: Date.now() - startedAt
       });
+      _commitTextClickTestResult(blockedResult);
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('textClick.test.failed', {
+          errorsCount: blockedResult.errors.length,
+          durationMs:  blockedResult.durationMs,
+          ocrProvider: desiredProvider,
+          reason: 'tesseractDisabledByFeatureFlag'
+        });
+      }
+      return blockedResult;
     }
-    return inputErr;
+    if (typeof recognizeTextWithTesseract !== 'function') {
+      var unavailableResult = createTextClickDebugResult(null, input, {
+        success:    false,
+        errors:     [TEXT_CLICK_TEST_ERROR_IDS.TesseractEngineUnavailable || 'tesseractEngineUnavailable'],
+        warnings:   [],
+        durationMs: Date.now() - startedAt
+      });
+      _commitTextClickTestResult(unavailableResult);
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('textClick.test.failed', {
+          errorsCount: unavailableResult.errors.length,
+          durationMs:  unavailableResult.durationMs,
+          ocrProvider: desiredProvider,
+          reason: 'tesseractEngineUnavailable'
+        });
+      }
+      return unavailableResult;
+    }
   }
 
+  // Run the OCR engine. Branch on the desired provider:
+  //   - mock      → Step-32 deterministic engine.
+  //   - tesseract → Step-40 real provider, gated by runtime flags.
+  // The mock engine never performs real OCR. The Tesseract path
+  // calls the real engine via `recognizeTextWithTesseract` and
+  // adapts its result to the legacy `runMockOcr` shape so the
+  // existing debug-result builder works unchanged.
   var ocrResult;
-  try {
-    ocrResult = runMockOcr(ocrInput);
-  } catch (err) {
-    var engineErr = createTextClickDebugResult(null, input, {
-      success:    false,
-      errors:     [TEXT_CLICK_TEST_ERROR_IDS.MockOcrEngineUnavailable],
-      warnings:   [],
-      durationMs: Date.now() - startedAt
-    });
-    _commitTextClickTestResult(engineErr);
-    if (typeof recordAuditEvent === 'function') {
-      recordAuditEvent('textClick.test.failed', {
-        errorsCount: engineErr.errors.length,
-        durationMs:  engineErr.durationMs
+
+  if (desiredProvider === 'tesseract') {
+    try {
+      var preview = input.screenPreview || {};
+      var tessRes = await recognizeTextWithTesseract({
+        imageDataUrl: typeof preview.imageDataUrl === 'string' ? preview.imageDataUrl : '',
+        region: input.region || null,
+        options: input.options || {}
+      }, {});
+      if (!tessRes || tessRes.success === false) {
+        var tErr = tessRes && tessRes.error ? tessRes.error : 'tesseractFailed';
+        var tessFailed = createTextClickDebugResult(null, input, {
+          success:    false,
+          errors:     [tErr],
+          warnings:   [],
+          durationMs: Date.now() - startedAt
+        });
+        _commitTextClickTestResult(tessFailed);
+        if (typeof recordAuditEvent === 'function') {
+          recordAuditEvent('textClick.test.failed', {
+            errorsCount: tessFailed.errors.length,
+            durationMs:  tessFailed.durationMs,
+            ocrProvider: desiredProvider
+          });
+        }
+        return tessFailed;
+      }
+      // Adapt the real-OCR envelope to the mock-engine shape used
+      // by `createTextClickDebugResult`.
+      ocrResult = {
+        success: true,
+        blocks: tessRes.blocks || [],
+        match: tessRes.match || null,
+        matched: !!tessRes.matched,
+        targetText: tessRes.targetText || (input.options && input.options.targetText) || '',
+        language: tessRes.language || (input.options && input.options.language) || 'ru+en',
+        matchMode: tessRes.matchMode || (input.options && input.options.matchMode) || 'contains',
+        caseSensitive: !!tessRes.caseSensitive,
+        durationMs: typeof tessRes.durationMs === 'number' ? tessRes.durationMs : (Date.now() - startedAt),
+        region: input.region || null
+      };
+    } catch (err) {
+      var tessThrew = createTextClickDebugResult(null, input, {
+        success:    false,
+        errors:     ['tesseractEngineThrew'],
+        warnings:   [],
+        durationMs: Date.now() - startedAt
       });
+      _commitTextClickTestResult(tessThrew);
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('textClick.test.failed', {
+          errorsCount: tessThrew.errors.length,
+          durationMs:  tessThrew.durationMs,
+          ocrProvider: desiredProvider
+        });
+      }
+      return tessThrew;
     }
-    return engineErr;
+  } else {
+    // Mock path (Step 32 — unchanged).
+    var ocrInput;
+    try {
+      ocrInput = createOcrInput(
+        input.screenPreview,
+        input.region,
+        input.options
+      );
+    } catch (err) {
+      var inputErr = createTextClickDebugResult(null, input, {
+        success:    false,
+        errors:     [TEXT_CLICK_TEST_ERROR_IDS.MockOcrEngineUnavailable],
+        warnings:   [],
+        durationMs: Date.now() - startedAt
+      });
+      _commitTextClickTestResult(inputErr);
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('textClick.test.failed', {
+          errorsCount: inputErr.errors.length,
+          durationMs:  inputErr.durationMs,
+          ocrProvider: desiredProvider
+        });
+      }
+      return inputErr;
+    }
+
+    try {
+      ocrResult = runMockOcr(ocrInput);
+    } catch (err) {
+      var engineErr = createTextClickDebugResult(null, input, {
+        success:    false,
+        errors:     [TEXT_CLICK_TEST_ERROR_IDS.MockOcrEngineUnavailable],
+        warnings:   [],
+        durationMs: Date.now() - startedAt
+      });
+      _commitTextClickTestResult(engineErr);
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('textClick.test.failed', {
+          errorsCount: engineErr.errors.length,
+          durationMs:  engineErr.durationMs,
+          ocrProvider: desiredProvider
+        });
+      }
+      return engineErr;
+    }
   }
 
   // Engine returned. Build the debug result.
@@ -321,6 +454,10 @@ function runTextClickTest(input) {
     warnings:   [],
     durationMs: Date.now() - startedAt
   });
+  // Stamp the source provider on the debug result so the UI can
+  // surface "OCR provider used: mock|tesseract".
+  debug.ocrProvider = desiredProvider;
+  debug.realOcr = (desiredProvider === 'tesseract');
 
   _commitTextClickTestResult(debug);
 
@@ -348,7 +485,8 @@ function runTextClickTest(input) {
           targetY:    debug.actionPreview.targetPoint ? debug.actionPreview.targetPoint.y : null,
           confidence: debug.actionPreview.confidence,
           realClick:  false,
-          realOcr:    false
+          realOcr:    debug.realOcr === true,
+          ocrProvider: debug.ocrProvider || 'mock'
         });
       }
     } else {
@@ -420,13 +558,18 @@ function createTextClickDebugResult(ocrResult, input, runMeta) {
   // Action preview — built ONLY when we have a real match. The
   // mock engine already builds it; we re-use it as-is. The UI
   // renders the preview through `<pre>.textContent`.
+  // Step 41 — when the OCR source was the Tesseract provider, the
+  // preview keeps `realClick: false` (no cursor work) but stamps
+  // `realOcr: true` so the consumer can see "this match came from
+  // a real OCR engine".
+  var providerForPreview = (inp && inp.ocrProvider === 'tesseract') ? 'tesseract' : 'mock';
+  var actionPreviewRealOcr = (providerForPreview === 'tesseract');
   var actionPreview = null;
   if (matched && ocrResult && ocrResult.actionPreview) {
     actionPreview = Object.assign({}, ocrResult.actionPreview);
-    // Defence-in-depth: stamp the simulation-only flags even if
-    // an upstream caller forgot.
     actionPreview.realClick = false;
-    actionPreview.realOcr   = false;
+    actionPreview.realOcr   = actionPreviewRealOcr;
+    actionPreview.ocrProvider = providerForPreview;
     if (!actionPreview.mode) actionPreview.mode = 'preview';
     if (!actionPreview.type) actionPreview.type = 'text_click';
   } else if (matched && match && targetPoint) {
@@ -443,8 +586,9 @@ function createTextClickDebugResult(ocrResult, input, runMeta) {
       matchMode:     inp.options ? inp.options.matchMode : 'contains',
       caseSensitive: !!(inp.options && inp.options.caseSensitive),
       usedRegion:    inp.region ? Object.assign({}, inp.region) : null,
+      ocrProvider:   providerForPreview,
       realClick:     false,
-      realOcr:       false,
+      realOcr:       actionPreviewRealOcr,
       note:          'Preview only. Real OCR is not connected. text_click action is not executed.'
     };
   }

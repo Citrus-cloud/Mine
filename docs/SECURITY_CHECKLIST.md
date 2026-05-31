@@ -1216,3 +1216,83 @@ See [`docs/TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md)
 for the full provider reference and
 [`docs/REAL_OCR_INTEGRATION_PLAN.md`](./REAL_OCR_INTEGRATION_PLAN.md)
 for the future-integration roadmap.
+
+
+
+## Real OCR UI activation + text_click / Visual Builder (Steps 40-41)
+
+Steps 40-41 land Phase 2 of Real OCR Integration. Real OCR can
+now run, but only after an explicit user action and only against
+the captured screen preview. The action pipeline still rejects
+every `realClick: true`.
+
+### Behavioural invariants
+- [x] **Base defaults unchanged.** `realOcr: false`,
+      `tesseractProvider: false`, `ocrMockProvider: true`,
+      `simulationOnly: true`, `realDesktopActions: false` in
+      the frozen `FEATURE_FLAGS`. There is no UI to flip any
+      of these in the source defaults.
+- [x] **Runtime overlay is restricted.** Only `realOcr` and
+      `tesseractProvider` are in `_RUNTIME_TOGGLABLE_FLAGS`.
+      Every other flag returns
+      `{ ok: false, error: 'flagNotRuntimeTogglable' }`. The
+      overlay lives in module-local memory and resets on
+      reload — it is NEVER persisted to settings, profiles,
+      scenarios, localStorage or disk.
+- [x] **Real OCR requires three explicit user actions:**
+      Enable Tesseract for this session → Use Tesseract OCR →
+      Run Real OCR. The Run Real OCR button stays disabled
+      until every condition is met.
+- [x] **Real OCR only analyses the captured preview.** No
+      live-screen loop. Tesseract.js receives the
+      screen-capture slice's `imageDataUrl`, optionally
+      cropped via canvas. Best-effort: falls back to the full
+      image when the canvas API rejects.
+- [x] **No real click.** The action pipeline rejects every
+      `realClick: true` regardless of source. `realOcr: true`
+      on a `text_click` action is a SOURCE marker only — the
+      simulated action keeps `realClick: false`.
+- [x] **text_click with tesseract refuses without session
+      opt-in.** click-engine returns the localised error
+      "Tesseract OCR is disabled. Enable it for this session
+      or use mock OCR." Test OCR returns the stable error
+      `tesseractDisabledByFeatureFlag`.
+- [x] **No new IPC channel.** `main.js` registers no
+      `ocr.real.*` handler. `preload.js` exposes no
+      `realOcr*` API. Tesseract.js runs entirely in the
+      renderer's worker.
+- [x] **No prohibited dependencies.** `package.json` still
+      declares zero of `tesseract-ocr`, `node-tesseract-ocr`,
+      `opencv*`, `sharp`, `jimp`, `pixelmatch`, `looks-same`,
+      `robotjs`, `nut-js`, `nutjs`, `@nut-tree/nut-js`,
+      `iohook`, `uiohook-napi`, `node-key-sender`.
+
+### Audit invariants
+- [x] **Allowlist extension.** `audit-events.js` adds 8 new
+      types: `ocr.real.enabledForSession`,
+      `ocr.real.disabled`, `ocr.real.started`,
+      `ocr.real.progress`, `ocr.real.completed`,
+      `ocr.real.failed`, `ocr.real.blocked`,
+      `ocr.provider.switched`. Payloads carry only flag
+      booleans, error counts, stable reason ids, durations,
+      and language strings — never the full target text,
+      never an `imageDataUrl`, never PII.
+
+### Diagnostics invariants
+- [x] **Real OCR diagnostics.** `Copy diagnostics` `Real OCR:`
+      line now consults the runtime overlay and surfaces
+      `realOcrRuntimeEnabled`, `lastRealOcrRunAt`,
+      `lastRealOcrDurationMs`, `lastRealOcrBlocksCount`,
+      `lastRealOcrMatched`, `tesseractReady`,
+      `realOcrAutoRun=false`, `realClick=false`.
+
+### Electron-security invariants (re-checked at Steps 40-41)
+- [x] `contextIsolation: true`.
+- [x] `nodeIntegration: false`.
+- [x] CSP unchanged: `default-src 'self'; script-src 'self';
+      style-src 'self';`.
+
+See [`docs/REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md) for the
+end-user manual and
+[`docs/TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md) for the
+provider reference.

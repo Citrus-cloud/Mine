@@ -111,6 +111,32 @@ function renderOcrTab() {
   runBtn.addEventListener('click', function (e) { e.preventDefault(); runMockOcrFromUi(); });
   btnRow.appendChild(runBtn);
 
+  // Step 40 — Run Real OCR (disabled unless every safety condition
+  // is met). The button NEVER auto-runs; it is enabled only when
+  // the user has clicked "Enable Tesseract for this session" in
+  // the provider control card AND switched the active provider to
+  // tesseract AND a screen preview is available.
+  var realBtn = document.createElement('button');
+  realBtn.type = 'button';
+  realBtn.id = 'ocr-run-real-button';
+  realBtn.className = 'btn btn-accent ocr-run-real-button';
+  realBtn.textContent = _ocrT('runRealOcr', 'Run Real OCR');
+  var ocrFlagsForBtn = (typeof getOcrFeatureStatus === 'function') ? getOcrFeatureStatus() : null;
+  var sessEnabledForBtn = !!(ocrFlagsForBtn && ocrFlagsForBtn.realOcrEnabledForSession);
+  var activeProvForBtn = (typeof getActiveOcrProvider === 'function' && getActiveOcrProvider())
+    ? getActiveOcrProvider().id : 'mock';
+  var stForBtn = (typeof getState === 'function') ? getState() : null;
+  var hasPreviewForBtn = !!(stForBtn && stForBtn.screenCapture && stForBtn.screenCapture.preview &&
+    typeof stForBtn.screenCapture.preview.imageDataUrl === 'string' &&
+    stForBtn.screenCapture.preview.imageDataUrl.indexOf('data:image/') === 0);
+  if (!sessEnabledForBtn || activeProvForBtn !== 'tesseract' || !hasPreviewForBtn) {
+    realBtn.disabled = true;
+    realBtn.title = _ocrT('tesseractMustBeEnabled',
+      'Tesseract must be enabled for this session before running.');
+  }
+  realBtn.addEventListener('click', function (e) { e.preventDefault(); runRealOcrFromUi(); });
+  btnRow.appendChild(realBtn);
+
   var clearBtn = document.createElement('button');
   clearBtn.type = 'button';
   clearBtn.className = 'btn btn-back ocr-clear-button';
@@ -139,6 +165,15 @@ function renderOcrTab() {
   btnRow.appendChild(openRegionBtn);
 
   c.appendChild(btnRow);
+
+  // Step 40 — OCR progress card (shown only while a Real OCR run
+  // is in flight). The card surfaces the current Tesseract.js
+  // status string plus a percentage bar. NEVER triggers OCR.
+  var progressCard = document.createElement('div');
+  progressCard.id = 'ocr-progress-card';
+  progressCard.className = 'adv-card ocr-progress-card view-hidden';
+  c.appendChild(progressCard);
+  renderOcrProgressCard();
 
   // 6. OCR result card + visual overlay + action preview.
   var resultHost = document.createElement('div');
@@ -390,6 +425,208 @@ function clearOcrResultUi() {
   }
   renderOcrResult();
   if (typeof renderState === 'function') renderState();
+}
+
+// =====================================================================
+// Step 40 — Real OCR run flow
+// =====================================================================
+//
+// Runs the Tesseract OCR provider against the current screen
+// preview using the OCR-tab settings. The function is async; it
+// drives the progress card, logs the result, and persists the
+// debug result through the existing OCR slice so the
+// Recognised-blocks list / overlay / action preview cards reuse
+// their renderers unchanged.
+//
+// Safety checks are layered:
+//   - the button is disabled until every condition is met;
+//   - the function re-checks `getOcrFeatureStatus()` on entry;
+//   - `recognizeTextWithTesseract` re-checks the same flags
+//     internally, so a buggy debug build with the button forced
+//     enabled still cannot run real OCR.
+
+var _realOcrRunInFlight = false;
+var _realOcrLastProgress = null;
+var _realOcrLastError = null;
+
+async function runRealOcrFromUi() {
+  if (_realOcrRunInFlight) return;
+  if (typeof recognizeTextWithTesseract !== 'function') return;
+
+  var ocrFlags = (typeof getOcrFeatureStatus === 'function') ? getOcrFeatureStatus() : null;
+  if (!ocrFlags || !ocrFlags.realOcrEnabledForSession) {
+    if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+      addLogEntry(createLog('warning',
+        _ocrT('tesseractMustBeEnabled',
+          'Tesseract must be enabled for this session before running.')));
+    }
+    return;
+  }
+
+  var input = buildOcrInputFromState();
+  if (!input) {
+    if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+      addLogEntry(createLog('error',
+        _ocrT('captureScreenPreviewFirst', 'Capture a screen preview first.')));
+    }
+    return;
+  }
+
+  var preview = (input && input.screenPreview) ? input.screenPreview : null;
+  var imageDataUrl = preview && typeof preview.imageDataUrl === 'string' ? preview.imageDataUrl : '';
+  if (!imageDataUrl) {
+    if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+      addLogEntry(createLog('error',
+        _ocrT('captureScreenPreviewFirst', 'Capture a screen preview first.')));
+    }
+    return;
+  }
+
+  _realOcrRunInFlight = true;
+  _realOcrLastProgress = { stage: '', progress: 0 };
+  _realOcrLastError = null;
+
+  if (typeof setOcrInput === 'function')   setOcrInput(input);
+  if (typeof setOcrRunning === 'function') setOcrRunning(true);
+  if (typeof setOcrError === 'function')   setOcrError(null);
+
+  var card = document.getElementById('ocr-progress-card');
+  if (card) card.classList.remove('view-hidden');
+  renderOcrProgressCard();
+
+  if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+    addLogEntry(createLog('info', _ocrT('realOcrCompleted', 'Real OCR completed').replace('completed', 'started')));
+  }
+
+  var realResult = null;
+  try {
+    realResult = await recognizeTextWithTesseract({
+      imageDataUrl: imageDataUrl,
+      region: input.region || null,
+      options: input.options || {}
+    }, {
+      onProgress: function (ev) {
+        _realOcrLastProgress = ev || { stage: '', progress: 0 };
+        renderOcrProgressCard();
+      }
+    });
+  } catch (e) {
+    _realOcrLastError = (e && e.message) ? String(e.message) : 'tesseractThrew';
+  }
+
+  _realOcrRunInFlight = false;
+  if (typeof setOcrRunning === 'function') setOcrRunning(false);
+
+  if (!realResult || realResult.success === false) {
+    var msg = _realOcrLastError ||
+      (realResult && realResult.error ? realResult.error : 'Real OCR failed');
+    if (typeof setOcrError === 'function') setOcrError(msg);
+    if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+      addLogEntry(createLog('error',
+        _ocrT('realOcrFailed', 'Real OCR failed') + ' · ' + msg));
+    }
+    if (card) {
+      var failTxt = card.querySelector('.ocr-progress-status');
+      if (failTxt) failTxt.textContent = _ocrT('realOcrFailed', 'Real OCR failed') + ' · ' + msg;
+    }
+    renderOcrProgressCard();
+    return;
+  }
+
+  // Build a mock-engine-shaped result so the existing OCR result
+  // panels render unchanged.
+  var resultForSlice = {
+    success: true,
+    blocks: realResult.blocks || [],
+    match: realResult.match || null,
+    matched: !!realResult.matched,
+    targetText: realResult.targetText || (input.options && input.options.targetText) || '',
+    language: realResult.language || (input.options && input.options.language) || 'ru+en',
+    matchMode: realResult.matchMode || (input.options && input.options.matchMode) || 'contains',
+    caseSensitive: !!realResult.caseSensitive,
+    region: realResult.region || input.region || null,
+    durationMs: typeof realResult.durationMs === 'number' ? realResult.durationMs : 0,
+    actionPreview: realResult.actionPreview || null,
+    providerId: 'tesseract',
+    realOcr: true,
+    mode: 'real-ocr'
+  };
+  if (typeof setOcrResult === 'function') setOcrResult(resultForSlice);
+  if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+    addLogEntry(createLog(realResult.matched ? 'success' : 'warning',
+      _ocrT('realOcrCompleted', 'Real OCR completed') + ' · ' +
+      (realResult.matched ? (realResult.match ? realResult.match.text : '') : _ocrT('targetTextNotFound', 'Target text not found.'))));
+  }
+
+  // Hide the progress card after a brief beat so the user can
+  // glance at the final percent.
+  setTimeout(function () {
+    if (card) card.classList.add('view-hidden');
+  }, 300);
+  renderOcrResult();
+  if (typeof renderState === 'function') renderState();
+}
+
+function renderOcrProgressCard() {
+  var card = document.getElementById('ocr-progress-card');
+  if (!card) return;
+  while (card.firstChild) card.removeChild(card.firstChild);
+
+  var title = document.createElement('div');
+  title.className = 'adv-card-title';
+  title.textContent = _ocrT('realOcrProgress', 'Real OCR progress');
+  card.appendChild(title);
+
+  var stageRow = document.createElement('div');
+  stageRow.className = 'ocr-progress-stage-row';
+  var stageLbl = document.createElement('span');
+  stageLbl.className = 'ocr-progress-stage-label';
+  stageLbl.textContent = _ocrT('ocrStage', 'OCR stage') + ':';
+  stageRow.appendChild(stageLbl);
+  var stageVal = document.createElement('span');
+  stageVal.className = 'ocr-progress-status';
+  var stage = _realOcrLastProgress && _realOcrLastProgress.stage ? _realOcrLastProgress.stage : '';
+  if (/loading.*language/i.test(stage)) {
+    stageVal.textContent = _ocrT('loadingOcrLanguage', 'Loading OCR language…');
+  } else if (/recognizing/i.test(stage)) {
+    stageVal.textContent = _ocrT('recognizingText', 'Recognizing text…');
+  } else if (stage) {
+    stageVal.textContent = stage;
+  } else {
+    stageVal.textContent = '—';
+  }
+  stageRow.appendChild(stageVal);
+  card.appendChild(stageRow);
+
+  var bar = document.createElement('div');
+  bar.className = 'ocr-progress-bar';
+  var fill = document.createElement('div');
+  fill.className = 'ocr-progress-fill';
+  var pct = (_realOcrLastProgress && typeof _realOcrLastProgress.progress === 'number')
+    ? Math.max(0, Math.min(1, _realOcrLastProgress.progress))
+    : 0;
+  fill.style.width = (pct * 100).toFixed(1) + '%';
+  bar.appendChild(fill);
+  card.appendChild(bar);
+
+  // Best-effort cancel button. Tesseract.js v5 cannot interrupt a
+  // running recognise — the button only marks the result as
+  // cancelled so the resolver drops it. Worker-based
+  // cancellation is documented as planned.
+  var cancelRow = document.createElement('div');
+  cancelRow.className = 'ocr-progress-cancel-row';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn btn-back ocr-progress-cancel-btn';
+  cancelBtn.textContent = _ocrT('ocrCancellationPlanned', 'Cancel (cancellation planned)');
+  cancelBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    if (typeof cancelCurrentTesseractRecognition === 'function') {
+      cancelCurrentTesseractRecognition();
+    }
+  });
+  cancelRow.appendChild(cancelBtn);
+  card.appendChild(cancelRow);
 }
 
 // ---------------------------------------------------------------------
@@ -961,6 +1198,125 @@ function renderOcrProviderStatusCard(host) {
   }
   btnRow.appendChild(inline);
   card.appendChild(btnRow);
+
+  // Step 40 — provider control buttons. Four explicit user
+  // actions: Use Mock OCR / Enable Tesseract for this session /
+  // Use Tesseract OCR / Disable Real OCR. Switching providers
+  // does NOT run OCR — recognition still requires the explicit
+  // Run-Real-OCR button below.
+  var ocrFlags = (typeof getOcrFeatureStatus === 'function') ? getOcrFeatureStatus() : null;
+  var sessionEnabled = !!(ocrFlags && ocrFlags.realOcrEnabledForSession);
+  var providerCtl = document.createElement('div');
+  providerCtl.className = 'ocr-provider-controls';
+
+  var useMockBtn = document.createElement('button');
+  useMockBtn.type = 'button';
+  useMockBtn.className = 'btn btn-secondary ocr-provider-controls-btn ocr-provider-use-mock-btn';
+  useMockBtn.textContent = _ocrT('useMockOcr', 'Use Mock OCR');
+  useMockBtn.addEventListener('click', function (e) { e.preventDefault(); _ocrUseProviderFromUi('mock'); });
+  providerCtl.appendChild(useMockBtn);
+
+  var enableBtn = document.createElement('button');
+  enableBtn.type = 'button';
+  enableBtn.className = 'btn btn-accent ocr-provider-controls-btn ocr-provider-enable-tesseract-btn';
+  enableBtn.id = 'ocr-provider-enable-tesseract-btn';
+  enableBtn.textContent = _ocrT('enableTesseractForSession', 'Enable Tesseract for this session');
+  if (sessionEnabled) enableBtn.disabled = true;
+  enableBtn.addEventListener('click', function (e) { e.preventDefault(); _ocrEnableTesseractForSessionFromUi(); });
+  providerCtl.appendChild(enableBtn);
+
+  var useTessBtn = document.createElement('button');
+  useTessBtn.type = 'button';
+  useTessBtn.className = 'btn btn-secondary ocr-provider-controls-btn ocr-provider-use-tesseract-btn';
+  useTessBtn.id = 'ocr-provider-use-tesseract-btn';
+  useTessBtn.textContent = _ocrT('useTesseractOcr', 'Use Tesseract OCR');
+  useTessBtn.title = sessionEnabled
+    ? ''
+    : _ocrT('tesseractMustBeEnabled', 'Tesseract must be enabled for this session before running.');
+  if (!sessionEnabled || !(tess && tess.engineLoadable)) {
+    useTessBtn.disabled = true;
+  }
+  useTessBtn.addEventListener('click', function (e) { e.preventDefault(); _ocrUseProviderFromUi('tesseract'); });
+  providerCtl.appendChild(useTessBtn);
+
+  var disableBtn = document.createElement('button');
+  disableBtn.type = 'button';
+  disableBtn.className = 'btn btn-back ocr-provider-controls-btn ocr-provider-disable-btn';
+  disableBtn.textContent = _ocrT('disableRealOcr', 'Disable Real OCR');
+  if (!sessionEnabled) disableBtn.disabled = true;
+  disableBtn.addEventListener('click', function (e) { e.preventDefault(); _ocrDisableRealOcrFromUi(); });
+  providerCtl.appendChild(disableBtn);
+
+  card.appendChild(providerCtl);
+}
+
+// Step 40 — explicit user actions for the OCR provider controls.
+
+function _ocrEnableTesseractForSessionFromUi() {
+  if (typeof setRuntimeFeatureFlag !== 'function') return;
+  // Confirm with the user — no real cursor work, no automatic
+  // execution. The dialog stays inside the renderer's `confirm`
+  // primitive (allowed under our CSP) and is the ONLY place
+  // where we trip the runtime overlay for real OCR.
+  var msg = _ocrT('realOcrMayBeSlower',
+    'Real OCR may be slower and uses local image processing. No clicks will be performed.');
+  var ok = true;
+  try { ok = window.confirm(msg + '\n\n' + _ocrT('noClicksWillBePerformed', 'No clicks will be performed.')); }
+  catch (e) { ok = true; }
+  if (!ok) return;
+  var r1 = setRuntimeFeatureFlag('realOcr', true);
+  var r2 = setRuntimeFeatureFlag('tesseractProvider', true);
+  if (r1.ok && r2.ok) {
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('ocr.real.enabledForSession', { source: 'ocr-tab-button' });
+    }
+    if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+      addLogEntry(createLog('info', _ocrT('enableTesseractForSession', 'Enable Tesseract for this session')));
+    }
+  }
+  renderOcrTab();
+}
+
+function _ocrDisableRealOcrFromUi() {
+  if (typeof resetRuntimeFeatureFlags !== 'function') return;
+  resetRuntimeFeatureFlags();
+  // Always switch the active provider back to mock.
+  if (typeof setActiveOcrProvider === 'function') {
+    var sw = setActiveOcrProvider('mock');
+    if (sw && sw.ok && typeof recordAuditEvent === 'function') {
+      recordAuditEvent('ocr.provider.switched', { from: 'tesseract', to: 'mock', source: 'ocr-tab-disable' });
+    }
+  }
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('ocr.real.disabled', { source: 'ocr-tab-button' });
+  }
+  if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+    addLogEntry(createLog('info', _ocrT('disableRealOcr', 'Disable Real OCR')));
+  }
+  renderOcrTab();
+}
+
+function _ocrUseProviderFromUi(id) {
+  if (typeof setActiveOcrProvider !== 'function') return;
+  var prev = (typeof getActiveOcrProvider === 'function' && getActiveOcrProvider()) ? getActiveOcrProvider().id : null;
+  var sw = setActiveOcrProvider(id);
+  if (!sw || !sw.ok) {
+    if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+      var msg = (sw && sw.error && sw.error.message) ? sw.error.message :
+                _ocrT('tesseractMustBeEnabled', 'Tesseract must be enabled for this session before running.');
+      addLogEntry(createLog('warning', msg));
+    }
+    renderOcrProviderStatusCard();
+    return;
+  }
+  if (typeof recordAuditEvent === 'function' && prev !== id) {
+    recordAuditEvent('ocr.provider.switched', { from: prev || 'unknown', to: id, source: 'ocr-tab-button' });
+  }
+  if (typeof addLogEntry === 'function' && typeof createLog === 'function') {
+    addLogEntry(createLog('info',
+      (id === 'tesseract' ? _ocrT('useTesseractOcr', 'Use Tesseract OCR') : _ocrT('useMockOcr', 'Use Mock OCR'))));
+  }
+  renderOcrTab();
 }
 
 function runTesseractReadinessCheckFromUi() {

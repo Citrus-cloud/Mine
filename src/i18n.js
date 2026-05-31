@@ -899,7 +899,34 @@ const translations = {
     tesseractDependencyPresent: "Зависимость Tesseract присутствует",
     tesseractReadinessCheckCompleted: "Проверка готовности Tesseract завершена",
     tesseractReadinessCheckFailed: "Проверка готовности Tesseract не прошла",
-    tesseractEngineNotLoadable: "Движок Tesseract не загружается в этой сборке"
+    tesseractEngineNotLoadable: "Движок Tesseract не загружается в этой сборке",
+
+    // Steps 40-41 — Real OCR UI Activation + text_click / Visual
+    // Builder real OCR support.
+    enableTesseractForSession: "Включить Tesseract для этой сессии",
+    disableRealOcr: "Отключить реальный OCR",
+    useMockOcr: "Использовать Mock OCR",
+    useTesseractOcr: "Использовать Tesseract OCR",
+    runRealOcr: "Запустить настоящий OCR",
+    realOcrProgress: "Прогресс настоящего OCR",
+    ocrStage: "Этап OCR",
+    loadingOcrLanguage: "Загрузка языка OCR…",
+    recognizingText: "Распознавание текста…",
+    realOcrCompleted: "Настоящий OCR завершён",
+    realOcrFailed: "Настоящий OCR не выполнен",
+    realOcrBlocked: "Настоящий OCR заблокирован",
+    tesseractMustBeEnabled: "Tesseract должен быть включён для этой сессии перед запуском.",
+    ocrProviderSelect: "OCR-провайдер",
+    selectedOcrProvider: "Выбранный OCR-провайдер",
+    testWithSelectedProvider: "Тест с выбранным провайдером",
+    realOcrMayBeSlower: "Настоящий OCR может работать медленнее и использует локальную обработку изображений.",
+    noClicksWillBePerformed: "Никаких кликов выполняться не будет.",
+    ocrCancellationPlanned: "Отмена (отмена в планах)",
+    languageDataFailed: "Не удалось загрузить языковые данные OCR.",
+    targetTextNotFound: "Целевой текст не найден.",
+    ocrProviderUsed: "Использованный OCR-провайдер",
+    realOcrSource: "Источник настоящего OCR",
+    textClickStillSimulationOnly: "text_click по-прежнему simulation-only — реальных кликов нет."
   },
   en: {
     // Main screen
@@ -1799,7 +1826,34 @@ const translations = {
     tesseractDependencyPresent: "Tesseract dependency present",
     tesseractReadinessCheckCompleted: "Tesseract readiness check completed",
     tesseractReadinessCheckFailed: "Tesseract readiness check failed",
-    tesseractEngineNotLoadable: "Tesseract engine is not loadable in this build"
+    tesseractEngineNotLoadable: "Tesseract engine is not loadable in this build",
+
+    // Steps 40-41 — Real OCR UI Activation + text_click / Visual
+    // Builder real OCR support.
+    enableTesseractForSession: "Enable Tesseract for this session",
+    disableRealOcr: "Disable Real OCR",
+    useMockOcr: "Use Mock OCR",
+    useTesseractOcr: "Use Tesseract OCR",
+    runRealOcr: "Run Real OCR",
+    realOcrProgress: "Real OCR progress",
+    ocrStage: "OCR stage",
+    loadingOcrLanguage: "Loading OCR language…",
+    recognizingText: "Recognizing text…",
+    realOcrCompleted: "Real OCR completed",
+    realOcrFailed: "Real OCR failed",
+    realOcrBlocked: "Real OCR blocked",
+    tesseractMustBeEnabled: "Tesseract must be enabled for this session before running.",
+    ocrProviderSelect: "OCR provider",
+    selectedOcrProvider: "Selected OCR provider",
+    testWithSelectedProvider: "Test with selected provider",
+    realOcrMayBeSlower: "Real OCR may be slower and uses local image processing.",
+    noClicksWillBePerformed: "No clicks will be performed.",
+    ocrCancellationPlanned: "Cancel (cancellation planned)",
+    languageDataFailed: "Failed to load OCR language data.",
+    targetTextNotFound: "Target text not found.",
+    ocrProviderUsed: "OCR provider used",
+    realOcrSource: "Real OCR source",
+    textClickStillSimulationOnly: "text_click is still simulation-only — no real clicks."
   }
 };
 

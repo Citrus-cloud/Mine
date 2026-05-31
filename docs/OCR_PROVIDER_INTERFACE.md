@@ -331,3 +331,29 @@ an `imageDataUrl`, never PII.
 module-local engine reference at Step 39. Step 40+ replaces
 the body with the real worker termination call once the
 worker is live.
+
+
+
+## Step 40-41 — active provider selection at runtime
+
+`setActiveOcrProvider('tesseract')` is now reachable from the UI
+through the **Use Tesseract OCR** button on the OCR provider
+status card. The registry still gates the switch by:
+- `realOcr === true` (runtime overlay, session-only),
+- `tesseractProvider === true` (runtime overlay, session-only),
+- `simulationOnly === false` (always false in production
+  builds — keeps the umbrella safety stance).
+- the engine resolver reports `engineLoadable: true`.
+
+Without the runtime overlay the registry returns
+`{ ok: false, error: { id: 'realOcrBlocked' } }` and emits
+`ocr.provider.selection.blocked` plus `ocr.provider.real.unavailable`.
+The active provider stays `mock`.
+
+`runActiveOcrProvider(input)` is unchanged at Step 40-41 — it is
+still a thin dispatcher. Real OCR call sites use
+`recognizeTextWithTesseract` directly and re-check the flags
+themselves.
+
+For the runtime user manual see
+[`REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md).

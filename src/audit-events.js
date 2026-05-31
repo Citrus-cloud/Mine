@@ -157,6 +157,19 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   OcrTesseractBlockedByFeatureFlag: 'ocr.tesseract.blockedByFeatureFlag',
   OcrProviderTesseractDetected:     'ocr.provider.tesseract.detected',
   OcrProviderTesseractUnavailable:  'ocr.provider.tesseract.unavailable',
+  // Step 40 — Real OCR UI activation. Session-scoped runtime
+  // toggle, manual recognise calls, provider switch, progress and
+  // outcome telemetry. Payloads carry only flag booleans, stable
+  // reason ids, durations, counts, language strings — never the
+  // full target text, never an `imageDataUrl`, never PII.
+  OcrRealEnabledForSession:         'ocr.real.enabledForSession',
+  OcrRealDisabled:                  'ocr.real.disabled',
+  OcrRealStarted:                   'ocr.real.started',
+  OcrRealProgress:                  'ocr.real.progress',
+  OcrRealCompleted:                 'ocr.real.completed',
+  OcrRealFailed:                    'ocr.real.failed',
+  OcrRealBlocked:                   'ocr.real.blocked',
+  OcrProviderSwitched:              'ocr.provider.switched',
   TextClickPreviewCreated:          'text.click.preview.created',
   // Step 33: text_click scenario type. Payloads carry only ids,
   // numeric metadata (confidence, target X / Y, durationMs),

@@ -72,17 +72,18 @@ function validateAction(action) {
     return { ok: true };
   }
   if (action.type === 'text_click') {
-    // Step 33: text_click is simulation-only. Both realClick and
-    // realOcr must be falsy. Any caller that asks for either is
-    // rejected outright. The action-pipeline will record an
-    // `action.textClick.realBlocked` audit event with the exact
-    // reason via blockRealAction() when this validator returns
-    // ok: false.
+    // Step 33: text_click is simulation-only. `realClick: true` is
+    // ALWAYS rejected — the action pipeline never lets the cursor
+    // move.
+    //
+    // Step 41 — relaxation: `realOcr: true` is now ALLOWED on
+    // text_click actions. It is a source marker that records
+    // "this match came from a real OCR engine (Tesseract)", not a
+    // real-input flag. The action stays a simulation: there is no
+    // real click, no real keyboard, no real cursor movement. The
+    // simulate path still emits `realClick: false`.
     if (action.realClick === true) {
       return { ok: false, error: 'text_click realClick=true is blocked' };
-    }
-    if (action.realOcr === true) {
-      return { ok: false, error: 'text_click realOcr=true is blocked' };
     }
     if (typeof action.text !== 'string' || action.text.length === 0) {
       return { ok: false, error: 'text_click requires text' };
@@ -164,6 +165,11 @@ function executeSimulatedAction(action, context) {
       // and numeric metadata — never the full target text, never
       // an imageDataUrl. We surface `textLen` so the timeline
       // shows a usable diagnostic without exposing PII.
+      // Step 41: `realOcr` is preserved as a source marker
+      // (`realOcr: true` means the match came from a real OCR
+      // backend, e.g. Tesseract). It does NOT change the
+      // simulation guarantee — `realClick` is still `false` and
+      // no cursor moves.
       recordAuditEvent('action.textClick.simulated', {
         scenarioId: context && context.scenarioId,
         actionType: action.type,
@@ -172,7 +178,8 @@ function executeSimulatedAction(action, context) {
         targetY:    action.targetPoint ? action.targetPoint.y : null,
         confidence: typeof action.confidence === 'number' ? action.confidence : null,
         realClick:  false,
-        realOcr:    false
+        realOcr:    action.realOcr === true,
+        ocrProvider: typeof action.ocrProvider === 'string' ? action.ocrProvider : null
       });
     } else {
       recordAuditEvent('action.simulated', {

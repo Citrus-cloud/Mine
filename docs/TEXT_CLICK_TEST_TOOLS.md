@@ -273,3 +273,28 @@ expose any real-OCR toggle. The diagnostics card and the
 `realOcr=false`, `realClick=false`, `tesseractAvailable=false`.
 The panel still never clicks, never persists screenshots, and
 never runs real OCR.
+
+
+
+## Test with selected provider (Steps 40-41)
+
+Test OCR now reads the form's `OCR provider` select and
+dispatches accordingly:
+
+- **Mock provider** — Step-32 deterministic engine
+  (`runMockOcr`). Behaviour unchanged.
+- **Tesseract provider** — async path through
+  `recognizeTextWithTesseract`. The Test OCR helper
+  re-checks the runtime overlay first; without the
+  session opt-in it returns the stable error
+  `tesseractDisabledByFeatureFlag` and the panel surfaces a
+  warning.
+
+The debug result and the action preview both stamp
+`ocrProvider` and `realOcr` so the panel can show
+"OCR provider used: mock | tesseract". The action preview
+keeps `realClick: false` regardless of source. Test OCR
+never executes the action — it is a preview only.
+
+For the runtime user manual see
+[`REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md).
