@@ -887,3 +887,21 @@ but each is part of the manual QA briefing in
 ### 21.7 Mobile version is not implemented
 - ClickFlow ships only as an Electron desktop app (Windows,
   macOS, Linux). An Android / iOS port is out of scope.
+
+
+
+## Real desktop adapter prototype (Step 47)
+
+- The real adapter supports **coordinate click only**, and only as an
+  experimental, session-only mode that is disabled by default.
+- It is **unavailable** unless an optional native backend
+  (`@nut-tree/nut-js`/`nut-js`) is installed. That dependency is not
+  declared at Step 47, so on a stock checkout real clicks cannot fire —
+  only dry-run and the safety blocking can be demonstrated.
+- `image_click` and `text_click` real modes are **not** implemented.
+  Keyboard, scroll, hotkeys, loops, and background/hidden automation
+  are out of scope.
+- One real click per explicit confirmation; no repeating loop.
+- Prohibited forever: captcha/anti-bot bypass, ad-click automation,
+  banking/payment/protected-app automation, hidden device control,
+  keyloggers/input hooks.

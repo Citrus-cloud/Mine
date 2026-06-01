@@ -903,6 +903,92 @@ testing/release milestone.
 добавлялись. realDesktopActions=false, simulationOnly=true,
 contextIsolation: true, nodeIntegration: false, CSP не ослаблен.**
 
+**Step 46 — Desktop v1 architecture and safety foundation:** начало
+полноценной ветки Desktop v1. **Реальные системные клики НЕ
+добавлены.** Заложена архитектурная и safety-основа:
+- v1 product plan, implementation checklist, full product branch plan
+  (`docs/V1_DESKTOP_PRODUCT_PLAN.md`,
+  `docs/V1_IMPLEMENTATION_CHECKLIST.md`,
+  `docs/FULL_PRODUCT_BRANCH_PLAN.md`);
+- v1 safety docs (`docs/V1_SAFETY_MODEL.md`,
+  `docs/V1_ACTION_PIPELINE.md`,
+  `docs/V1_REAL_ADAPTER_REQUIREMENTS.md`, `docs/V1_AUDIT_LOGS.md`,
+  `docs/V1_PERMISSION_MODEL.md`, `docs/V1_RELEASE_CRITERIA.md`) +
+  `docs/NUTJS_INTEGRATION_PLAN.md` (план, без зависимости);
+- action pipeline приведён к v1-ready виду: таксономия типов
+  (`click` / `image_click` / `text_click` / `wait` активны;
+  `move_mouse` / `scroll` / `key_press` / `hotkey` planned/disabled),
+  единый формат результата (`normalizeActionResult`), многоусловный
+  real-mode gate (`evaluateRealModeReadiness`), который **блокирует по
+  умолчанию**;
+- persistent audit log manager (`src/audit-log-manager.js`,
+  in-memory + redaction, file persistence prepared);
+- permission manager (`src/permission-manager.js`, только
+  status/guidance);
+- real desktop adapter interface (`src/real-desktop-adapter-interface.js`)
+  — контракт, но всё real execution **disabled** (каждый
+  `executeReal*` блокирует);
+- Safety Center UI (`src/safety-center-ui.js`): текущий режим,
+  V1 readiness, permissions checklist, audit logs (фильтры / refresh /
+  clear / export), кнопки Run safety check / Export diagnostics;
+- миграция scenario metadata к `version: 1` + run summaries (последние
+  10 запусков, `realActionsPerformed: false`);
+- i18n RU/EN расширен, smoke-check расширен Step-46 инвариантами.
+**realDesktopActions=false, simulationOnly=true,
+contextIsolation: true, nodeIntegration: false, CSP не ослаблен,
+no robotjs/nut.js/iohook/uiohook-napi/opencv.**
+
+**Step 47 — Real desktop adapter prototype behind hard safety gate:**
+добавлен первый **прототип** реального desktop-адаптера — **только
+coordinate click**, **выключен по умолчанию**, **session-only**, **один
+клик на одно подтверждение**.
+- main-process модуль `main/real-desktop-adapter.js` (renderer не имеет
+  прямого доступа; три узких IPC-канала: status / availability /
+  execute-coordinate-click; нет универсального «run any action»);
+- опциональный backend `@nut-tree/nut-js` / `nut-js` **не добавлен в
+  зависимости** на этом шаге — adapter сообщает *unavailable* и
+  блокирует реальный клик, пока backend не установлен (require в
+  try/catch, сборка не ломается);
+- feature flags: `realCoordinateClick` / `realImageClick` /
+  `realTextClick` добавлены (все false); runtime-toggle разрешён только
+  для `realDesktopActions` и `realCoordinateClick` (session-only, не
+  сохраняется, сбрасывается при перезапуске);
+- action-pipeline: `canExecuteRealDesktopAction` /
+  `executeRealDesktopAction` / `createRealActionBlockedResult` — real
+  mode **заблокирован по умолчанию**, image/text/keyboard real —
+  заблокированы;
+- safety-gates: строгий `getRealDesktopActionGateStatus` (default
+  deny);
+- Safety Center: карточка **Experimental Real Coordinate Click**
+  (risk warning, dry-run, enable-for-session с модальным подтверждением
+  «I understand…», Test real coordinate click с отдельным
+  подтверждением, диагностика прототипа); кнопки image_click/text_click
+  real **отсутствуют**;
+- audit events для real adapter; permission/diagnostics расширены;
+  REAL_ADAPTER_PROTOTYPE.md + REAL_CLICK_TESTING_GUIDE.md; i18n RU/EN.
+**По умолчанию реальные клики выключены; image/text real clicks
+disabled; keyboard automation отсутствует; запрещены
+captcha/anti-bot/ad/banking/protected/hidden. realDesktopActions=false
+по умолчанию, simulationOnly=true, contextIsolation: true,
+nodeIntegration: false, CSP не ослаблен.**
+
+### Towards Desktop v1
+
+- `v0.2.0-smart-beta` опубликован / готов как Smart Desktop Beta
+  pre-release (simulation-only).
+- **Desktop v1 foundation начат (Step 46).** Это архитектура и
+  безопасность; **реальные клики ещё не реализованы и остаются
+  отключёнными до прохождения safety review.**
+- Реальный адаптер будет разрабатываться в отдельной ветке
+  `v1-desktop` за feature flag; `main` / `v0.2.x` остаются
+  simulation-only (см. `docs/FULL_PRODUCT_BRANCH_PLAN.md`).
+- Android — позже отдельной веткой `v1-android-research`; iOS
+  ограничен системой. Никаких captcha / anti-bot / ad-click /
+  banking automation.
+- Открыть в приложении: **Advanced → Центр безопасности (Safety
+  Center)** — текущий режим, V1 readiness, permissions checklist,
+  audit logs.
+
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
 (файлы, security-флаги, CSP, package.json wiring, отсутствие

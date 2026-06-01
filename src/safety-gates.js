@@ -224,3 +224,87 @@ function validateActionSafety(action /*, settings */) {
   }
   return _fail(['Unsupported action type: ' + action.type]);
 }
+
+
+
+// =====================================================================
+// Step 47 — Real desktop action gate (coordinate click prototype).
+// ---------------------------------------------------------------------
+// Strict, defense-in-depth gate evaluated before any real coordinate
+// click. It is INDEPENDENT of the main-process re-validation (which is
+// the real authority). Default: NOT allowed. Every requirement must be
+// met. "When in doubt, block."
+//
+// Inputs (all optional; missing ones count as not-ready):
+//   settings      — app settings (reads settings.safety.*)
+//   flags         — merged feature flags (getRealAdapterFeatureStatus)
+//   permissions   — permission checklist array (getPermissionChecklist)
+//   adapterStatus — { available: bool } from the real adapter
+//
+// Returns: { allowed: bool, reasons: [], warnings: [], requirements: [] }
+// =====================================================================
+function getRealDesktopActionGateStatus(settings, flags, permissions, adapterStatus) {
+  var s = (settings && typeof settings === 'object') ? settings : {};
+  var safety = (s.safety && typeof s.safety === 'object') ? s.safety : {};
+  var f = (flags && typeof flags === 'object')
+    ? flags
+    : ((typeof getRealAdapterFeatureStatus === 'function') ? getRealAdapterFeatureStatus() : {});
+  var perms = Array.isArray(permissions) ? permissions : null;
+  var adapter = (adapterStatus && typeof adapterStatus === 'object') ? adapterStatus : {};
+
+  var requirements = [];
+  var reasons = [];
+  var warnings = [];
+
+  function req(key, met) {
+    requirements.push({ key: key, met: met === true });
+    if (met !== true) reasons.push(key);
+  }
+
+  // 1) Session umbrella flag enabled.
+  req('realDesktopActionsEnabled', f.realDesktopActions === true);
+  // 2) Per-action coordinate-click flag enabled.
+  req('realCoordinateClickEnabled', f.realCoordinateClick === true);
+  // 3) Safe mode on.
+  req('safeMode', safety.safeMode === true);
+  // 4) Emergency stop enabled.
+  req('emergencyStop', safety.emergencyStopEnabled === true);
+  // 5) Audit logs available.
+  var auditReady = (typeof getAuditLogManagerStatus === 'function');
+  req('auditLogsEnabled', auditReady);
+  // 6) Adapter available (native backend loaded in main).
+  req('adapterAvailable', adapter.available === true || adapter.adapterAvailable === true);
+  // 7) Permissions: no required-for-real-mode item is "missing".
+  if (perms) {
+    var anyMissing = perms.some(function (p) {
+      return p && p.requiredForRealMode === true && p.status === 'missing';
+    });
+    req('permissionsNotMissing', !anyMissing);
+  } else {
+    // No checklist supplied — treat as unknown, do not block solely on
+    // this, but surface a warning and a requirement marker.
+    requirements.push({ key: 'permissionsNotMissing', met: false });
+    warnings.push('permissionsUnknown');
+  }
+  // 8) image/text real clicks must stay disabled (hard invariant).
+  req('imageTextRealClickDisabled', f.realImageClick !== true && f.realTextClick !== true);
+  // 9) keyboard actions must stay disabled (hard invariant).
+  req('keyboardActionsDisabled', f.keyboardActions !== true);
+
+  // Soft requirements that are PER-ACTION (not part of allowed-state):
+  //   - explicit user confirmation is required for each test click;
+  //   - only `type: "click"` is accepted;
+  //   - no protected / banking / captcha / ad targets;
+  //   - active window should be visible (not auto-detectable here).
+  warnings.push('userConfirmationRequiredPerClick');
+  warnings.push('coordinateClickOnly');
+  warnings.push('noProtectedApps');
+
+  var allowed = reasons.length === 0;
+  return {
+    allowed: allowed,
+    reasons: reasons,
+    warnings: warnings,
+    requirements: requirements
+  };
+}

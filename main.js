@@ -2,6 +2,10 @@ const { app, BrowserWindow, ipcMain, dialog, globalShortcut, Menu, Tray, nativeI
 const path = require('path');
 const fs = require('fs');
 const templateAssets = require('./main/template-assets');
+// Step 47 — Real desktop adapter prototype (main process only). The
+// module loads its optional native backend defensively; if the backend
+// is absent the adapter simply reports unavailable.
+const realDesktopAdapter = require('./main/real-desktop-adapter');
 
 // ---------------------------------------------------------------------
 // Step 25 — Screen Capture Foundation
@@ -642,6 +646,14 @@ templateAssets.registerTemplateAssetsIpc({
   getMainWindow: function () { return mainWindow; },
   getUserDataPath: function () { return app.getPath('userData'); }
 });
+
+// --- IPC: Real Desktop Adapter prototype (Step 47) ---
+// Three narrow channels only: status, availability, and a
+// coordinate-click executor that re-validates the full hard context in
+// the main process. There is no generic "run any action" channel. The
+// adapter is unavailable (and every execute call blocks) unless an
+// optional native backend is installed — it is not at Step 47.
+realDesktopAdapter.registerRealDesktopAdapterIpc({ ipcMain: ipcMain });
 
 // --- Lifecycle ---
 app.whenReady().then(() => {

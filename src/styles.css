@@ -4745,3 +4745,49 @@ body {
     width: 100%;
   }
 }
+
+
+/* Step 46 — Safety Center */
+.sc-header { margin-bottom: 12px; }
+.sc-title { margin: 0 0 4px; font-size: 18px; }
+.sc-subtitle { margin: 0; color: #b00020; font-weight: 600; font-size: 13px; }
+.sc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.sc-btn { padding: 6px 12px; border: 1px solid #c9ced6; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
+.sc-btn:hover { background: #f0f2f5; }
+.sc-btn-small { padding: 4px 8px; font-size: 12px; }
+.sc-card { border: 1px solid #e1e4e8; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: #fff; }
+.sc-card-title { margin: 0 0 10px; font-size: 14px; font-weight: 700; }
+.sc-row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 13px; border-bottom: 1px solid #f2f3f5; }
+.sc-row-label { color: #333; }
+.sc-row-value { font-weight: 600; }
+.sc-ok { color: #1a7f37; }
+.sc-warn { color: #9a6700; }
+.sc-bad { color: #b00020; }
+.sc-perm-item { padding: 4px 0; }
+.sc-perm-guidance { margin: 2px 0 0; color: #5a6068; font-size: 12px; }
+.sc-audit-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.sc-audit-filter { padding: 4px 6px; border: 1px solid #c9ced6; border-radius: 6px; font-size: 12px; }
+.sc-audit-list { max-height: 320px; overflow-y: auto; }
+.sc-audit-item { padding: 6px 8px; border-left: 3px solid #c9ced6; margin-bottom: 6px; background: #fafbfc; border-radius: 0 6px 6px 0; }
+.sc-audit-item.sc-sev-error { border-left-color: #b00020; }
+.sc-audit-item.sc-sev-warning { border-left-color: #9a6700; }
+.sc-audit-item.sc-sev-info { border-left-color: #1a7f37; }
+.sc-audit-item-head { display: flex; justify-content: space-between; gap: 8px; }
+.sc-audit-type { font-family: monospace; font-size: 12px; }
+.sc-audit-sev { font-size: 11px; text-transform: uppercase; color: #5a6068; }
+.sc-audit-item-meta { display: flex; gap: 10px; color: #5a6068; font-size: 11px; margin-top: 2px; }
+.sc-empty { color: #5a6068; font-size: 13px; font-style: italic; }
+
+
+/* Step 47 — Real adapter prototype + confirmation modal */
+.sc-btn-danger { border-color: #b00020; color: #b00020; }
+.sc-btn-danger:hover { background: #fdecef; }
+.sc-real-inputs { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; align-items: flex-end; }
+.sc-real-input { display: flex; flex-direction: column; font-size: 12px; gap: 2px; }
+.sc-real-num { padding: 4px 6px; border: 1px solid #c9ced6; border-radius: 6px; font-size: 13px; width: 90px; }
+.sc-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.sc-modal { background: #fff; border-radius: 10px; padding: 18px 20px; max-width: 460px; width: calc(100% - 40px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+.sc-modal-title { margin: 0 0 10px; font-size: 16px; }
+.sc-modal-line { margin: 4px 0; font-size: 13px; color: #333; }
+.sc-modal-check { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; font-size: 13px; }
+.sc-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }

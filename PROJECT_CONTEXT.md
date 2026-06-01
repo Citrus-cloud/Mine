@@ -7,6 +7,126 @@
 
 ## Текущий шаг
 
+**Шаг 47 завершён.** Real desktop adapter prototype behind hard safety
+gate. Текущий шаг — **47**.
+
+Главное: **реальные клики выключены по умолчанию.** Добавлен первый
+*прототип* реального desktop-адаптера — **только coordinate click**,
+**session-only**, **один клик на одно подтверждение**. ClickFlow по
+умолчанию остаётся simulation-only.
+
+Что сделано на Step 47:
+
+- `main/real-desktop-adapter.js` (main process only): функции
+  `getRealDesktopAdapterInfo`, `checkRealDesktopAdapterAvailability`,
+  `validateRealClickAction`, `executeRealCoordinateClick`,
+  `blockRealDesktopAction`, `getRealDesktopAdapterStatus` +
+  `registerRealDesktopAdapterIpc`. Опциональный backend
+  `@nut-tree/nut-js` / `nut-js` грузится через try/catch; **в
+  зависимости не добавлен** (network INTEGRATIONS_ONLY) → adapter
+  unavailable, сборка не ломается;
+- IPC (main.js): `real-adapter:get-status`,
+  `real-adapter:check-availability`,
+  `real-adapter:execute-coordinate-click` (требует полный hard context,
+  re-validation в main, нет универсального action-runner);
+- preload: `realAdapter.getStatus/checkAvailability/executeCoordinateClick`;
+- feature-flags: `realCoordinateClick`/`realImageClick`/`realTextClick`
+  (все false); whitelist runtime-toggle = `realOcr`, `tesseractProvider`,
+  `realDesktopActions`, `realCoordinateClick`; image/text/keyboard real
+  **нельзя** включить runtime; session-flags не сохраняются;
+- action-pipeline: `canExecuteRealDesktopAction`,
+  `executeRealDesktopAction`, `createRealActionBlockedResult` — real
+  mode blocked by default, делегирует в main;
+- safety-gates: `getRealDesktopActionGateStatus` (default deny);
+- Safety Center UI: карточка Experimental Real Coordinate Click,
+  enable-for-session с подтверждением, dry-run, test real click с
+  отдельным подтверждением, диагностика прототипа; без
+  image/text real;
+- audit events Step 47; permission-manager + diagnostics расширены;
+  i18n RU/EN; docs REAL_ADAPTER_PROTOTYPE.md +
+  REAL_CLICK_TESTING_GUIDE.md + обновления v1/security/limitations;
+- smoke-check расширен Step-47 инвариантами.
+
+Безопасность (по умолчанию):
+
+- real clicks disabled by default; realCoordinateClick disabled;
+- image_click / text_click real mode blocked; keyboard automation
+  отсутствует; scroll/hotkey real — нет;
+- один real click требует явного подтверждения; action-pipeline и main
+  блокируют real без gates;
+- real click не происходит при smoke / при старте приложения;
+- нет robotjs / iohook / uiohook-napi / opencv;
+- `realDesktopActions: false`, `simulationOnly: true`,
+  `contextIsolation: true`, `nodeIntegration: false`, CSP не ослаблен;
+- renderer без прямого Node-доступа; screenshots/base64 не пишутся в
+  scenarios/settings/audit logs.
+
+**Next step:** при наличии безопасного backend — расширять только за
+полным safety review (`docs/REAL_ACTIONS_GO_NO_GO.md`,
+`docs/V1_RELEASE_CRITERIA.md`): persisted audit, confirmation hardening,
+target allow/deny-list; image/text real остаются вне scope до отдельного
+ревью.
+
+## Шаг 46 (Desktop v1 foundation)
+
+**Шаг 46 завершён.** Desktop v1 architecture + safety foundation.
+Проект **перешёл к Desktop v1 foundation**. Текущий шаг — **46**.
+
+Главное: **реальные системные клики НЕ добавлены. real clicks still
+disabled.** ClickFlow остаётся simulation-only.
+
+Что сделано на Step 46:
+
+- начата полноценная ветка разработки Desktop v1 (архитектура +
+  безопасность, без реального ввода);
+- созданы v1-документы: `docs/V1_DESKTOP_PRODUCT_PLAN.md`,
+  `docs/V1_IMPLEMENTATION_CHECKLIST.md`,
+  `docs/FULL_PRODUCT_BRANCH_PLAN.md`, `docs/V1_SAFETY_MODEL.md`,
+  `docs/V1_ACTION_PIPELINE.md`, `docs/V1_REAL_ADAPTER_REQUIREMENTS.md`,
+  `docs/V1_AUDIT_LOGS.md`, `docs/V1_PERMISSION_MODEL.md`,
+  `docs/V1_RELEASE_CRITERIA.md`, `docs/NUTJS_INTEGRATION_PLAN.md`
+  (nut.js — только план, без зависимости);
+- action pipeline приведён к v1-ready: таксономия типов
+  (`click`/`image_click`/`text_click`/`wait` активны;
+  `move_mouse`/`scroll`/`key_press`/`hotkey` planned/disabled), единый
+  формат результата, многоусловный real-mode gate
+  (`evaluateRealModeReadiness`), который блокирует real по умолчанию;
+- добавлен persistent audit log manager (`src/audit-log-manager.js`):
+  in-memory + строгая redaction (без screenshot/base64/imageDataUrl/
+  путей/PII), file persistence prepared/planned;
+- добавлен permission manager (`src/permission-manager.js`): только
+  status/guidance, без кнопки включения real;
+- добавлен real desktop adapter interface
+  (`src/real-desktop-adapter-interface.js`): контракт, но real
+  execution disabled — каждый `executeReal*` блокирует;
+- добавлен Safety Center UI (`src/safety-center-ui.js`) и вкладка
+  Advanced → Safety Center: current mode, V1 readiness, permissions
+  checklist, audit logs (фильтры/refresh/clear/export), кнопки Run
+  safety check / Export diagnostics; **без Enable Real Clicks**;
+- миграция scenario metadata к `version: 1`
+  (`migrateScenarioToV1` / `migrateScenariosToV1`, аддитивно, старые
+  сценарии не ломаются) + run summaries (последние 10,
+  `realActionsPerformed: false`);
+- i18n RU/EN расширен, smoke-check расширен Step-46 инвариантами.
+
+Безопасность (без изменений):
+
+- real desktop clicks disabled; action-pipeline блокирует
+  `realClick: true` и любой real-mode запрос по умолчанию;
+- image_click / text_click simulation-only; OCR не кликает;
+- Visual Builder drafts only; presets не запускаются автоматически;
+- `realDesktopActions: false`, `simulationOnly: true`;
+- `contextIsolation: true`, `nodeIntegration: false`, CSP не ослаблен;
+- нет robotjs / nut.js / iohook / uiohook-napi / opencv; renderer не
+  получает прямой Node-доступ; screenshot не сохраняется на диск;
+  imageDataUrl не сохраняется в scenario/settings.
+
+**Next step:** real adapter prototype за hard gate в отдельной ветке
+`v1-desktop` — только после прохождения safety review
+(`docs/REAL_ACTIONS_GO_NO_GO.md`, `docs/V1_RELEASE_CRITERIA.md`).
+
+## Шаг 45 (post-release cleanup)
+
 **Шаг 45 завершён.** Post-release cleanup and feedback tracking.
 Проект дошёл до **шага 45**. ClickFlow остаётся simulation-only
 desktop MVP.

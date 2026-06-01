@@ -321,6 +321,7 @@
         <button class="adv-tab" data-advanced-tab="logs" data-i18n="tabLogs">Логи</button>
         <button class="adv-tab" data-advanced-tab="settings" data-i18n="tabSettings">Настройки</button>
         <button class="adv-tab" data-advanced-tab="safety" data-i18n="tabSafety">Безопасность</button>
+        <button class="adv-tab" data-advanced-tab="safetyCenter" data-i18n="safetyCenter">Центр безопасности</button>
         <button class="adv-tab" data-advanced-tab="screenCapture" data-i18n="screenCapture">Захват экрана</button>
         <button class="adv-tab" data-advanced-tab="templates" data-i18n="templates">Шаблоны</button>
         <button class="adv-tab" data-advanced-tab="templateMatching" data-i18n="templateMatching">Поиск шаблона</button>
@@ -335,6 +336,7 @@
         <section id="advanced-tab-logs" class="adv-section adv-section-hidden"></section>
         <section id="advanced-tab-settings" class="adv-section adv-section-hidden"></section>
         <section id="advanced-tab-safety" class="adv-section adv-section-hidden"></section>
+        <section id="advanced-tab-safetyCenter" class="adv-section adv-section-hidden"></section>
         <section id="advanced-tab-screenCapture" class="adv-section adv-section-hidden"></section>
         <section id="advanced-tab-templates" class="adv-section adv-section-hidden"></section>
         <section id="advanced-tab-templateMatching" class="adv-section adv-section-hidden"></section>
@@ -391,6 +393,14 @@
   <script src="visual-builder.js"></script>
   <script src="visual-builder-ui.js"></script>
   <script src="smart-beta-health.js"></script>
+  <!-- Step 46: Desktop v1 architecture + safety foundation. These
+       modules are renderer-only logic; they perform no real input and
+       must load BEFORE safety-center-ui.js (which consumes them) and
+       BEFORE renderer.js. -->
+  <script src="audit-log-manager.js"></script>
+  <script src="permission-manager.js"></script>
+  <script src="real-desktop-adapter-interface.js"></script>
+  <script src="safety-center-ui.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

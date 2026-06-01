@@ -225,7 +225,39 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   ScenarioPresetFormOpened:           'scenarioPreset.form.opened',
   VisualBuilderOverlayChanged:        'visualBuilder.overlay.changed',
   VisualBuilderRequirementMissing:    'visualBuilder.requirement.missing',
-  VisualBuilderDraftPreviewCreated:   'visualBuilder.draft.preview.created'
+  VisualBuilderDraftPreviewCreated:   'visualBuilder.draft.preview.created',
+  // Step 46 — Desktop v1 architecture + safety foundation.
+  // Architecture/readiness events only. Payloads carry only stable
+  // string ids, short reasons, counts, and flag booleans — never the
+  // full target text, never an `imageDataUrl`, never a screenshot,
+  // never a filesystem path, never PII. NONE of these events
+  // represent a real action: real desktop actions remain disabled.
+  RealAdapterBlocked:                 'real.adapter.blocked',
+  RealAdapterAvailabilityChecked:     'real.adapter.availability.checked',
+  PermissionsRefreshed:               'permission.refreshed',
+  PermissionMissing:                  'permission.missing',
+  SafetyCenterCheckRun:               'safetyCenter.check.run',
+  SafetyCenterDiagnosticsExported:    'safetyCenter.diagnostics.exported',
+  AuditLogExported:                   'audit.log.exported',
+  AuditLogCleared:                    'audit.log.cleared',
+  ScenarioRunSummaryRecorded:         'scenario.runSummary.recorded',
+  // Step 47 — Real desktop adapter prototype (coordinate click behind a
+  // hard gate). Payloads carry only stable string ids, short reasons,
+  // numeric coordinates, and the mouse button — never screenshots,
+  // never base64, never filesystem paths, never PII. The mere presence
+  // of these events does NOT mean a real click happened: most are
+  // availability/confirmation/block events.
+  RealAdapterAvailabilityChecked2:    'realAdapter.availability.checked',
+  RealAdapterSessionEnabled:          'realAdapter.session.enabled',
+  RealAdapterSessionDisabled:         'realAdapter.session.disabled',
+  RealActionConfirmationRequested:    'realAction.confirmation.requested',
+  RealActionConfirmationAccepted:     'realAction.confirmation.accepted',
+  RealActionConfirmationCancelled:    'realAction.confirmation.cancelled',
+  RealActionCoordinateRequested:      'realAction.coordinate.requested',
+  RealActionCoordinateExecuted:       'realAction.coordinate.executed',
+  RealActionCoordinateBlocked:        'realAction.coordinate.blocked',
+  RealActionDisallowedBlocked:        'realAction.disallowed.blocked',
+  RealActionSafetyGateFailed:         'realAction.safetyGate.failed'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

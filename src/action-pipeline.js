@@ -24,9 +24,36 @@ function getActionPipelineStatus() {
     simulationOnly: true,
     realActionsEnabled: false,
     realActionsImplemented: false,
-    pipelineReady: true
+    pipelineReady: true,
+    // Step 46 — Desktop v1 readiness metadata.
+    pipelineVersion: 1,
+    realModeBlockedByDefault: true,
+    activeActionTypes: ['click', 'image_click', 'text_click', 'wait'],
+    plannedActionTypes: ['move_mouse', 'scroll', 'key_press', 'hotkey']
   };
 }
+
+// --- Step 46: action-type taxonomy. ---
+// Describes every action type the v1 pipeline knows about. "active"
+// types are simulated; "planned" types validate as known but are
+// never executed (a request to run one is blocked). This powers the
+// V1 readiness UI without enabling anything.
+function getActionTypeInfo() {
+  return [
+    { type: 'click',       state: 'active',  realInput: false },
+    { type: 'image_click', state: 'active',  realInput: false },
+    { type: 'text_click',  state: 'active',  realInput: false },
+    { type: 'wait',        state: 'active',  realInput: false },
+    { type: 'move_mouse',  state: 'planned', realInput: false },
+    { type: 'scroll',      state: 'planned', realInput: false },
+    { type: 'key_press',   state: 'planned', realInput: false },
+    { type: 'hotkey',      state: 'planned', realInput: false }
+  ];
+}
+
+// Planned/disabled action types: recognized by the taxonomy but never
+// executed in this build.
+var PIPELINE_PLANNED_ACTION_TYPES = ['move_mouse', 'scroll', 'key_press', 'hotkey'];
 
 // --- Action validation (single source of truth). ---
 // The Action schema for 0.1.x is:
@@ -100,6 +127,20 @@ function validateAction(action) {
     }
     return { ok: true };
   }
+  if (action.type === 'wait') {
+    // Step 46: non-input delay action. Simulation-only and never
+    // touches the OS. durationMs must be a finite non-negative number.
+    if (typeof action.durationMs !== 'number' || !isFinite(action.durationMs) || action.durationMs < 0) {
+      return { ok: false, error: 'wait requires a non-negative durationMs' };
+    }
+    return { ok: true };
+  }
+  // Step 46: planned/disabled action types are recognized so the UI
+  // and diagnostics can list them, but they never execute. Validation
+  // reports them as not-yet-available rather than "unsupported".
+  if (PIPELINE_PLANNED_ACTION_TYPES.indexOf(action.type) !== -1) {
+    return { ok: false, error: 'Action type "' + action.type + '" is planned and disabled in this build' };
+  }
   return { ok: false, error: 'Unsupported action type: ' + action.type };
 }
 
@@ -134,9 +175,69 @@ function evaluateActionSafety(action, context) {
   return { ok: true, errors: [], warnings: [] };
 }
 
+// --- Step 46: real-mode readiness evaluation. ---
+// Returns the list of preconditions that are NOT met for real mode.
+// Real mode needs ALL of: realDesktopActions flag, explicit user
+// confirmation, safeMode, emergency stop enabled, audit logs enabled,
+// adapter available, and a passed permission check. In this build at
+// least the flag, the adapter, and the safety review are always unmet,
+// so the list is never empty.
+function evaluateRealModeReadiness(context) {
+  var ctx = (context && typeof context === 'object') ? context : {};
+  var settings = (ctx.settings && typeof ctx.settings === 'object') ? ctx.settings : {};
+  var safety = (settings.safety && typeof settings.safety === 'object') ? settings.safety : {};
+  var ff = (typeof getFeatureFlags === 'function') ? getFeatureFlags() : {};
+  var unmet = [];
+
+  if (ff.realDesktopActions !== true) unmet.push('realDesktopActionsFlag');
+  if (ff.simulationOnly !== false)    unmet.push('simulationOnlyOff');
+  if (ctx.userConfirmed !== true)     unmet.push('userConfirmation');
+  if (safety.safeMode !== true)       unmet.push('safeMode');
+  if (safety.emergencyStopEnabled !== true) unmet.push('emergencyStop');
+  if (ctx.auditLogsEnabled !== true)  unmet.push('auditLogsEnabled');
+
+  // Adapter availability — must be a registered, available real adapter.
+  var adapterAvailable = false;
+  try {
+    if (typeof isRealAdapterAvailable === 'function') adapterAvailable = isRealAdapterAvailable();
+  } catch (err) { adapterAvailable = false; }
+  if (!adapterAvailable) unmet.push('adapterAvailable');
+
+  if (ctx.permissionCheckPassed !== true) unmet.push('permissionCheck');
+
+  // The safety review gate is independent of runtime context and is
+  // never satisfied in this build.
+  unmet.push('safetyReviewPassed');
+
+  return { ready: false, unmet: unmet };
+}
+
 // --- Hard gate. ALWAYS false on this step. ---
-function canExecuteRealAction(/* context */) {
-  return false;
+// Built on top of evaluateRealModeReadiness so the reason is auditable,
+// but the safety-review precondition guarantees it can never return
+// true in this build.
+function canExecuteRealAction(context) {
+  var readiness = evaluateRealModeReadiness(context);
+  return readiness.ready === true && readiness.unmet.length === 0;
+}
+
+// --- Step 46: uniform result normalizer. ---
+// Guarantees every pipeline result carries the full v1 shape so
+// callers never branch on mode to read a field. `realAction` is forced
+// to false — there is no real-action code path in this build.
+function normalizeActionResult(result) {
+  var r = (result && typeof result === 'object') ? result : {};
+  var mode = (r.mode === 'real' || r.mode === 'dry-run') ? r.mode : 'simulation';
+  return {
+    success:    r.success === true || r.ok === true,
+    mode:       mode,
+    simulated:  (typeof r.simulated === 'boolean') ? r.simulated : (mode === 'simulation'),
+    realAction: false,
+    action:     (r.action !== undefined) ? r.action : null,
+    result:     (r.result !== undefined) ? r.result : null,
+    error:      (typeof r.error === 'string') ? r.error : null,
+    timestamp:  (typeof r.timestamp === 'string') ? r.timestamp : new Date().toISOString()
+  };
 }
 
 // --- Simulated execution path. ---
@@ -320,6 +421,12 @@ function executeAction(action, context) {
       if (active && (active.realActions === true || active.type === 'real')) {
         return blockRealAction(action, context);
       }
+      // Step 46: wait is a non-input delay action. It bypasses the
+      // mock adapter (which only understands `click`) and goes through
+      // the legacy simulate path. It never touches the OS.
+      if (action.type === 'wait') {
+        return executeSimulatedAction(action, context);
+      }
       // Step 30: image_click does NOT go through the mock adapter.
       // The mock adapter only knows about `click` actions and would
       // throw on any other type. We emit `action.imageClick.simulated`
@@ -375,4 +482,150 @@ function executeAction(action, context) {
   // Anything that is not the simulate path is blocked. This includes
   // an explicit "real" request and any unknown / typo'd mode name.
   return blockRealAction(action, context);
+}
+
+
+
+// =====================================================================
+// Step 47 — Real desktop action path (renderer side).
+// ---------------------------------------------------------------------
+// The renderer NEVER performs real input. These helpers decide whether
+// a real coordinate click is permitted (pre-flight) and, if so, hand
+// the request to the main-process adapter through the narrow preload
+// bridge `window.clickflow.realAdapter.executeCoordinateClick`. The
+// main process re-validates the FULL hard context and is the actual
+// gate. Real mode is BLOCKED BY DEFAULT.
+//
+// Only `type:"click"` with `realClick:true` is ever eligible.
+// image_click / text_click / keyboard / scroll real modes are always
+// blocked here, before any IPC call is made.
+// =====================================================================
+
+function createRealActionBlockedResult(reason, action) {
+  return {
+    success: false,
+    mode: 'real',
+    simulated: false,
+    realAction: false,
+    blocked: true,
+    action: action || null,
+    result: null,
+    error: (typeof reason === 'string' && reason.length > 0)
+      ? reason
+      : 'Real desktop action blocked',
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Synchronous pre-flight gate. Returns true ONLY if every renderer-side
+// precondition holds. The authoritative gate still runs in main.
+function canExecuteRealDesktopAction(action, context) {
+  var ctx = (context && typeof context === 'object') ? context : {};
+
+  // Coordinate click only. Everything else is blocked outright.
+  if (!action || action.type !== 'click') return false;
+  if (action.realClick !== true) return false;
+  if (typeof action.x !== 'number' || action.x < 0) return false;
+  if (typeof action.y !== 'number' || action.y < 0) return false;
+  if (['left', 'right', 'middle'].indexOf(action.button) === -1) return false;
+
+  // Session feature gate: BOTH umbrella + coordinate-click flags must
+  // be enabled for this session.
+  var ff = (typeof getRealAdapterFeatureStatus === 'function')
+    ? getRealAdapterFeatureStatus()
+    : { realCoordinateClickSessionEnabled: false };
+  if (ff.realCoordinateClickSessionEnabled !== true) return false;
+  // image/text real clicks can never be enabled.
+  if (ff.realImageClick === true || ff.realTextClick === true) return false;
+
+  // Explicit per-call context. "When in doubt, block."
+  if (ctx.userConfirmed !== true) return false;
+  if (ctx.safetyCheckPassed !== true) return false;
+  if (ctx.emergencyStopReady !== true) return false;
+  if (ctx.auditLogsEnabled !== true) return false;
+  if (ctx.sessionRealModeEnabled !== true) return false;
+
+  return true;
+}
+
+// Async. Delegates to the main-process adapter. Always returns a
+// normalized result object. Never performs input in the renderer.
+async function executeRealDesktopAction(action, context) {
+  // Block every non-coordinate-click real action before any IPC.
+  if (!action || action.type !== 'click') {
+    var blk = createRealActionBlockedResult(
+      'Real mode supports coordinate click only (image_click / text_click / keyboard are disabled)',
+      action
+    );
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('realAction.coordinate.blocked', {
+        actionType: action && action.type, reason: 'unsupportedRealActionType'
+      });
+    }
+    return blk;
+  }
+
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('realAction.coordinate.requested', {
+      scenarioId: context && context.scenarioId, actionType: 'click'
+    });
+  }
+
+  if (!canExecuteRealDesktopAction(action, context)) {
+    var blocked = createRealActionBlockedResult(
+      'Real coordinate click blocked by safety gate (session disabled or confirmation/gates missing)',
+      action
+    );
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('realAction.coordinate.blocked', {
+        scenarioId: context && context.scenarioId, reason: 'safetyGate'
+      });
+    }
+    return blocked;
+  }
+
+  // Pre-flight passed — hand off to main. Main re-validates everything.
+  try {
+    if (!(typeof window !== 'undefined' && window.clickflow &&
+          window.clickflow.realAdapter &&
+          typeof window.clickflow.realAdapter.executeCoordinateClick === 'function')) {
+      var noBridge = createRealActionBlockedResult('Real adapter bridge unavailable', action);
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('realAction.coordinate.blocked', { reason: 'bridgeUnavailable' });
+      }
+      return noBridge;
+    }
+    var res = await window.clickflow.realAdapter.executeCoordinateClick(action, {
+      userConfirmed: context.userConfirmed === true,
+      safetyCheckPassed: context.safetyCheckPassed === true,
+      emergencyStopReady: context.emergencyStopReady === true,
+      auditLogsEnabled: context.auditLogsEnabled === true,
+      sessionRealModeEnabled: context.sessionRealModeEnabled === true,
+      scenarioId: context.scenarioId || null
+    });
+    // Return the main-process result verbatim. We do NOT run it through
+    // normalizeActionResult() because that helper force-zeroes
+    // `realAction` (a Step-46 simulation-only invariant); a genuine,
+    // gated, confirmed real click must be allowed to report
+    // realAction:true so diagnostics and the UI are truthful.
+    if (typeof recordAuditEvent === 'function') {
+      if (res && res.success && res.realAction === true && !res.blocked) {
+        recordAuditEvent('realAction.coordinate.executed', {
+          scenarioId: context && context.scenarioId, actionType: 'click'
+        });
+      } else {
+        recordAuditEvent('realAction.coordinate.blocked', {
+          scenarioId: context && context.scenarioId,
+          reason: (res && res.error) ? 'mainBlocked' : 'unknown'
+        });
+      }
+    }
+    return res;
+  } catch (err) {
+    var failed = createRealActionBlockedResult('Real coordinate click failed', action);
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('realAction.coordinate.blocked', { reason: 'exception' });
+    }
+    return failed;
+  }
 }

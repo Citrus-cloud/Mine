@@ -465,10 +465,39 @@ function startScenario() {
       }
     },
     onProgress: (c, total) => { setExecutionProgress(c, total); renderState(); },
-    onStop: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('warning', t('logScenarioStopped'))); window.clickflow.system.setExecutionRunning(false); renderState(); },
-    onComplete: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); addLogEntry(createLog('success', t('logScenarioComplete'))); window.clickflow.system.setExecutionRunning(false); if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.completed', { scenarioId: sc.id }); renderState(); },
+    onStop: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); recordScenarioRunSummary(sc, 'stopped', null); addLogEntry(createLog('warning', t('logScenarioStopped'))); window.clickflow.system.setExecutionRunning(false); renderState(); },
+    onComplete: () => { setRunning(false); setExecutionRunning(false); setExecutionFinishedAt(new Date().toISOString()); recordScenarioRunSummary(sc, 'completed', getState().execution.lastAction); addLogEntry(createLog('success', t('logScenarioComplete'))); window.clickflow.system.setExecutionRunning(false); if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.completed', { scenarioId: sc.id }); renderState(); },
     onError: (msg) => { setRunning(false); setExecutionRunning(false); reportError({ code: 'EXEC_ERROR', message: msg }, 'click-engine'); addLogEntry(createLog('error', msg)); window.clickflow.system.setExecutionRunning(false); if (typeof recordAuditEvent === 'function') recordAuditEvent('safety.validation.failed', { scenarioId: sc.id, reason: msg }); renderState(); }
   }, { safety: state.settings.safety });
+}
+
+// Step 46: record a scenario run summary (renderer memory only). Plain
+// metadata only — no screenshots, no imageDataUrl, no full OCR text.
+// realActionsPerformed is always false (simulation-only build).
+function recordScenarioRunSummary(sc, status, lastAction) {
+  if (typeof addRunSummary !== 'function' || !sc) return;
+  var ex = getState().execution;
+  var startedAt = ex.startedAt || null;
+  var startMs = startedAt ? Date.parse(startedAt) : null;
+  var completedAt = new Date().toISOString();
+  var summary = {
+    scenarioId: sc.id,
+    scenarioType: (typeof sc.type === 'string') ? sc.type : 'simple_click',
+    startedAt: startedAt,
+    completedAt: completedAt,
+    durationMs: (startMs && !isNaN(startMs)) ? (Date.parse(completedAt) - startMs) : null,
+    status: status,
+    actionsCount: ex.progressTotal,
+    matched: (lastAction && typeof lastAction.status === 'string') ? (lastAction.status !== 'no_match') : null,
+    confidence: (lastAction && typeof lastAction.confidence === 'number') ? lastAction.confidence : null,
+    targetPoint: (lastAction && lastAction.targetPoint) ? lastAction.targetPoint : null,
+    mode: 'simulation',
+    realActionsPerformed: false
+  };
+  addRunSummary(summary);
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('scenario.runSummary.recorded', { scenarioId: sc.id, actionType: summary.scenarioType });
+  }
 }
 
 function stopScenario() {
@@ -508,6 +537,7 @@ function renderAdvancedDashboard() {
     case 'logs': renderAdvancedLogs(); break;
     case 'settings': renderAdvancedSettings(); break;
     case 'safety': renderAdvancedSafety(); break;
+    case 'safetyCenter': if (typeof renderSafetyCenter === 'function') renderSafetyCenter(); break;
     case 'screenCapture': if (typeof renderScreenCapture === 'function') renderScreenCapture(); break;
     case 'templates': if (typeof renderTemplatesTab === 'function') renderTemplatesTab(); break;
     case 'templateMatching': if (typeof renderTemplateMatchingTab === 'function') renderTemplateMatchingTab(); break;
@@ -1920,6 +1950,12 @@ async function init() {
   // gracefully — the slice stays empty and lastError is surfaced.
   if (typeof initTemplates === 'function') {
     try { await initTemplates(); } catch (e) {}
+  }
+  // Step 46: best-effort Safety Center init (loads any persisted audit
+  // log when the optional preload bridge is present). Safe no-op
+  // otherwise; never blocks startup.
+  if (typeof initSafetyCenter === 'function') {
+    try { await initSafetyCenter(); } catch (e) {}
   }
   const def = getDefaultScenario(); setSelectedScenario(def);
   resetExecution();

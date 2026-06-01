@@ -8,6 +8,158 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 47 — Real desktop adapter prototype behind hard safety gate
+
+First **real** desktop action path: a single **coordinate click**
+prototype, **disabled by default**, **session-only**, **one click per
+confirmation**. ClickFlow stays simulation-only by default
+(`realDesktopActions:false`, `realCoordinateClick:false`,
+`simulationOnly:true`, `contextIsolation:true`, `nodeIntegration:false`,
+CSP unchanged, no `robotjs`/`iohook`/`uiohook-napi`/`opencv`).
+
+### Added (source)
+
+- `main/real-desktop-adapter.js` — main-process adapter prototype:
+  `getRealDesktopAdapterInfo`, `checkRealDesktopAdapterAvailability`,
+  `validateRealClickAction`, `executeRealCoordinateClick`,
+  `blockRealDesktopAction`, `getRealDesktopAdapterStatus`, plus
+  `registerRealDesktopAdapterIpc`. Optional native backend
+  (`@nut-tree/nut-js`/`nut-js`) loaded in try/catch; **not** a declared
+  dependency → adapter reports unavailable and blocks; never crashes.
+
+### Added (docs)
+
+- `docs/REAL_ADAPTER_PROTOTYPE.md`, `docs/REAL_CLICK_TESTING_GUIDE.md`.
+
+### Changed
+
+- `main.js` — three narrow IPC channels (`real-adapter:get-status`,
+  `real-adapter:check-availability`,
+  `real-adapter:execute-coordinate-click`); the executor requires the
+  full hard context and main re-validates it. No generic action runner.
+- `preload.js` — `realAdapter` API (status / availability /
+  executeCoordinateClick) only; ipcRenderer not exposed.
+- `src/feature-flags.js` — added `realCoordinateClick`,
+  `realImageClick`, `realTextClick` (all false);
+  `_RUNTIME_TOGGLABLE_FLAGS` now allows `realDesktopActions` +
+  `realCoordinateClick` (session-only, never persisted); image/text/
+  keyboard real flags are NOT togglable; `getRealAdapterFeatureStatus()`.
+- `src/action-pipeline.js` — `canExecuteRealDesktopAction`,
+  `executeRealDesktopAction`, `createRealActionBlockedResult`. Real mode
+  blocked by default; coordinate click only; delegates real execution to
+  main; image/text/keyboard real blocked before any IPC.
+- `src/safety-gates.js` — `getRealDesktopActionGateStatus` (strict,
+  default-deny gate with reasons/warnings/requirements).
+- `src/safety-center-ui.js` — Experimental Real Coordinate Click card:
+  diagnostics, coordinate inputs, Run safety check, dry-run, enable-for-
+  session (modal with "I understand…" checkbox), Test real coordinate
+  click (per-click confirmation modal). No image/text real controls.
+- `src/permission-manager.js` — `realCoordinateClickPermission`,
+  `sessionRealModeEnabled`, `userConfirmationAvailable`,
+  `auditLogPersistenceReady`.
+- `src/audit-events.js` — Step 47 real-adapter event types.
+- `src/i18n.js` — RU/EN keys for the prototype; `src/styles.css` modal.
+- Docs updated: `V1_REAL_ADAPTER_REQUIREMENTS`, `V1_SAFETY_MODEL`,
+  `V1_ACTION_PIPELINE`, `V1_AUDIT_LOGS`, `V1_PERMISSION_MODEL`,
+  `SECURITY_CHECKLIST`, `KNOWN_LIMITATIONS`, README, PROJECT_CONTEXT.
+
+### Safety invariants kept (Step 47)
+
+- Real clicks disabled by default; `realCoordinateClick` disabled.
+- image_click / text_click real modes blocked; keyboard automation
+  absent; scroll/hotkey real absent.
+- One real click requires explicit confirmation; action-pipeline + main
+  block real without the full gate.
+- No real click during smoke or at app start. No prohibited
+  dependencies. `contextIsolation:true`, `nodeIntegration:false`, CSP
+  unchanged. No screenshots/base64/paths in audit logs.
+
+---
+
+## [Unreleased] — Step 46 — Desktop v1 architecture and safety foundation
+
+Start of the full Desktop v1 development line. **No real system clicks
+were added.** ClickFlow remains **simulation-only**:
+`realDesktopActions:false`, `simulationOnly:true`,
+`contextIsolation:true`, `nodeIntegration:false`, CSP unchanged, no
+`robotjs`/`nut.js`/`iohook`/`uiohook-napi`/`opencv`.
+
+### Added (docs)
+
+- `docs/V1_DESKTOP_PRODUCT_PLAN.md`, `docs/V1_IMPLEMENTATION_CHECKLIST.md`,
+  `docs/FULL_PRODUCT_BRANCH_PLAN.md` — v1 product plan, checklist, and
+  branch model (`main`, `v1-desktop`, `hotfix/v0.2.x`,
+  `v1-android-research`).
+- `docs/V1_SAFETY_MODEL.md`, `docs/V1_ACTION_PIPELINE.md`,
+  `docs/V1_REAL_ADAPTER_REQUIREMENTS.md`, `docs/V1_AUDIT_LOGS.md`,
+  `docs/V1_PERMISSION_MODEL.md`, `docs/V1_RELEASE_CRITERIA.md` — v1
+  safety/architecture docs.
+- `docs/NUTJS_INTEGRATION_PLAN.md` — candidate real-input backend
+  **plan only**; nut.js is NOT added as a dependency.
+
+### Added (source)
+
+- `src/audit-log-manager.js` — in-memory v1 audit log manager with
+  strict redaction (no screenshots/base64/`imageDataUrl`/paths/PII);
+  file persistence prepared/planned via an optional preload bridge.
+- `src/permission-manager.js` — permission/readiness checklist
+  (status + guidance only; never enables real mode).
+- `src/real-desktop-adapter-interface.js` — real adapter contract;
+  `checkRealAdapterAvailability()` returns unavailable and every
+  `executeReal*()` blocks.
+- `src/safety-center-ui.js` — Advanced → Safety Center tab: current
+  mode, V1 readiness, permissions checklist, audit logs (filters /
+  refresh / clear / export), Run safety check, Export diagnostics. No
+  "enable real clicks" control.
+
+### Changed
+
+- `src/action-pipeline.js` — v1-ready: action-type taxonomy
+  (`click`/`image_click`/`text_click`/`wait` active;
+  `move_mouse`/`scroll`/`key_press`/`hotkey` planned/disabled),
+  `normalizeActionResult()` uniform result shape, and
+  `evaluateRealModeReadiness()` multi-condition gate that blocks real
+  mode by default. `canExecuteRealAction()` can never return true
+  (`safetyReviewPassed` always unmet).
+- `src/scenario-manager.js` — `migrateScenarioToV1` /
+  `migrateScenariosToV1` add `meta.version:1` + run fields additively;
+  applied on load. Old scenarios keep working.
+- `src/app-state.js` — `runSummaries` slice + `addRunSummary` /
+  `getLastRunSummary` / `getRunSummaries`; `realActionsPerformed`
+  forced false. Run summaries recorded on scenario complete/stop.
+- `src/audit-events.js` — allowlist extended with Step 46 types
+  (`real.adapter.blocked`, `permission.refreshed`,
+  `safetyCenter.check.run`, `scenario.runSummary.recorded`, …).
+- `src/index.html` — Safety Center tab + section + module scripts.
+- `src/i18n.js` — RU/EN keys for Safety Center, permissions, audit
+  logs, V1 readiness, run summary.
+- `src/styles.css` — Safety Center styles.
+- `README.md`, `PROJECT_CONTEXT.md`, `docs/ROADMAP.md` — Desktop v1
+  foundation / Step 46.
+
+### Smoke check (Step 46)
+
+- New invariants: all v1 docs + new src modules exist;
+  README/PROJECT_CONTEXT mention Desktop v1; README/PROJECT_CONTEXT/
+  CHANGELOG mention Step 46; `package.json` declares no
+  `robotjs`/`iohook`/`uiohook-napi`/`opencv`; `realDesktopActions:false`;
+  real adapter `executeReal*` all block; permission manager keeps
+  `realModeEnabled:false`; audit manager denylists pixel data and
+  forces `realAction:false`; pipeline has `wait` + planned types +
+  `normalizeActionResult` + `evaluateRealModeReadiness`;
+  Safety Center UI is DOM-safe with no real-clicks control;
+  `contextIsolation:true`, `nodeIntegration:false`, CSP unchanged.
+
+### Safety invariants kept (Step 46)
+
+- No real desktop actions added; simulation-only model preserved.
+- Action pipeline blocks `realClick:true` and real mode by default.
+- Audit logs never store screenshots/base64/paths/PII.
+- Visual Builder drafts only; presets do not execute automatically;
+  OCR does not click.
+
+---
+
 ## [Unreleased] — Step 45 — Post-release cleanup and feedback tracking
 
 Post-release / post-smart-beta cleanup for `v0.2.0-smart-beta`
