@@ -1003,6 +1003,34 @@ clicks disabled; keyboard automation disabled; realDesktopActions=false
 по умолчанию, simulationOnly=true, contextIsolation: true,
 nodeIntegration: false, CSP не ослаблен.**
 
+**Step 49 — Real Coordinate Click Scenario Mode:** сценарий
+`simple_click` теперь можно запустить как **один** реальный
+координатный клик, но только через строгий safety flow. Реальный режим
+**выключен по умолчанию**, **session-only**, **fresh confirmation на
+каждый запуск**, `repeatCount` должен быть **1**.
+- execution mode (runtime-only, не сохраняется): `simulation` /
+  `dry-run` / `real-coordinate`; `setExecutionMode`/`getExecutionMode`/
+  `isRealCoordinateModeSelected`/`resetExecutionModeToSimulation`;
+- click-engine: `runSimpleClickRealCoordinate` (один real click для
+  simple_click, repeatCount===1; dry-run через ctx.executionMode);
+  real mode для image_click/text_click заблокирован;
+- action-pipeline: `executeRealCoordinateScenarioAction` (result
+  `mode: "real-coordinate"`, `oneClickOnly: true`);
+- scenario-manager: `validateSimpleClickRealMode` (executionMode
+  хранится в runtime, не в сценарии);
+- Safety Center: блок **Scenario real run readiness** (селектор режима,
+  readiness, badges, Run scenario safety check, Reset to Simulation,
+  confirmation modal с чекбоксом «I confirm one real click…»);
+- после real run executionMode возвращается в simulation, confirmation
+  сбрасывается; run summary с `executionMode`/`realActionsPerformed`/
+  `x`/`y`/`button`; audit events `scenario.realCoordinate.*`; i18n
+  RU/EN; docs `REAL_COORDINATE_SCENARIO_MODE.md` +
+  `REAL_COORDINATE_SCENARIO_QA.md`.
+**Real mode только для simple_click; repeatCount must be 1; image/text
+real disabled; keyboard disabled; realDesktopActions=false по
+умолчанию, simulationOnly=true, contextIsolation: true,
+nodeIntegration: false, CSP не ослаблен.**
+
 ### Towards Desktop v1
 
 - `v0.2.0-smart-beta` опубликован / готов как Smart Desktop Beta

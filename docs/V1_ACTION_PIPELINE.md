@@ -86,3 +86,16 @@ delegates to it. New context requirements:
 Repeats (`repeatCount > 1`) and batches (action arrays) are blocked.
 image_click/text_click/keyboard/scroll/move_mouse real modes each map
 to their own blocked reason.
+
+
+
+---
+
+## Step 49 update — scenario real mode wrapper
+
+Added `executeRealCoordinateScenarioAction(action, context)` — a thin
+wrapper over `executeRealDesktopAction` for the scenario-run path. It
+accepts only `type:"click"` (image/text blocked), delegates to the
+hardened real path (and main re-validation), and returns the Step-49
+result shape `{ success, blocked, mode:"real-coordinate", realAction,
+oneClickOnly, action, result, reason, timestamp }`.

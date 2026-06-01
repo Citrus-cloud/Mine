@@ -628,3 +628,39 @@ function getTextClickScenarios() {
   }
   return scenarios.filter(function (s) { return s && s.type === 'text_click'; });
 }
+
+
+
+// =====================================================================
+// Step 49 — Real coordinate scenario-mode validation (runtime only)
+// ---------------------------------------------------------------------
+// The execution mode (simulation | dry-run | real-coordinate) is a
+// RUNTIME run option held in app-state — it is intentionally NOT stored
+// in a scenario, so a real run can never be "remembered" and silently
+// repeated after a restart. This helper validates that a given scenario
+// is eligible for a real coordinate run:
+//   - type must be simple_click;
+//   - repeatCount must be exactly 1 (no repeats in real mode);
+//   - x / y / button must be valid.
+// Returns { ok: bool, reason: string|null }.
+// =====================================================================
+function validateSimpleClickRealMode(scenario) {
+  if (!scenario || typeof scenario !== 'object') {
+    return { ok: false, reason: 'missingScenario' };
+  }
+  var type = (typeof scenario.type === 'string') ? scenario.type : 'simple_click';
+  if (type !== 'simple_click') {
+    return { ok: false, reason: 'unsupportedScenarioForRealMode' };
+  }
+  var s = scenario.settings || {};
+  if (Number(s.repeatCount) !== 1) {
+    return { ok: false, reason: 'repeatCountMustBeOneForRealMode' };
+  }
+  if (typeof s.x !== 'number' || s.x < 0 || typeof s.y !== 'number' || s.y < 0) {
+    return { ok: false, reason: 'invalidCoordinates' };
+  }
+  if (['left', 'right', 'middle'].indexOf(s.button) === -1) {
+    return { ok: false, reason: 'invalidButton' };
+  }
+  return { ok: true, reason: null };
+}

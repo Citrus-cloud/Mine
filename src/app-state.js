@@ -113,6 +113,11 @@ const appState = {
     last: null,
     history: []
   },
+  // Step 49 — Real Coordinate Click Scenario Mode. Runtime-only run
+  // option (NOT persisted, NOT stored in a scenario). One of:
+  // "simulation" | "dry-run" | "real-coordinate". Default simulation.
+  // Resets to "simulation" on reload and after each real run.
+  executionMode: "simulation",
   settings: {
     language: "ru",
     theme: "system",
@@ -190,6 +195,7 @@ function getState() {
     },
     activeAdvancedTab: appState.activeAdvancedTab,
     importPreview: appState.importPreview,
+    executionMode: appState.executionMode,
     runSummaries: {
       last: appState.runSummaries.last ? { ...appState.runSummaries.last } : null,
       history: appState.runSummaries.history.map(function (r) { return { ...r }; })
@@ -704,12 +710,13 @@ function _cloneOcrSliceResult(result) {
 
 
 
-// --- Step 46: Scenario run summary state (renderer memory only) ---
+// --- Step 46/49: Scenario run summary state (renderer memory only) ---
 // A run summary is plain-data metadata only. The setter strips
 // anything that could carry pixel data or PII (no imageDataUrl, no
-// full target text), clamps strings, and forces realActionsPerformed
-// to false. The history is bounded to the last RUN_SUMMARY_HISTORY_MAX
-// runs. Nothing here is persisted to disk.
+// full target text) and clamps strings. `realActionsPerformed` is
+// false unless the caller EXPLICITLY records a real run (Step 49 real
+// coordinate scenario mode). The history is bounded to
+// RUN_SUMMARY_HISTORY_MAX runs. Nothing here is persisted to disk.
 function _cloneRunSummary(summary) {
   if (!summary || typeof summary !== 'object') return null;
   function s(v, max) {
@@ -718,22 +725,31 @@ function _cloneRunSummary(summary) {
     return v.length > lim ? v.slice(0, lim) : v;
   }
   function n(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
+  var execMode = (summary.executionMode === 'real-coordinate' || summary.executionMode === 'dry-run')
+    ? summary.executionMode : 'simulation';
   return {
     scenarioId:           s(summary.scenarioId, 80),
     scenarioType:         s(summary.scenarioType, 40),
+    executionMode:        execMode,
     startedAt:            s(summary.startedAt, 40),
     completedAt:          s(summary.completedAt, 40),
     durationMs:           n(summary.durationMs),
     status:               s(summary.status, 40),
+    blockedReason:        s(summary.blockedReason, 120),
     actionsCount:         n(summary.actionsCount),
     matched:              (typeof summary.matched === 'boolean') ? summary.matched : null,
     confidence:           n(summary.confidence),
+    x:                    n(summary.x),
+    y:                    n(summary.y),
+    button:               s(summary.button, 10),
+    oneClickOnly:         summary.oneClickOnly === true,
     targetPoint:          (summary.targetPoint && typeof summary.targetPoint === 'object')
                             ? { x: n(summary.targetPoint.x), y: n(summary.targetPoint.y) }
                             : null,
     mode:                 (summary.mode === 'real' || summary.mode === 'dry-run') ? summary.mode : 'simulation',
-    // Hard guarantee: this build never performs real actions.
-    realActionsPerformed: false
+    // Safe default: only ever true when the caller explicitly records a
+    // real run AND the execution mode was real-coordinate.
+    realActionsPerformed: (summary.realActionsPerformed === true) && (execMode === 'real-coordinate')
   };
 }
 
@@ -759,4 +775,34 @@ function getRunSummaries() {
 function resetRunSummaries() {
   appState.runSummaries.last = null;
   appState.runSummaries.history = [];
+}
+
+
+
+// --- Step 49: Execution mode (runtime-only run option) ---
+// Never persisted to settings/disk. Only "simulation", "dry-run", and
+// "real-coordinate" are accepted; anything else collapses to
+// "simulation". `real-coordinate` here only records the user's
+// selection — it does NOT itself enable a real click; the safety gate,
+// session flags, and fresh per-run confirmation still apply.
+var _EXECUTION_MODES = ['simulation', 'dry-run', 'real-coordinate'];
+
+function setExecutionMode(mode) {
+  appState.executionMode = (_EXECUTION_MODES.indexOf(mode) !== -1) ? mode : 'simulation';
+  return appState.executionMode;
+}
+
+function getExecutionMode() {
+  return _EXECUTION_MODES.indexOf(appState.executionMode) !== -1 ? appState.executionMode : 'simulation';
+}
+
+function isRealCoordinateModeSelected() {
+  return getExecutionMode() === 'real-coordinate';
+}
+
+// Step 49 — called after a real run (and on reset) to force the mode
+// back to the safe default.
+function resetExecutionModeToSimulation() {
+  appState.executionMode = 'simulation';
+  return appState.executionMode;
 }

@@ -8,6 +8,60 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 49 — Real Coordinate Click Scenario Mode
+
+A `simple_click` scenario may run **one** real coordinate click, but
+only through the strict safety flow. Real mode is **disabled by
+default**, **session-only**, **one click per fresh confirmation**,
+`repeatCount === 1`. Real `image_click`/`text_click`, keyboard, scroll,
+hotkeys, repeats and batches remain disabled. Default invariants
+unchanged (`realDesktopActions:false`, `realCoordinateClick:false`,
+`simulationOnly:true`, `contextIsolation:true`, `nodeIntegration:false`,
+CSP unchanged, no `robotjs`/`iohook`/`uiohook-napi`/`opencv`).
+
+### Added (docs)
+
+- `docs/REAL_COORDINATE_SCENARIO_MODE.md`,
+  `docs/REAL_COORDINATE_SCENARIO_QA.md`.
+
+### Changed
+
+- `src/app-state.js` — runtime `executionMode` (`simulation` |
+  `dry-run` | `real-coordinate`, default simulation, never persisted);
+  `setExecutionMode` / `getExecutionMode` /
+  `isRealCoordinateModeSelected` / `resetExecutionModeToSimulation`; run
+  summary extended (`executionMode`, `x`/`y`/`button`, `blockedReason`,
+  `oneClickOnly`); `realActionsPerformed` true only on an explicit real
+  run.
+- `src/click-engine.js` — execution-mode aware `runScenario`;
+  `runSimpleClickRealCoordinate` (one real click, `repeatCount === 1`);
+  dry-run via `ctx.executionMode`; real mode blocked for image/text.
+- `src/action-pipeline.js` — `executeRealCoordinateScenarioAction`
+  (result `mode:"real-coordinate"`, `oneClickOnly:true`).
+- `src/scenario-manager.js` — `validateSimpleClickRealMode`
+  (runtime-only mode; `repeatCount === 1`).
+- `src/safety-center-ui.js` — "Scenario real run readiness" card
+  (execution-mode selector, readiness rows, badges, run scenario safety
+  check, reset to simulation, run-one-real-click with confirmation
+  modal); auto-reset to simulation after a real run;
+  `getRealCoordinateScenarioDiagnostics`.
+- `src/audit-events.js` — `scenario.realCoordinate.*` event types.
+- `src/i18n.js` — RU/EN keys.
+- Docs updated: `REAL_COORDINATE_CLICK_STABILIZATION`,
+  `REAL_CLICK_TESTING_GUIDE`, `V1_ACTION_PIPELINE`, `V1_SAFETY_MODEL`,
+  `SECURITY_CHECKLIST`, `KNOWN_LIMITATIONS`, README, PROJECT_CONTEXT.
+
+### Safety invariants kept (Step 49)
+
+- Real mode disabled by default; session enable + fresh confirmation
+  required; `repeatCount > 1` blocked; only `simple_click`.
+- `image_click`/`text_click` real blocked; keyboard automation blocked.
+- Execution mode resets to simulation after a real run. No real click
+  during smoke or at app start. `contextIsolation:true`,
+  `nodeIntegration:false`, CSP unchanged; no prohibited dependencies.
+
+---
+
 ## [Unreleased] — Step 48 — Real coordinate click stabilization and safety QA
 
 Hardening + QA of the Step 47 coordinate-click prototype. **No new real

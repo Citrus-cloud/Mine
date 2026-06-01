@@ -195,6 +195,25 @@ async function runScenario(scenario, callbacks, options) {
     return;
   }
 
+  // Step 49: execution mode. Runtime-only run option supplied by the
+  // caller (default "simulation"). real-coordinate is allowed ONLY for
+  // simple_click; image_click / text_click real mode is blocked here
+  // before any dispatch.
+  var execMode = (options && typeof options.executionMode === 'string')
+    ? options.executionMode : 'simulation';
+  if (execMode === 'real-coordinate') {
+    if (scenario.type === 'image_click' || scenario.type === 'text_click') {
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('scenario.realCoordinate.unsupportedScenarioBlocked', {
+          scenarioId: scenario.id, scenarioType: scenario.type
+        });
+      }
+      if (cb.onError) cb.onError('Real mode is only available for coordinate click scenarios.');
+      return;
+    }
+    return runSimpleClickRealCoordinate(scenario, cb, (options && options.realContext) || {});
+  }
+
   // Step 30: dispatch on scenario type. The simple_click flow is
   // unchanged. The image_click flow lives in
   // `runImageClickScenario` and uses the renderer's screen-capture
@@ -224,6 +243,13 @@ async function runScenario(scenario, callbacks, options) {
   const ctx = (typeof createActionContext === 'function')
     ? createActionContext(scenario, options && options.settings)
     : { scenarioId: scenario.id, executionMode: 'simulation' };
+
+  // Step 49: dry-run is a non-real preview path. We flip the context's
+  // executionMode to 'dry-run' so executeAction routes to the dry-run
+  // branch (no OS input, no real click) while progress still completes.
+  if (execMode === 'dry-run') {
+    ctx.executionMode = 'dry-run';
+  }
 
   if (cb.onStart) cb.onStart();
 
@@ -886,6 +912,134 @@ async function runTextClickScenario(scenario, callbacks, options) {
     if (cb.onComplete) cb.onComplete();
   } catch (err) {
     return _failOut('exception', 'Ошибка выполнения: ' + (err && err.message ? err.message : 'unknown'));
+  } finally {
+    clickEngineState.isRunning = false;
+    clickEngineState.shouldStop = false;
+    clickEngineState.finishedAt = new Date().toISOString();
+  }
+}
+
+
+
+
+// =====================================================================
+// Step 49 — simple_click REAL coordinate execution path
+// ---------------------------------------------------------------------
+// Runs exactly ONE real coordinate click for a simple_click scenario,
+// and only through the hardened safety path:
+//   - scenario type must be simple_click;
+//   - repeatCount MUST be 1 (repeats are blocked — use simulation);
+//   - the caller passes a FRESH per-run context (userConfirmed,
+//     session flags, oneClickOnly, etc.) — this engine never fabricates
+//     consent;
+//   - the click goes through executeRealCoordinateScenarioAction(), the
+//     renderer pipeline wrapper, which delegates to the main-process
+//     adapter (the actual authority). The renderer never performs input.
+//
+// Progress stages reported via callbacks/audit: requested → safety
+// checked → confirmed → executed/blocked → completed/failed.
+// =====================================================================
+async function runSimpleClickRealCoordinate(scenario, callbacks, context) {
+  var cb = callbacks || {};
+  var ctx = (context && typeof context === 'object') ? context : {};
+
+  if (clickEngineState.isRunning) {
+    if (cb.onError) cb.onError('Сценарий уже выполняется');
+    return;
+  }
+
+  // Coordinate click only.
+  if (!scenario || scenario.type === 'image_click' || scenario.type === 'text_click') {
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('scenario.realCoordinate.unsupportedScenarioBlocked', {
+        scenarioId: scenario && scenario.id, scenarioType: scenario && scenario.type
+      });
+    }
+    if (cb.onError) cb.onError('Real mode is only available for coordinate click scenarios.');
+    return;
+  }
+
+  var s = scenario.settings || {};
+
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('scenario.realCoordinate.run.requested', {
+      scenarioId: scenario.id, scenarioType: 'simple_click'
+    });
+  }
+
+  // repeatCount MUST be exactly 1 for a real run.
+  if (Number(s.repeatCount) !== 1) {
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('scenario.realCoordinate.repeatBlocked', {
+        scenarioId: scenario.id, repeatCount: Number(s.repeatCount) || 0
+      });
+    }
+    if (cb.onError) cb.onError('Real mode requires repeatCount = 1. Use simulation mode or set repeatCount to 1.');
+    return;
+  }
+
+  // Coordinate / button validity.
+  if (typeof s.x !== 'number' || s.x < 0 || typeof s.y !== 'number' || s.y < 0 ||
+      ['left', 'right', 'middle'].indexOf(s.button) === -1) {
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('scenario.realCoordinate.blocked', { scenarioId: scenario.id, reason: 'invalidCoordinatesOrButton' });
+    }
+    if (cb.onError) cb.onError('Некорректные координаты или кнопка для реального клика.');
+    return;
+  }
+
+  // Initialise engine state (single iteration).
+  clickEngineState.isRunning = true;
+  clickEngineState.shouldStop = false;
+  clickEngineState.currentScenarioId = scenario.id;
+  clickEngineState.currentIteration = 0;
+  clickEngineState.totalIterations = 1;
+  clickEngineState.startedAt = new Date().toISOString();
+  clickEngineState.finishedAt = null;
+
+  if (cb.onStart) cb.onStart();
+
+  var action = { type: 'click', x: s.x, y: s.y, button: s.button, realClick: true };
+
+  try {
+    // Stage: safety checked / confirmed are recorded by the caller
+    // (Safety Center) before this runs; we re-assert the gate via the
+    // pipeline wrapper which (and main) block if anything is missing.
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('scenario.realCoordinate.safetyCheck.passed', { scenarioId: scenario.id });
+    }
+    clickEngineState.currentIteration = 1;
+
+    var result = null;
+    if (typeof executeRealCoordinateScenarioAction === 'function') {
+      result = await executeRealCoordinateScenarioAction(action, ctx);
+    } else {
+      result = { success: false, blocked: true, reason: 'pipeline-unavailable' };
+    }
+
+    var success = !!(result && result.success && !result.blocked);
+    if (success) {
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('scenario.realCoordinate.executed', { scenarioId: scenario.id, actionType: 'click' });
+        recordAuditEvent('scenario.realCoordinate.completed', { scenarioId: scenario.id });
+      }
+      if (cb.onAction) cb.onAction({ type: 'click', x: s.x, y: s.y, button: s.button, realClick: true, status: 'executed' }, 1, 1);
+      if (cb.onProgress) cb.onProgress(1, 1);
+      if (cb.onComplete) cb.onComplete(result);
+    } else {
+      var reason = (result && result.reason) ? result.reason : 'blocked';
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('scenario.realCoordinate.blocked', { scenarioId: scenario.id, reason: String(reason).slice(0, 80) });
+        recordAuditEvent('scenario.realCoordinate.failed', { scenarioId: scenario.id });
+      }
+      if (cb.onError) cb.onError(reason, result);
+    }
+    return result;
+  } catch (err) {
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('scenario.realCoordinate.failed', { scenarioId: scenario.id });
+    }
+    if (cb.onError) cb.onError('Ошибка выполнения real click: ' + (err && err.message ? err.message : 'unknown'));
   } finally {
     clickEngineState.isRunning = false;
     clickEngineState.shouldStop = false;

@@ -99,3 +99,17 @@ repeats/batches/loops, background/hidden clicks. Permanently
 prohibited: captcha/anti-bot bypass, ad-click automation,
 banking/payment/protected-app automation. No `robotjs`/`iohook`/
 `uiohook-napi`/`opencv`. No mobile.
+
+
+
+---
+
+## Step 49 update — scenario mode
+
+A `simple_click` scenario can now run **one** real coordinate click via
+a runtime execution mode (`simulation` | `dry-run` | `real-coordinate`,
+default simulation, never persisted). `real-coordinate` requires
+`repeatCount === 1`, the session enabled, a fresh per-run confirmation,
+the gate passing, and the adapter available; after the run the mode
+resets to simulation. image/text real modes, keyboard, repeats and
+batches remain blocked. See `docs/REAL_COORDINATE_SCENARIO_MODE.md`.

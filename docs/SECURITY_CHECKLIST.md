@@ -1394,3 +1394,20 @@ For the manual QA checklist see
 - No `robotjs`/`iohook`/`uiohook-napi`/`opencv`. `contextIsolation:true`,
   `nodeIntegration:false`, CSP unchanged. No real click at app start or
   during smoke.
+
+
+
+## Real coordinate scenario mode (Step 49)
+
+- Execution mode (simulation | dry-run | real-coordinate) is runtime-
+  only, never stored in a scenario, and resets to simulation on reload
+  and after each real run.
+- `real-coordinate` is allowed only for `simple_click` with
+  `repeatCount === 1`, session enabled, fresh confirmation, gate passed,
+  adapter available. `repeatCount > 1` is blocked.
+- image_click/text_click real modes and keyboard automation stay
+  blocked. One click per fresh confirmation; no repeats/batches/loops.
+- Real input still happens only in main via the narrow adapter; the
+  renderer never performs input. `contextIsolation:true`,
+  `nodeIntegration:false`, CSP unchanged; no real click at start/smoke;
+  no `robotjs`/`iohook`/`uiohook-napi`/`opencv`.
