@@ -7,6 +7,148 @@
 
 ## Текущий шаг
 
+**Шаги 42 и 43 завершены вместе.** Smart OCR/Image QA + Bugfix
+Pass + Smart Beta Packaging/Release Pass. Проект готовится к
+выпуску **`v0.2.0-smart-beta`** (Smart Desktop Beta).
+`package.json` `version` обновлён `0.1.0` → **`0.2.0-beta`**
+(semver-clean pre-release identifier; релизный тег с
+человекочитаемым суффиксом — `v0.2.0-smart-beta`).
+ClickFlow остаётся simulation-only desktop MVP.
+
+Step 42 — Smart OCR/Image QA + Bugfix Pass:
+
+- Проведён сквозной audit пяти smart-features цепочек:
+  Coordinate flow / Image flow / OCR-Text flow / Visual
+  Builder / Presets, плюс Diagnostics и Packaging surface.
+- Найдены и исправлены пять багов:
+  1. `src/scenario-presets.js` `preset-text-click-basic` не
+     нёс поле `ocrProvider` (Step-41 регрессия). Добавлен
+     `ocrProvider: 'mock'`, валидатор `presetOcrProviderInvalid`,
+     whitelist clone-ключей расширен `ocrProvider`.
+  2. `applyVisualContextToPreset` не переносил активный
+     OCR-провайдер из визуального контекста — добавлен мап.
+  3. `buildVisualContextFromState` не консультировал
+     `getActiveOcrProvider()` — теперь использует.
+  4. `isRealOcrAllowed` (`src/ocr-provider-interface.js`)
+     был Step-38 hard-stop возвращавшим всегда `false` —
+     теперь честно отражает merged base+runtime snapshot
+     (true только когда `realOcr === true &&
+     tesseractProvider === true && simulationOnly !== true`).
+     В production-сборке (где `simulationOnly: true`) функция
+     по-прежнему `false`, но семантика теперь корректна для
+     unit-тестов и будущих проектов.
+  5. `getOcrProviderRegistryStatus` сообщал
+     `realOcrEnabled: false` даже после session opt-in —
+     теперь читает `realOcrEnabledForSession` из
+     `getOcrFeatureStatus()`, чтобы UI и diagnostics видели
+     актуальное состояние.
+- Создан новый renderer-only модуль
+  [`src/smart-beta-health.js`](./src/smart-beta-health.js)
+  (`getSmartBetaHealth`, `getSmartBetaHealthDiagnostics`,
+  `countSmartBetaReleaseBlockers`). Он считывает 10
+  smart-features readiness-флагов
+  (`screenCaptureReady`, `regionSelectorReady`,
+  `templatesReady`, `templateMatchingReady`,
+  `imageClickReady`, `ocrMockReady`,
+  `tesseractProviderReady`, `textClickReady`,
+  `visualBuilderReady`, `presetsReady`) плюс
+  `releaseBlockersCount`. Никаких системных вызовов, никакого
+  OCR.
+- В `Copy diagnostics` — новая строка `Smart beta:` со всеми
+  readiness-флагами + `simulationOnly=true`, `realClick=false`.
+- В `src/audit-events.js` — 5 новых allowlisted типов:
+  `smartBeta.qa.started`, `smartBeta.qa.completed`,
+  `smartBeta.blocker.found`, `smartBeta.blocker.fixed`,
+  `smartBeta.releaseCandidate.checked`.
+- В `src/i18n.js` — 16 новых ключей RU+EN, parity 835/835.
+- Созданы документы
+  [`docs/SMART_BETA_QA_REPORT.md`](./docs/SMART_BETA_QA_REPORT.md)
+  (audit + bugfix report — scope, environment, checked flows,
+  results, known issues, blockers, safety verification, release
+  recommendation) и
+  [`docs/SMART_BETA_MANUAL_TESTS.md`](./docs/SMART_BETA_MANUAL_TESTS.md)
+  (15-секционный manual checklist с
+  `Status: Not tested` placeholders).
+- Обновлены `docs/SMOKE_TESTS.md` (S1-S18 smart-beta
+  end-to-end sequence), `docs/SECURITY_CHECKLIST.md` (smart
+  beta safety section), `docs/KNOWN_LIMITATIONS.md` (раздел
+  21 — smart-beta limitations).
+- Smoke-check расширен Step-42 invariants. Также retired
+  Step-38 invariant `isRealOcrAllowed never returns true`
+  (теперь функция отражает реальное состояние) и заменён на
+  два более конкретных: `short-circuits on simulationOnly` и
+  `checks the tesseractProvider gate`.
+
+Step 43 — Smart Beta Packaging/Release Pass:
+
+- В `package.json`:
+  - `version` обновлён `0.1.0` → **`0.2.0-beta`**.
+  - `description` дополнен "smart desktop beta".
+  - `build.files` ужесточён:
+    - явные include для tesseract.js node_modules
+      (`node_modules/tesseract.js/**/*`,
+      `tesseract.js-core`, `wasm-feature-detect`,
+      `idb-keyval`, `bmp-js`, `regenerator-runtime`,
+      `zlibjs`, `is-electron`, `opencollective-postinstall`),
+      чтобы packaged build мог запустить настоящий OCR;
+    - exclude новых паттернов:
+      `!**/userData/**`, `!**/.env`, `!**/.env.*`,
+      `!**/*.tmp`, `!**/*.log`,
+      `!**/screenshots/**`, `!**/screenshot-*.png`,
+      `!**/screenshot-*.jpg`, `!dist/**`, `!coverage/**`,
+      `!.cache/**`, `!.npm/**`.
+- Создан
+  [`docs/SMART_BETA_RELEASE_NOTES.md`](./docs/SMART_BETA_RELEASE_NOTES.md)
+  — полные release notes: summary, new smart features
+  (Screen Capture / Region Selector / Templates / Image
+  matching / image_click / OCR mock and real OCR session /
+  text_click / Visual Builder / Presets), safety model, what
+  is still not included (real cursor / OpenCV / mobile /
+  bundled language packs), known limitations, how to test,
+  feedback.
+- Создан
+  [`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./docs/SMART_BETA_RELEASE_CHECKLIST.md)
+  — engineering / smart-features dev-mode QA / packaging /
+  documentation / release sign-off (Engineering + Documentation
+  + Manual QA per Windows / macOS / Linux).
+- Создан
+  [`docs/SMART_BETA_RELEASE_DRAFT.md`](./docs/SMART_BETA_RELEASE_DRAFT.md)
+  — готовый body для GitHub release editor: Summary,
+  Highlights, Safety model, How to run, How to test, Known
+  limitations, What is not included, Feedback, Security note.
+- [`RELEASE_NOTES.md`](./RELEASE_NOTES.md) дополнен секцией
+  "Smart Desktop Beta — `v0.2.0-smart-beta`".
+- [`docs/TAG_AND_RELEASE_GUIDE.md`](./docs/TAG_AND_RELEASE_GUIDE.md)
+  получил smart-beta tag plan: 10-шаговая процедура,
+  rollback guidance.
+- Smoke-check расширен Step-43 invariants (новые docs +
+  package.json `version: "0.2.0-beta"` + `build.files`
+  ужесточение + README/PROJECT_CONTEXT/CHANGELOG mention
+  Step 43).
+
+**Реальных кликов нет. tesseract.js — единственная новая
+runtime-зависимость; tesseract-ocr / node-tesseract-ocr /
+opencv* / sharp / jimp / pixelmatch / looks-same / robotjs /
+nut-js / iohook / uiohook-napi / node-key-sender НЕ объявлены.
+realDesktopActions=false (hard-coded, не в runtime
+whitelist). simulationOnly=true. realOcr/tesseractProvider
+включаются только session-scoped через явное действие
+пользователя в OCR tab. action-pipeline блокирует
+realClick=true. CSP не ослаблен. contextIsolation: true,
+nodeIntegration: false. Никаких новых IPC-каналов.** На
+шагах 42-43 **специально не сделано**: bundling local
+language packs (`eng.traineddata` / `rus.traineddata`),
+worker-based OCR cancellation, real cursor / keyboard,
+robotjs / nut.js / iohook / uiohook-napi / node-key-sender,
+OpenCV, мобильная версия, обход капчи / антибот-систем /
+банковских приложений, multi-action drafts в Visual Builder.
+Логичный следующий шаг (Step 44): final smart beta release
+preparation — bundle local Tesseract language packs,
+worker-based cancellation, manual QA passes per OS,
+GitHub release publication. Real clicks остаются вне scope.
+
+## Прошлый шаг
+
 **Шаги 40 и 41 завершены вместе.** Real OCR UI Activation +
 Real OCR for text_click and Visual Builder. Проект остаётся в
 стадии `0.1.0-beta` (simulation-only desktop MVP). На этих
@@ -187,7 +329,7 @@ toggle "Try real OCR by default" (со скоупом per-machine,
 не per-scenario), и manual QA pass на Windows / macOS / Linux.
 Real clicks остаются вне scope.
 
-## Прошлый шаг
+## Шаг 39 (компактно)
 
 **Шаг 39 завершён.** Real OCR Provider Integration — Phase 1.
 Проект остаётся в стадии `0.1.0-beta` (simulation-only desktop

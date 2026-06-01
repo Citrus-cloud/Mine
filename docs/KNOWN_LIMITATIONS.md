@@ -837,3 +837,53 @@ following limitations are intentional.
 
 See [`docs/REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md) for the
 user manual and the troubleshooting table.
+
+
+
+## 21. Smart Beta — Step 42 limitations
+
+Step 42 audited the smart-features chain and consolidated the
+known limitations below. None of them block the smart-beta tag,
+but each is part of the manual QA briefing in
+[`docs/SMART_BETA_MANUAL_TESTS.md`](./SMART_BETA_MANUAL_TESTS.md).
+
+### 21.1 Tesseract may require language data download or local availability
+- The default Tesseract.js v5 language path is its CDN. Our CSP
+  (`default-src 'self'`) blocks the fetch. In environments
+  without preloaded language packs the user sees
+  "Failed to load OCR language data." and falls back to the
+  mock provider. Bundling local `eng.traineddata` /
+  `rus.traineddata` is the natural Step-44+ work.
+
+### 21.2 OCR can be slow
+- First call: language pack load + WebAssembly init + recognise.
+  Worst case on a `1920×1080` preview is several seconds. Steady
+  state on a tight region is 600–1200 ms. The Cancel button is
+  best-effort and does not interrupt the worker.
+
+### 21.3 OCR result quality depends on screenshot quality
+- The preview is a single still image. Tesseract.js results
+  vary widely with font size, contrast, language data version,
+  and JPEG compression. The user is expected to adjust target
+  text / language / region accordingly.
+
+### 21.4 Template matching is plain-JS preview matching
+- Step-29 matcher is intentionally simple. It does not call
+  OpenCV, sharp, jimp, pixelmatch, or any native binding. It
+  only analyses the captured preview, never the live screen.
+
+### 21.5 Visual Builder is foundation level
+- The Visual Builder produces drafts; it does not save, run, or
+  click. Step-44+ may expand it (multi-action drafts, reusable
+  template/region pickers).
+
+### 21.6 Real clicks are not implemented
+- `realDesktopActions: false` is hard-coded and is not in the
+  runtime-togglable whitelist. The action pipeline rejects
+  every `realClick: true` outright. Real cursor / keyboard
+  work is a separate roadmap item (Branch B in
+  `docs/NEXT_BRANCH_PLAN.md`).
+
+### 21.7 Mobile version is not implemented
+- ClickFlow ships only as an Electron desktop app (Windows,
+  macOS, Linux). An Android / iOS port is out of scope.

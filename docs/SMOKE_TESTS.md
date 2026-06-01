@@ -612,3 +612,35 @@ These checks verify the documentation pass for Step 37.
 | 386  | PROJECT_CONTEXT mentions Step 37                      | `PROJECT_CONTEXT.md` describes Step 37 with the same wording: simulation-only, no real OCR, no real clicks, recommendation Branch A. |
 | 387  | CHANGELOG mentions Step 36 + Step 37                  | `CHANGELOG.md` has entries "Step 36 — Visual Builder UX Polish + Scenario Presets" and "Step 37 — Smart Features QA + Next Branch Preparation" with bullet lists. |
 | 388  | Smoke check passes Step 37 invariants                 | `npm run smoke` reports 0 failures. New invariants: `src/scenario-presets.js`, `src/visual-builder.js`, `src/visual-builder-ui.js`, `docs/SMART_FEATURES_QA.md`, `docs/NEXT_BRANCH_PLAN.md`, `docs/SMART_FEATURES_LIMITATIONS.md` exist. README / PROJECT_CONTEXT mention Step 37 + Visual Builder + Scenario Presets. `package.json` still does not declare any forbidden module. |
+
+
+
+## Smart Beta smoke sequence (Step 42)
+
+End-to-end manual sequence that exercises the full smart-features
+chain in dev mode and the packaged build. The cursor never moves;
+the action-pipeline rejects every `realClick: true` outright.
+
+| #   | Step                                                | Expected                                                                                                                          |
+|-----|-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| S1  | `npm install`                                       | Pulls `tesseract.js@^5.0.4` plus the Electron toolchain.                                                                          |
+| S2  | `npm run smoke`                                     | 0 failures.                                                                                                                       |
+| S3  | `npm start`                                         | The app opens. Scenario list is populated. Status: Idle.                                                                          |
+| S4  | Capture a screen preview                            | Audit emits `screen.capture.preview.captured`. The screenshot is held only in renderer memory.                                    |
+| S5  | Select a region                                     | Audit emits `region.selection.completed`. Region card shows preview-space + image-space rectangles.                               |
+| S6  | Import a template                                   | Audit emits `template.import.completed`. Metadata file is rewritten through the main process.                                     |
+| S7  | Run mock + real-preview template matching           | Result card shows bbox + target dot + confidence. Audit emits `template.match.realPreview.requested/.completed`.                  |
+| S8  | Create + save an `image_click` scenario             | Test Match draws the debug overlay. The scenario engine emits `scenario.imageClick.simulated` cycles. Cursor never moves.         |
+| S9  | Run mock OCR                                        | Mock blocks list + overlay + action preview render. Audit emits `ocr.mock.requested/.completed`.                                  |
+| S10 | Enable Tesseract for the session                    | Confirmation dialog appears. After confirm, audit emits `ocr.real.enabledForSession`. Use Tesseract OCR enables.                  |
+| S11 | Run real OCR manually                               | Progress card shows stages + percent bar. Audit emits `ocr.real.started/.progress/.completed`. Cursor never moves.                |
+| S12 | Create + save a `text_click` scenario               | Provider select persists. With Tesseract and no session opt-in, the engine fails cleanly. Otherwise audit emits `scenario.textClick.simulated`. |
+| S13 | Open the Visual Builder                             | Status row paints. Real clicks badge is always `disabled` (red).                                                                  |
+| S14 | Create a draft from the Visual Builder              | Audit emits `visualBuilder.draft.preview.created`. Draft preview card surfaces `OCR provider used` + `Real OCR`.                  |
+| S15 | Use a preset (e.g. `coordinate-basic`)              | Form opens pre-filled. Audit emits `scenarioPreset.selected/.draft.created/.form.opened`. Presets NEVER auto-save.                |
+| S16 | Verify no real clicks                               | Watch a focused text editor for 60 s while iterating. Cursor unchanged. Editor receives no input. `Action pipeline:` line reports `realActionAllowed=false`. |
+| S17 | `npm run pack`                                      | electron-builder produces an unpacked dir under `dist/`. No userData / temp screenshots in the artifacts.                          |
+| S18 | `npm run dist`                                      | Installable artifacts (NSIS / DMG / AppImage). Open and re-run every step above against the packaged build.                       |
+
+For the per-platform release sign-offs see
+[`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./SMART_BETA_RELEASE_CHECKLIST.md).

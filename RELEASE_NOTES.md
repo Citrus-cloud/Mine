@@ -287,3 +287,60 @@ Planned for upcoming releases (see `docs/ROADMAP.md`):
 - Safety concern: `.github/ISSUE_TEMPLATE/safety_report.md`
 
 Thank you for testing ClickFlow.
+
+
+
+---
+
+## Smart Desktop Beta — `v0.2.0-smart-beta`
+
+> **Status: pre-release preparation.**
+> The smart-features chain (Screen Capture → Region Selector →
+> Templates → Template Matching → image_click → Mock OCR →
+> Tesseract OCR session → text_click → Visual Builder → Scenario
+> Presets) is feature-complete and audited. Manual packaged-app
+> QA on Windows / macOS / Linux is the gating step before the
+> tag.
+
+ClickFlow stays **simulation-only** in the smart beta:
+
+- Real cursor work, real keyboard input, and real OCR-driven
+  clicks are NOT in this release.
+- The action pipeline rejects every `realClick: true` for every
+  scenario type.
+- Real OCR runs only after THREE explicit user actions
+  (Enable Tesseract for this session → Use Tesseract OCR →
+  Run Real OCR). The session flag wipes on reload.
+- `realDesktopActions: false`, `simulationOnly: true`,
+  `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+
+### Current release target
+
+- Tag: `v0.2.0-smart-beta`
+- `package.json` `version`: `0.2.0-beta`
+- Pre-release flag: yes
+
+### Smart-beta release docs
+
+- [`docs/SMART_BETA_RELEASE_NOTES.md`](./docs/SMART_BETA_RELEASE_NOTES.md)
+  — full smart-beta release notes (summary / new features /
+  safety / not-included / limitations / how-to-test / feedback).
+- [`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./docs/SMART_BETA_RELEASE_CHECKLIST.md)
+  — engineering / packaging / QA sign-off checklist.
+- [`docs/SMART_BETA_RELEASE_DRAFT.md`](./docs/SMART_BETA_RELEASE_DRAFT.md)
+  — body to paste into the GitHub release editor.
+- [`docs/SMART_BETA_QA_REPORT.md`](./docs/SMART_BETA_QA_REPORT.md)
+  — Step-42 audit + bugfix report.
+- [`docs/SMART_BETA_MANUAL_TESTS.md`](./docs/SMART_BETA_MANUAL_TESTS.md)
+  — manual QA checklist with `Status: Not tested` placeholders
+  for each section.
+
+### What is not implemented
+
+- Real desktop clicks. No `robotjs`, no `nut.js`, no `iohook`,
+  no `uiohook-napi`, no `node-key-sender`.
+- OpenCV (no `opencv*`, `sharp`, `jimp`, `pixelmatch`,
+  `looks-same`).
+- Mobile / Android / iOS port.
+- Bundled OCR language data (planned for Step 44+).

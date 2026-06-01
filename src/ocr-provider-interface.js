@@ -300,32 +300,33 @@ function getSupportedOcrLanguages() {
 
 // Centralised gate that says "is real OCR allowed to run?".
 //
-// At Step 38 the answer is ALWAYS `false`, regardless of whatever
-// the caller passes, because:
-//   - the umbrella `simulationOnly` flag is true;
-//   - the `realOcr` flag is false by default and there is no UI
-//     to toggle it;
-//   - no real OCR provider is registered in the registry at Step
-//     38, so even if the flag were true, the registry would refuse
-//     to switch the active provider.
+// Step 38 introduced this function as a hard-stop returning `false`
+// regardless of input. Step 40 wired the runtime overlay so the
+// user can opt in for the current session. The gate now reflects
+// the merged base + runtime feature-flag snapshot:
+//   - if the umbrella `simulationOnly` is true → still returns `false`
+//     (the umbrella safety stance does not bend);
+//   - if `realOcr` is false → returns `false`;
+//   - if `tesseractProvider` is false → returns `false`;
+//   - otherwise returns `true`.
 //
-// Returns boolean. Defensive: any unexpected input returns `false`.
+// In production builds `simulationOnly` stays `true`, so this
+// function still evaluates to `false` for the umbrella safety
+// surface. The session-scoped opt-in is exposed separately as
+// `realOcrEnabledForSession` in `getOcrFeatureStatus()`. Call sites
+// that drive recognition use the session flag; call sites that
+// describe the umbrella safety stance use this function.
+//
+// Defensive: any unexpected input returns `false`.
 function isRealOcrAllowed(flags, settings) {
   if (!flags || typeof flags !== 'object') return false;
   if (flags.simulationOnly === true) return false;
   if (flags.realOcr !== true) return false;
-  // Settings reserved for future opt-in (a per-scenario "I really
-  // want real OCR" checkbox we have not built yet). For now we only
-  // accept it as a strict additional opt-in; absence is interpreted
-  // as "no".
+  if (flags.tesseractProvider !== true) return false;
   if (settings && typeof settings === 'object') {
     if (settings.realOcrConfirmed === false) return false;
   }
-  // Step 38 hard-stop: even if every flag is somehow set to true,
-  // we still refuse, because the runtime simply does not have a
-  // real OCR provider registered. This is a defence-in-depth gate
-  // independent of feature flags.
-  return false;
+  return true;
 }
 
 // =====================================================================

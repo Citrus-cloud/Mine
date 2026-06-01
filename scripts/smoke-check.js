@@ -699,11 +699,16 @@ record(
   /step\s*22|шаг\s*22|Step 22|Шаг 22/.test(readText('PROJECT_CONTEXT.md'))
 );
 
-// 39. package.json version is 0.1.0 (the `-beta` qualifier lives on the GitHub tag).
+// 39. package.json version. At Step 21 the version was pinned to
+// 0.1.0 (the `-beta` qualifier lived on the GitHub tag). At
+// Step 43 the version bumps to `0.2.0-beta` (semver-clean
+// pre-release identifier; the GitHub release tag is
+// `v0.2.0-smart-beta`). The check now accepts either, so
+// historical snapshots and current builds both stay green.
 if (pkg) {
   record(
-    'package.json version is 0.1.0',
-    pkg.version === '0.1.0',
+    'package.json version matches a known release target',
+    pkg.version === '0.1.0' || pkg.version === '0.2.0-beta',
     'version = ' + pkg.version
   );
   // 40. package.json declares scripts.smoke (already checked above) — re-assert here.
@@ -5292,16 +5297,21 @@ var ifaceTxt = readText('src/ocr-provider-interface.js');
     new RegExp('function\\s+' + fn + '\\s*\\(').test(ifaceTxt)
   );
 });
-// Step 38 hard-stop: isRealOcrAllowed must always return false.
-// We verify the function body has a bare `return false;` and no
-// unconditional `return true`.
+// Step 38 hard-stop: `isRealOcrAllowed` returned `false`
+// unconditionally. Step 42 retires the hard-stop — the function
+// now reflects the merged base + runtime feature-flag snapshot.
+// The new invariant is: under the production safe defaults
+// (simulationOnly === true) the function still evaluates to
+// `false`. We assert that the production code keeps the
+// `simulationOnly` short-circuit and that the runtime overlay does
+// NOT include `simulationOnly` in its whitelist.
 record(
-  'ocr-provider-interface.js isRealOcrAllowed has a final `return false`',
-  /function\s+isRealOcrAllowed[\s\S]*?return\s+false\s*;[\s\S]*?\n\}/.test(ifaceTxt)
+  'ocr-provider-interface.js isRealOcrAllowed short-circuits on simulationOnly',
+  /if\s*\(\s*flags\.simulationOnly\s*===\s*true\s*\)\s*return\s+false/.test(ifaceTxt)
 );
 record(
-  'ocr-provider-interface.js isRealOcrAllowed never returns `true`',
-  !/function\s+isRealOcrAllowed[\s\S]*?return\s+true\s*;/.test(ifaceTxt)
+  'ocr-provider-interface.js isRealOcrAllowed checks the tesseractProvider gate',
+  /if\s*\(\s*flags\.tesseractProvider\s*!==\s*true\s*\)\s*return\s+false/.test(ifaceTxt)
 );
 // Contract default must report realOcrAvailable: false and
 // supportedProviders that includes 'mock'.
@@ -6255,6 +6265,346 @@ record(
 record(
   'CHANGELOG.md mentions Step 41 — Real OCR for text_click and Visual Builder',
   clog41.indexOf('Step 41 — Real OCR for text_click and Visual Builder') !== -1
+);
+
+// =====================================================================
+// Steps 42-43 — Smart OCR/Image QA + Bugfix Pass + Packaging/Release
+// =====================================================================
+
+// 330. Step-42 bugfixes — scenario-presets carries ocrProvider on
+//      the text_click preset and the clone whitelist preserves it.
+var presetsTxt42 = readText('src/scenario-presets.js');
+record(
+  "scenario-presets.js text_click preset declares ocrProvider: 'mock'",
+  /id:\s*'preset-text-click-basic'[\s\S]*?ocrProvider:\s*'mock'/.test(presetsTxt42)
+);
+record(
+  'scenario-presets.js clone whitelist includes ocrProvider',
+  /'targetText',\s*'language',\s*'matchMode',\s*'caseSensitive',\s*'ocrProvider'/.test(presetsTxt42)
+);
+record(
+  'scenario-presets.js validateScenarioPreset checks ocrProvider for text_click',
+  /presetOcrProviderInvalid/.test(presetsTxt42)
+);
+record(
+  'scenario-presets.js _sanitizeVisualContext preserves ocrProvider',
+  /ctx\.ocrProvider === 'mock'\s*\|\|\s*ctx\.ocrProvider === 'tesseract'/.test(presetsTxt42)
+);
+
+// 331. Step-42 bugfix — buildVisualContextFromState consults the
+//      active OCR provider.
+var vbTxt42 = readText('src/visual-builder.js');
+record(
+  'visual-builder.js buildVisualContextFromState consults getActiveOcrProvider',
+  /buildVisualContextFromState[\s\S]*?getActiveOcrProvider/.test(vbTxt42) ||
+  (vbTxt42.indexOf('buildVisualContextFromState') !== -1 &&
+   /getActiveOcrProvider[\s\S]*?ctx\.ocrProvider/.test(vbTxt42))
+);
+
+// 332. Step-42 bugfix — isRealOcrAllowed reflects the merged
+//      flags. The Step-38 invariant "never returns true" is
+//      replaced by two more specific invariants.
+//      (Already added above as #279 update; re-checked here for
+//      clarity.)
+var ifaceTxt42 = readText('src/ocr-provider-interface.js');
+record(
+  'ocr-provider-interface.js isRealOcrAllowed retires the Step-38 hard-stop',
+  !/Step 38 hard-stop:\s*even if every flag/.test(ifaceTxt42)
+);
+
+// 333. Step-42 bugfix — getOcrProviderRegistryStatus reads
+//      realOcrEnabledForSession.
+var regTxt42 = readText('src/ocr-provider-registry.js');
+record(
+  'ocr-provider-registry.js getOcrProviderRegistryStatus reads realOcrEnabledForSession',
+  /realOcrEnabledForSession/.test(regTxt42)
+);
+
+// 334. Smart-beta health module exists and exports the public
+//      surface.
+record(
+  'src/smart-beta-health.js exists',
+  fileExists('src/smart-beta-health.js')
+);
+var sbhTxt = readText('src/smart-beta-health.js');
+['getSmartBetaHealth', 'getSmartBetaHealthDiagnostics', 'countSmartBetaReleaseBlockers'].forEach(function (fn) {
+  record(
+    'smart-beta-health.js exports ' + fn,
+    new RegExp('function\\s+' + fn + '\\s*\\(').test(sbhTxt)
+  );
+});
+record(
+  'smart-beta-health.js never sets realClicksEnabled to true',
+  !/realClicksEnabled:\s*true/.test(sbhTxt)
+);
+record(
+  'smart-beta-health.js never imports any forbidden module',
+  !/require\(['"](tesseract-ocr|node-tesseract-ocr|opencv|sharp|jimp|pixelmatch|looks-same|robotjs|nut-js|nutjs|@nut-tree|iohook|uiohook-napi|node-key-sender)/i.test(sbhTxt)
+);
+
+// 335. index.html loads smart-beta-health.js.
+var htmlTxt42 = readText('src/index.html');
+record(
+  'index.html loads smart-beta-health.js',
+  htmlTxt42.indexOf('smart-beta-health.js') !== -1
+);
+record(
+  'index.html loads smart-beta-health.js before renderer.js',
+  htmlTxt42.indexOf('smart-beta-health.js') < htmlTxt42.indexOf('renderer.js')
+);
+
+// 336. renderer.js Copy diagnostics has the Smart beta line.
+var rendererTxt42 = readText('src/renderer.js');
+record(
+  'renderer.js Copy diagnostics has a `Smart beta:` line',
+  /Smart beta:[\s\S]*?screenCaptureReady=[\s\S]*?releaseBlockersCount=/.test(rendererTxt42) &&
+  rendererTxt42.indexOf('realClicksEnabled=false') !== -1
+);
+
+// 337. Audit allowlist includes the 5 new Step-42 types.
+var auditTxt42 = readText('src/audit-events.js');
+[
+  'smartBeta.qa.started',
+  'smartBeta.qa.completed',
+  'smartBeta.blocker.found',
+  'smartBeta.blocker.fixed',
+  'smartBeta.releaseCandidate.checked'
+].forEach(function (eventType) {
+  record(
+    'audit allowlist includes ' + eventType,
+    auditTxt42.indexOf("'" + eventType + "'") !== -1
+  );
+});
+
+// 338. i18n parity is preserved AND the new Step-42 keys exist.
+var i18nTxt42 = readText('src/i18n.js');
+[
+  'smartBetaStatus',
+  'smartBetaQa',
+  'screenCaptureReady',
+  'regionSelectorReady',
+  'templatesReady',
+  'templateMatchingReady',
+  'imageClickReady',
+  'ocrMockReady',
+  'tesseractProviderReady',
+  'textClickReady',
+  'visualBuilderReady',
+  'presetsReady',
+  'releaseBlockersCount',
+  'readyAfterManualQa',
+  'manualOcrTestingRequired',
+  'smartBetaManualTests',
+  'smartBetaQaReport'
+].forEach(function (key) {
+  record(
+    'i18n declares Step-42 key ' + key,
+    new RegExp('\\b' + key + ':\\s*"').test(i18nTxt42)
+  );
+});
+
+// 339. Step-42 docs exist and assert simulation-only.
+[
+  'docs/SMART_BETA_QA_REPORT.md',
+  'docs/SMART_BETA_MANUAL_TESTS.md'
+].forEach(function (rel) {
+  record('Step-42 doc exists: ' + rel, fileExists(rel));
+});
+var qaReport = readText('docs/SMART_BETA_QA_REPORT.md');
+record(
+  'docs/SMART_BETA_QA_REPORT.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(qaReport)
+);
+record(
+  'docs/SMART_BETA_QA_REPORT.md mentions ready after manual QA',
+  /Ready after manual packaged-app QA|ready after manual/i.test(qaReport)
+);
+record(
+  'docs/SMART_BETA_QA_REPORT.md mentions manual OCR testing required',
+  /Manual OCR testing is required|manual.*OCR.*required/i.test(qaReport)
+);
+var manualTests = readText('docs/SMART_BETA_MANUAL_TESTS.md');
+record(
+  'docs/SMART_BETA_MANUAL_TESTS.md uses Status: Not tested format',
+  /Status:\*?\*?\s*Not tested/.test(manualTests)
+);
+record(
+  'docs/SMART_BETA_MANUAL_TESTS.md covers Real OCR session',
+  /Real OCR session|Real OCR/i.test(manualTests)
+);
+record(
+  'docs/SMART_BETA_MANUAL_TESTS.md preserves no-real-click invariant',
+  /no real click|never click|simulation-only/i.test(manualTests)
+);
+
+// 340. README/PROJECT_CONTEXT mention Steps 42-43 and smart beta.
+var readme42 = readText('README.md');
+var ctx42 = readText('PROJECT_CONTEXT.md');
+record(
+  'README or PROJECT_CONTEXT mentions step 42',
+  /step\s*42|шаг\s*42|Step 42|Шаг 42/.test(readme42) ||
+  /step\s*42|шаг\s*42|Step 42|Шаг 42/.test(ctx42)
+);
+record(
+  'README or PROJECT_CONTEXT mentions step 43',
+  /step\s*43|шаг\s*43|Step 43|Шаг 43/.test(readme42) ||
+  /step\s*43|шаг\s*43|Step 43|Шаг 43/.test(ctx42)
+);
+record(
+  'README or PROJECT_CONTEXT mentions smart beta',
+  /smart\s+beta|Smart Beta|smart desktop beta/i.test(readme42) ||
+  /smart\s+beta|Smart Beta|smart desktop beta/i.test(ctx42)
+);
+
+// 341. CHANGELOG mentions Step 42 + Step 43.
+var changelogTxt42 = readText('CHANGELOG.md');
+record(
+  'CHANGELOG.md mentions Step 42 — Smart OCR/Image QA + Bugfix Pass',
+  /Step 42 — Smart OCR\/Image QA \+ Bugfix Pass/.test(changelogTxt42)
+);
+record(
+  'CHANGELOG.md mentions Step 43 — Smart Beta Packaging\/Release Pass',
+  /Step 43 — Smart Beta Packaging\/Release Pass/.test(changelogTxt42)
+);
+
+// 342. SMOKE_TESTS / SECURITY_CHECKLIST / KNOWN_LIMITATIONS get
+//      smart-beta sections.
+var smoke42 = readText('docs/SMOKE_TESTS.md');
+record(
+  'docs/SMOKE_TESTS.md has a Smart Beta smoke sequence',
+  /Smart Beta smoke sequence|Step 42/i.test(smoke42)
+);
+var sec42 = readText('docs/SECURITY_CHECKLIST.md');
+record(
+  'docs/SECURITY_CHECKLIST.md has a smart beta safety section',
+  /Smart beta safety|smart-beta safety|Step 42/i.test(sec42) &&
+  /realDesktopActions|action-pipeline|realClick/i.test(sec42)
+);
+var kl42 = readText('docs/KNOWN_LIMITATIONS.md');
+record(
+  'docs/KNOWN_LIMITATIONS.md has Step 42 limitations section',
+  /Step 42|Smart Beta/i.test(kl42) &&
+  /Tesseract|language data|simulation-only/i.test(kl42)
+);
+
+// 343. Step-43 release docs exist.
+[
+  'docs/SMART_BETA_RELEASE_NOTES.md',
+  'docs/SMART_BETA_RELEASE_CHECKLIST.md',
+  'docs/SMART_BETA_RELEASE_DRAFT.md'
+].forEach(function (rel) {
+  record('Step-43 doc exists: ' + rel, fileExists(rel));
+});
+
+// 344. package.json declares the smart-beta version.
+if (pkg) {
+  record(
+    'package.json version is 0.2.0-beta',
+    pkg.version === '0.2.0-beta'
+  );
+  record(
+    'package.json description mentions smart desktop beta',
+    typeof pkg.description === 'string' &&
+    /smart desktop beta/i.test(pkg.description)
+  );
+}
+
+// 345. package.json build.files excludes private / temp folders.
+if (pkg && pkg.build && Array.isArray(pkg.build.files)) {
+  var filesArr = pkg.build.files.join('\n');
+  [
+    '!**/userData/**',
+    '!**/.env',
+    '!**/screenshots/**',
+    '!dist/**',
+    '!coverage/**'
+  ].forEach(function (pattern) {
+    record(
+      'package.json build.files excludes ' + pattern,
+      filesArr.indexOf(pattern) !== -1
+    );
+  });
+  record(
+    'package.json build.files includes tesseract.js node_modules path',
+    filesArr.indexOf('node_modules/tesseract.js/**/*') !== -1
+  );
+}
+
+// 346. Step-43 docs preserve simulation-only stance.
+var notes43 = readText('docs/SMART_BETA_RELEASE_NOTES.md');
+record(
+  'docs/SMART_BETA_RELEASE_NOTES.md asserts simulation-only',
+  /simulation-only|simulation only/i.test(notes43) &&
+  /no real click|realClick: true|never click/i.test(notes43)
+);
+var checklist43 = readText('docs/SMART_BETA_RELEASE_CHECKLIST.md');
+record(
+  'docs/SMART_BETA_RELEASE_CHECKLIST.md mentions v0.2.0-smart-beta',
+  /v0\.2\.0-smart-beta/.test(checklist43)
+);
+record(
+  'docs/SMART_BETA_RELEASE_CHECKLIST.md preserves no-real-click invariant',
+  /no real click|simulation-only|realClick: true/i.test(checklist43)
+);
+var draft43 = readText('docs/SMART_BETA_RELEASE_DRAFT.md');
+record(
+  'docs/SMART_BETA_RELEASE_DRAFT.md ready for GitHub release editor',
+  /ClickFlow Smart Desktop Beta/.test(draft43) &&
+  /v0\.2\.0-smart-beta/.test(draft43)
+);
+
+// 347. RELEASE_NOTES + TAG_AND_RELEASE_GUIDE link to smart beta.
+var rn = readText('RELEASE_NOTES.md');
+record(
+  'RELEASE_NOTES.md mentions Smart Desktop Beta target',
+  /Smart Desktop Beta|v0\.2\.0-smart-beta/.test(rn)
+);
+var tagGuide = readText('docs/TAG_AND_RELEASE_GUIDE.md');
+record(
+  'docs/TAG_AND_RELEASE_GUIDE.md has a smart-beta tag plan',
+  /Smart Desktop Beta tag plan|v0\.2\.0-smart-beta/.test(tagGuide)
+);
+
+// 348. Smart Beta safety re-check — package.json still declares
+//      zero of the forbidden modules.
+if (pkg) {
+  var allDepsSb = Object.assign({},
+    pkg.dependencies || {}, pkg.devDependencies || {}, pkg.optionalDependencies || {});
+  var smartBetaForbidden = [
+    'tesseract-ocr', 'node-tesseract-ocr',
+    'opencv4nodejs', '@u4/opencv4nodejs', 'opencv.js', 'opencv-js',
+    'sharp', 'jimp', 'pixelmatch', 'looks-same',
+    'robotjs', 'nut-js', 'nutjs', '@nut-tree/nut-js',
+    'iohook', 'uiohook-napi', 'node-key-sender'
+  ];
+  var pkgForbiddenSb = smartBetaForbidden.filter(function (m) {
+    return Object.prototype.hasOwnProperty.call(allDepsSb, m);
+  });
+  record(
+    'Smart Beta — package.json declares no forbidden modules at Step 43',
+    pkgForbiddenSb.length === 0,
+    pkgForbiddenSb.join(', ')
+  );
+  record(
+    'Smart Beta — package.json declares tesseract.js (Phase-1+ dependency)',
+    Object.prototype.hasOwnProperty.call(allDepsSb, 'tesseract.js')
+  );
+}
+
+// 349. Step-42 / Step-43 bugfixes do not regress the runtime
+//      overlay safety stance.
+var ffSb = readText('src/feature-flags.js');
+record(
+  'Smart Beta — feature-flags.js still pins realDesktopActions: false',
+  /FEATURE_FLAGS\s*=\s*Object\.freeze\(\{[\s\S]*?realDesktopActions:\s*false/.test(ffSb)
+);
+record(
+  'Smart Beta — feature-flags.js still pins simulationOnly: true',
+  /FEATURE_FLAGS\s*=\s*Object\.freeze\(\{[\s\S]*?simulationOnly:\s*true/.test(ffSb)
+);
+record(
+  'Smart Beta — runtime overlay still whitelist-only',
+  /_RUNTIME_TOGGLABLE_FLAGS\s*=\s*\[\s*['"]realOcr['"],\s*['"]tesseractProvider['"]\s*\]/.test(ffSb)
 );
 
 // --- Report ---

@@ -8,6 +8,248 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Steps 15-43
+
+ClickFlow Smart Desktop Beta preparation (`v0.2.0-smart-beta`).
+Final QA + bugfix audit of the smart-features chain
+(Step 42) and packaging / release pass (Step 43). The
+`package.json` `version` bumps from `0.1.0` to `0.2.0-beta`
+(semver-clean pre-release identifier; the human-facing release
+tag is `v0.2.0-smart-beta`).
+
+ClickFlow stays **simulation-only**:
+
+- The action pipeline rejects every `realClick: true` for every
+  scenario type.
+- `realDesktopActions: false`, `simulationOnly: true` baked into
+  `FEATURE_FLAGS`. Neither is in the runtime-togglable whitelist.
+- `realOcr` and `tesseractProvider` are session-scoped runtime
+  toggles only. The session flag wipes on reload.
+- No new IPC channel introduced beyond the Step 25-34
+  smart-features set.
+- `contextIsolation: true`, `nodeIntegration: false`, CSP
+  unchanged.
+
+### Added (Step 42 — Smart OCR/Image QA + Bugfix Pass)
+
+- **Smart-features audit.** Step 42 ran the five smart-features
+  chains end-to-end (Coordinate / Image / OCR-Text / Visual
+  Builder / Presets) plus the Diagnostics and Packaging
+  surfaces, and patched the bugs the audit surfaced:
+  - `src/scenario-presets.js` — `preset-text-click-basic` did
+    NOT carry the `ocrProvider` field introduced at Step 41.
+    Bugfix: added `ocrProvider: 'mock'` to the frozen preset,
+    extended `validateScenarioPreset` with a new error id
+    `presetOcrProviderInvalid`, extended the clone whitelist
+    to keep the field, propagated the active provider through
+    `applyVisualContextToPreset` and `_sanitizeVisualContext`.
+  - `src/visual-builder.js` — `buildVisualContextFromState`
+    did NOT consult `getActiveOcrProvider()`. Bugfix: now
+    copies the active provider id into the visual context so
+    drafts created from the Visual Builder + presets used
+    "with current visual context" reflect the user's actual
+    OCR-tab selection.
+  - `src/ocr-provider-interface.js` — `isRealOcrAllowed` was
+    a Step-38 hard-stop that always returned `false`. Bugfix:
+    now reflects the merged base + runtime feature-flag
+    snapshot. Returns `true` only when `realOcr === true &&
+    tesseractProvider === true && simulationOnly !== true`.
+    In production builds (where `simulationOnly: true` stays
+    baked in) the function still evaluates to `false`, but
+    the semantics are now correct for unit tests and future
+    builds. Smoke-check invariants updated accordingly.
+  - `src/ocr-provider-registry.js` —
+    `getOcrProviderRegistryStatus` reported
+    `realOcrEnabled: false` even after the user pressed
+    "Enable Tesseract for this session". Bugfix: now reads
+    `realOcrEnabledForSession` from `getOcrFeatureStatus()`,
+    so the diagnostics line and the readiness UI accurately
+    reflect the runtime overlay.
+- **`src/smart-beta-health.js` (new).** Pure-renderer module
+  consolidating every smart-features readiness boolean into
+  one snapshot:
+  - `getSmartBetaHealth()` returns the 10 readiness booleans
+    (`screenCaptureReady`, `regionSelectorReady`,
+    `templatesReady`, `templateMatchingReady`,
+    `imageClickReady`, `ocrMockReady`,
+    `tesseractProviderReady`, `textClickReady`,
+    `visualBuilderReady`, `presetsReady`) plus
+    `realClicksEnabled: false` and `releaseBlockersCount`.
+  - `countSmartBetaReleaseBlockers()` reports how many
+    smart-features modules are not loaded. A production
+    build returns `0`.
+  - `getSmartBetaHealthDiagnostics()` is an alias used by the
+    Copy diagnostics line.
+  - The module never opens an IPC channel, never runs OCR,
+    never reads pixel data.
+- **`src/renderer.js` Copy diagnostics.** New `Smart beta:`
+  line listing every readiness boolean plus
+  `releaseBlockersCount`, `simulationOnly=true`,
+  `realClick=false`. The line never carries the full target
+  text, an `imageDataUrl`, a thumbnail, or PII.
+- **`src/audit-events.js`.** Five new allowlisted types:
+  `smartBeta.qa.started`, `smartBeta.qa.completed`,
+  `smartBeta.blocker.found`, `smartBeta.blocker.fixed`,
+  `smartBeta.releaseCandidate.checked`.
+- **`src/i18n.js`.** 16 new keys per language. Final parity:
+  835 ru / 835 en. New keys: `smartBetaStatus`,
+  `smartBetaQa`, `screenCaptureReady`,
+  `regionSelectorReady`, `templatesReady`,
+  `templateMatchingReady`, `imageClickReady`,
+  `ocrMockReady`, `tesseractProviderReady`, `textClickReady`,
+  `visualBuilderReady`, `presetsReady`,
+  `releaseBlockersCount`, `readyAfterManualQa`,
+  `manualOcrTestingRequired`, `smartBetaManualTests`,
+  `smartBetaQaReport`.
+- **`src/index.html`.** New `<script src="smart-beta-health.js">`
+  loaded between `visual-builder-ui.js` and `renderer.js`.
+- **`docs/SMART_BETA_QA_REPORT.md` (new).** Step-42 audit +
+  bugfix report. Sections: Scope, Environment, Checked flows
+  (Coordinate / Image / OCR-Text / Visual Builder / Presets /
+  Diagnostics / Packaging), Results, Known issues, Blockers,
+  Safety verification, Release recommendation. Status:
+  Ready after manual packaged-app QA.
+- **`docs/SMART_BETA_MANUAL_TESTS.md` (new).** 15-section
+  manual checklist with `Status: Not tested` placeholders for
+  every section: Install / Smoke check / Screen capture /
+  Region selector / Templates / Template matching /
+  image_click / OCR mock / Real OCR session / text_click /
+  Visual Builder / Presets / Diagnostics / Safety / Packaging.
+- **`docs/SMOKE_TESTS.md`.** New "Smart Beta smoke sequence"
+  section covering steps S1-S18 (npm install → npm run smoke
+  → npm start → smart-features chain → npm run pack → npm
+  run dist).
+- **`docs/SECURITY_CHECKLIST.md`.** New "Smart beta safety"
+  section listing 12 invariants (screen capture only by user
+  action, real OCR only by session flag, OCR does not click,
+  image_click / text_click simulation only, Visual Builder
+  drafts only, presets do not auto-execute, action-pipeline
+  blocks `realClick: true`, `realDesktopActions: false`, no
+  `robotjs` / `nut.js`, no OpenCV).
+- **`docs/KNOWN_LIMITATIONS.md`.** New section
+  **21. Smart Beta — Step 42 limitations** with subsections
+  21.1-21.7 (Tesseract may require language data, OCR can be
+  slow, OCR result quality depends on screenshot quality,
+  template matching is plain-JS preview matching, Visual
+  Builder is foundation-level, real clicks not implemented,
+  mobile not implemented).
+
+### Added (Step 43 — Smart Beta Packaging/Release Pass)
+
+- **`package.json`.**
+  - `version` bumped `0.1.0` → `0.2.0-beta` (semver-clean
+    pre-release identifier; the GitHub release tag is
+    `v0.2.0-smart-beta`).
+  - `description` updated to "Electron, simulation-only smart
+    desktop beta".
+  - `build.files` tightened:
+    - explicit include of `tesseract.js` runtime files under
+      `node_modules/` (`tesseract.js`, `tesseract.js-core`,
+      `wasm-feature-detect`, `idb-keyval`, `bmp-js`,
+      `regenerator-runtime`, `zlibjs`, `is-electron`,
+      `opencollective-postinstall`) so the packaged build can
+      run real OCR after the user enables Tesseract for the
+      session;
+    - explicit exclude of `userData/`, `.env*`, `*.tmp`,
+      `*.log`, `screenshots/`, `screenshot-*.png|jpg`,
+      `dist/`, `coverage/`, `.cache/`, `.npm/`. No private
+      data, no temporary screenshots, no env files leak into
+      the artifacts.
+- **`docs/SMART_BETA_RELEASE_NOTES.md` (new).** Full smart-beta
+  release notes. Sections: Summary, New smart features
+  (Screen Capture / Region Selector / Templates / Image
+  matching / image_click / OCR mock and real OCR session /
+  text_click / Visual Builder / Presets), Safety model, What
+  is still not included, Known limitations, How to test,
+  Feedback.
+- **`docs/SMART_BETA_RELEASE_CHECKLIST.md` (new).**
+  Engineering / smart-features dev-mode QA / packaging /
+  documentation / release sign-off checklist. Five sections,
+  per-platform sign-offs (Windows, macOS, Linux).
+- **`docs/SMART_BETA_RELEASE_DRAFT.md` (new).** Body to paste
+  into the GitHub release editor. Sections: Title, Tag,
+  Summary, Highlights, Safety model, How to run, How to test,
+  Known limitations, What is not included, Feedback,
+  Security note.
+- **`RELEASE_NOTES.md`.** New "Smart Desktop Beta —
+  `v0.2.0-smart-beta`" section linking to the smart-beta
+  docs.
+- **`docs/TAG_AND_RELEASE_GUIDE.md`.** New "Smart Desktop Beta
+  tag plan (`v0.2.0-smart-beta`)" section: tag procedure
+  (10 steps), rollback guidance.
+- **`README.md` / `PROJECT_CONTEXT.md` / `CHANGELOG.md`.**
+  Updated to Steps 42-43.
+
+### Smoke check (Steps 42-43)
+
+- New invariants for Step 42:
+  - `src/smart-beta-health.js` exists and exports the public
+    surface (`getSmartBetaHealth`,
+    `getSmartBetaHealthDiagnostics`,
+    `countSmartBetaReleaseBlockers`).
+  - `index.html` loads `smart-beta-health.js` between
+    `visual-builder-ui.js` and `renderer.js`.
+  - `renderer.js` Copy diagnostics has a `Smart beta:` line.
+  - 5 new audit types in the allowlist.
+  - i18n parity preserved (835 ru / 835 en).
+  - 5 bugfix invariants:
+    - `scenario-presets.js` declares `ocrProvider: 'mock'`
+      on the text_click preset and clones the field.
+    - `visual-builder.js` consults `getActiveOcrProvider`.
+    - `ocr-provider-interface.js` `isRealOcrAllowed` short-
+      circuits on `simulationOnly` and checks the
+      `tesseractProvider` gate (replacing the retired
+      Step-38 hard-stop invariant).
+    - `ocr-provider-registry.js`
+      `getOcrProviderRegistryStatus` reads
+      `realOcrEnabledForSession`.
+  - `docs/SMART_BETA_QA_REPORT.md` and
+    `docs/SMART_BETA_MANUAL_TESTS.md` exist with the
+    expected sections.
+- New invariants for Step 43:
+  - `package.json` declares `"version": "0.2.0-beta"`.
+  - `package.json` `build.files` excludes `userData/`,
+    `.env`, screenshots, `dist/`, `coverage/`, `.cache/`,
+    `.npm/`.
+  - `docs/SMART_BETA_RELEASE_CHECKLIST.md`,
+    `docs/SMART_BETA_RELEASE_NOTES.md`,
+    `docs/SMART_BETA_RELEASE_DRAFT.md` exist with the
+    expected sections.
+  - README / PROJECT_CONTEXT / CHANGELOG mention Steps 42
+    and 43.
+  - `RELEASE_NOTES.md` mentions the smart-beta release
+    target.
+  - `docs/TAG_AND_RELEASE_GUIDE.md` carries the smart-beta
+    tag plan.
+- Total: 1348 + Step-42 + Step-43 invariants. Smoke runs are
+  recorded in [`docs/SMART_BETA_QA_REPORT.md`](./docs/SMART_BETA_QA_REPORT.md).
+
+### Safety invariants kept (Steps 42-43)
+
+- ClickFlow remains **simulation-only**.
+- `nodeIntegration: false`, `contextIsolation: true`, CSP
+  unchanged.
+- Base `FEATURE_FLAGS` defaults: `realDesktopActions: false`,
+  `simulationOnly: true`, `realOcr: false`,
+  `tesseractProvider: false`, `ocrMockProvider: true`. None
+  of the umbrella safety flags are in the runtime-togglable
+  whitelist.
+- The action pipeline rejects every `realClick: true` for
+  every scenario type. `realOcr: true` on a `text_click`
+  action is a SOURCE marker only.
+- No new IPC channel.
+- `package.json` declares `tesseract.js` and zero of the
+  forbidden modules (`tesseract-ocr`, `node-tesseract-ocr`,
+  `opencv*`, `sharp`, `jimp`, `pixelmatch`, `looks-same`,
+  `robotjs`, `nut-js`, `nutjs`, `@nut-tree/nut-js`, `iohook`,
+  `uiohook-napi`, `node-key-sender`).
+- `build.files` exclude removes `userData/`, `.env`,
+  screenshots, `dist/`, `coverage/`, `.cache/`, `.npm/`,
+  `*.tmp`, `*.log` from the packaged artifacts.
+- Audit payloads carry only stable string ids, durations,
+  counts, language strings, source flags — never the full
+  target text, never an `imageDataUrl`, never PII.
+
 ## [Unreleased] — Steps 15-41
 
 Final stabilization of the simulation-only beta, design-only handoff

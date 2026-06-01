@@ -161,6 +161,17 @@ function buildVisualContextFromState(state) {
     if (ocr.matchMode) ctx.matchMode   = ocr.matchMode;
     if (typeof ocr.caseSensitive === 'boolean') ctx.caseSensitive = ocr.caseSensitive;
   }
+  // Step 42 bugfix — propagate the active OCR provider into the
+  // visual context so presets / drafts created from the Visual
+  // Builder reflect the user's current OCR-tab selection.
+  if (typeof getActiveOcrProvider === 'function') {
+    try {
+      var ap = getActiveOcrProvider();
+      if (ap && (ap.id === 'mock' || ap.id === 'tesseract')) {
+        ctx.ocrProvider = ap.id;
+      }
+    } catch (_e) { /* swallow */ }
+  }
   return ctx;
 }
 

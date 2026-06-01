@@ -79,6 +79,12 @@ var SCENARIO_PRESETS = Object.freeze([
       language: 'ru+en',
       matchMode: 'contains',
       caseSensitive: false,
+      // Step 42 bugfix — text_click presets carry the ocrProvider
+      // field introduced at Step 41. Default `mock` so the preset
+      // round-trips through the form without surprising users; the
+      // user can flip the form's select to `tesseract` after Save
+      // and after enabling Tesseract for the session.
+      ocrProvider: 'mock',
       region: null,
       timeoutMs: 10000,
       intervalMs: 1000,
@@ -150,6 +156,14 @@ function validateScenarioPreset(preset) {
     if (typeof tc.timeoutMs !== 'number' || tc.timeoutMs < 1000) errors.push('presetTimeoutInvalid');
     if (typeof tc.intervalMs !== 'number' || tc.intervalMs < 100) errors.push('presetIntervalInvalid');
     if (typeof tc.repeatCount !== 'number' || tc.repeatCount < 1) errors.push('presetRepeatInvalid');
+    // Step 42 bugfix — ocrProvider is optional but if present must be
+    // either `mock` or `tesseract`. Anything else is rejected so a
+    // typo (`'tesseractr'`, `'real'`, etc.) cannot land a buggy
+    // preset that the click-engine refuses at run time.
+    if (tc.ocrProvider !== undefined && tc.ocrProvider !== null &&
+        tc.ocrProvider !== 'mock' && tc.ocrProvider !== 'tesseract') {
+      errors.push('presetOcrProviderInvalid');
+    }
   }
   return { valid: errors.length === 0, errors: errors };
 }
@@ -216,6 +230,13 @@ function applyVisualContextToPreset(preset, visualContext) {
     }
     if (typeof ctx.caseSensitive === 'boolean') {
       clone.settings.caseSensitive = ctx.caseSensitive;
+    }
+    // Step 42 bugfix — propagate the active OCR provider hint from
+    // the visual context so a "Use with current visual context"
+    // flow on the text preset reflects what the user is actively
+    // using. Default mock when unspecified.
+    if (ctx.ocrProvider === 'mock' || ctx.ocrProvider === 'tesseract') {
+      clone.settings.ocrProvider = ctx.ocrProvider;
     }
   }
   return clone;
@@ -292,10 +313,14 @@ function _cloneSettings(s) {
   var out = {};
   // Whitelist allowed keys per type so we never accidentally copy a
   // future imageDataUrl or pixel buffer that might leak in.
+  // Step 42 bugfix — `ocrProvider` is the new text_click field
+  // introduced at Step 41. Without this entry the preset's
+  // `ocrProvider` value would be silently dropped during clone.
   var allowed = [
     'x', 'y', 'button', 'intervalMs', 'repeatCount',
     'templateId', 'region', 'threshold', 'step', 'timeoutMs',
-    'targetText', 'language', 'matchMode', 'caseSensitive'
+    'targetText', 'language', 'matchMode', 'caseSensitive',
+    'ocrProvider'
   ];
   for (var i = 0; i < allowed.length; i++) {
     var k = allowed[i];
@@ -340,7 +365,13 @@ function _sanitizeVisualContext(ctx) {
     step:        typeof ctx.step        === 'number' ? ctx.step      : null,
     ocrLanguage: typeof ctx.ocrLanguage === 'string' ? ctx.ocrLanguage : null,
     matchMode:   typeof ctx.matchMode   === 'string' ? ctx.matchMode   : null,
-    caseSensitive: typeof ctx.caseSensitive === 'boolean' ? ctx.caseSensitive : null
+    caseSensitive: typeof ctx.caseSensitive === 'boolean' ? ctx.caseSensitive : null,
+    // Step 42 bugfix — preserve the active OCR provider hint so
+    // "Use with current visual context" reflects the user's
+    // current OCR-tab selection. Other values are ignored
+    // defensively (typo-protection).
+    ocrProvider: (ctx.ocrProvider === 'mock' || ctx.ocrProvider === 'tesseract')
+      ? ctx.ocrProvider : null
   };
 }
 
