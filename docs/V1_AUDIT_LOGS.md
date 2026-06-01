@@ -64,3 +64,20 @@ New event types: `realAdapter.availability.checked`,
 `realAction.disallowed.blocked`, `realAction.safetyGate.failed`.
 Payloads carry only stable ids, short reasons, numeric coordinates, and
 the mouse button — never screenshots, base64, filesystem paths, or PII.
+
+
+
+---
+
+## Step 48 update — coordinate-click events
+
+Added: `feature.flag.toggle.rejected`, `emergencyStop.status.checked`,
+`emergencyStop.requiredForRealAction`,
+`emergencyStop.notReadyBlockedRealAction`,
+`realCoordinate.session.enable.requested` / `.enabled` / `.disabled`,
+`realCoordinate.safetyCheck.started` / `.passed` / `.failed`,
+`realCoordinate.confirmation.requested` / `.accepted` / `.cancelled`,
+`realCoordinate.click.requested` / `.executed` / `.blocked`,
+`realCoordinate.adapter.unavailable`,
+`realCoordinate.unsupportedAction.blocked`. Coordinates are numeric
+metadata only; no screenshots/base64/paths/PII.

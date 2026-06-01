@@ -176,6 +176,44 @@ function getPermissionChecklist(settings, flags) {
       status: 'planned',
       requiredForRealMode: false,
       guidanceKey: 'permissionGuidanceAuditPersistence'
+    },
+    // Step 48 — real coordinate click stabilization readiness items.
+    {
+      id: 'adapterDependencyAvailable',
+      labelKey: 'adapterDependencyAvailable',
+      // The real availability is checked live in main (async); the
+      // sync checklist marks it 'unknown' so it never falsely blocks.
+      status: 'unknown',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceAdapter'
+    },
+    {
+      id: 'emergencyStopReady',
+      labelKey: 'emergencyStop',
+      status: (safety.emergencyStopEnabled === true) ? 'ready' : 'missing',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceEmergencyStop'
+    },
+    {
+      id: 'auditLogsReady',
+      labelKey: 'auditLogs',
+      status: (typeof getAuditLogManagerStatus === 'function') ? 'ready' : 'planned',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceAuditLogs'
+    },
+    {
+      id: 'sessionRealCoordinateClickEnabled',
+      labelKey: 'sessionRealCoordinateClickEnabled',
+      status: (ff.realDesktopActions === true && ff.realCoordinateClick === true) ? 'ready' : 'missing',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceSessionRealMode'
+    },
+    {
+      id: 'userConfirmationRequired',
+      labelKey: 'userConfirmationRequired',
+      status: 'ready',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceUserConfirmation'
     }
   ];
 }

@@ -7,6 +7,62 @@
 
 ## Текущий шаг
 
+**Шаг 48 завершён.** Real coordinate click stabilization + safety QA.
+Текущий шаг — **48**.
+
+Главное: **реальные клики выключены по умолчанию; новых типов real
+actions не добавлено.** Прототип реального клика по координатам
+стабилизирован: session-only, one click per confirmation.
+
+Что сделано на Step 48:
+
+- feature-flags: добавлен `keyboardAutomation: false` (hard-coded, не
+  runtime-togglable); `isRealCoordinateClickSessionEnabled()`; при
+  попытке включить запрещённый флаг — ошибка + audit
+  (`feature.flag.toggle.rejected`); runtime-флаги не сохраняются,
+  сбрасываются при перезапуске;
+- action-pipeline: `getRealDesktopActionBlockReason` (стабильные
+  blocked reasons), новые требования контекста
+  (`sessionRealCoordinateClickEnabled`, `adapterAvailable`,
+  `oneClickOnly`), блокировка repeat/batch;
+- safety-gates: `getRealCoordinateClickGateStatus(settings, flags,
+  permissions, adapterStatus, context)` (default-deny; click only; one
+  click per confirmation; no batch/repeat; no image/text/keyboard);
+- main/real-desktop-adapter.js: обязательны `oneClickOnly` и
+  `sessionRealCoordinateClickEnabled`, отказ repeat/batch, поле
+  `reason`, безопасный fallback при отсутствии зависимости;
+- Safety Center: status badges, fresh confirmation на каждый клик
+  (чекбокс), Test real click disabled при unavailable adapter,
+  диагностика (`getRealCoordinateClickDiagnostics`); emergency stop
+  проверяется перед real click;
+- audit: `realCoordinate.session.*`, `realCoordinate.safetyCheck.*`,
+  `realCoordinate.confirmation.*`, `realCoordinate.click.*`,
+  `realCoordinate.adapter.unavailable`,
+  `realCoordinate.unsupportedAction.blocked`, `emergencyStop.*`,
+  `feature.flag.toggle.rejected`;
+- permissions расширены; i18n RU/EN; docs:
+  `REAL_COORDINATE_CLICK_STABILIZATION.md`,
+  `REAL_COORDINATE_CLICK_QA.md` + обновления; smoke-check расширен
+  Step-48 инвариантами.
+
+Безопасность:
+
+- real clicks disabled by default; realCoordinateClick disabled;
+- real click требует session enable + fresh confirmation; one click per
+  confirmation; repeat/batch заблокированы;
+- image_click real blocked; text_click real blocked; keyboard
+  automation blocked; scroll/hotkey real нет;
+- no real click при smoke / при старте; нет robotjs/iohook/uiohook-napi/
+  opencv; `contextIsolation: true`, `nodeIntegration: false`, CSP не
+  ослаблен; renderer без прямого Node-доступа; screenshots/base64 не
+  пишутся.
+
+**Next step:** при наличии безопасного backend — только за полным
+safety review: persisted audit, OS permission probes, target
+allow/deny-list; image/text real и keyboard — вне scope.
+
+## Шаг 47 (real adapter prototype)
+
 **Шаг 47 завершён.** Real desktop adapter prototype behind hard safety
 gate. Текущий шаг — **47**.
 

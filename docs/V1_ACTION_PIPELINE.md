@@ -72,3 +72,17 @@ the main-process adapter (`main/real-desktop-adapter.js`), which
 re-validates everything. The result is returned verbatim (a genuine
 real click reports `realAction:true`); the simulation-only
 `normalizeActionResult` is intentionally not applied to real results.
+
+
+
+---
+
+## Step 48 update — explicit blocked reasons + one-click-only
+
+`getRealDesktopActionBlockReason(action, context)` returns a stable
+blocked-reason id (or null when permitted); `canExecuteRealDesktopAction`
+delegates to it. New context requirements:
+`sessionRealCoordinateClickEnabled`, `adapterAvailable`, `oneClickOnly`.
+Repeats (`repeatCount > 1`) and batches (action arrays) are blocked.
+image_click/text_click/keyboard/scroll/move_mouse real modes each map
+to their own blocked reason.

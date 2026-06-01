@@ -4791,3 +4791,12 @@ body {
 .sc-modal-line { margin: 4px 0; font-size: 13px; color: #333; }
 .sc-modal-check { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; font-size: 13px; }
 .sc-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+
+
+/* Step 48 — Safety Center status badges */
+.sc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.sc-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; border: 1px solid #d0d4da; background: #f6f7f9; }
+.sc-badge.sc-ok { color: #1a7f37; border-color: #add6b6; background: #eef7f0; }
+.sc-badge.sc-bad { color: #b00020; border-color: #e6b3bd; background: #fdecef; }
+.sc-badge.sc-warn { color: #9a6700; border-color: #e6d6a8; background: #fbf6e6; }
+.sc-btn:disabled { opacity: 0.5; cursor: not-allowed; }

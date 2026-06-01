@@ -25,6 +25,9 @@ const FEATURE_FLAGS = Object.freeze({
   realCoordinateClick: false,
   realImageClick: false,
   realTextClick: false,
+  // Step 48 — keyboard automation is explicitly out of scope and is
+  // hard-coded false and NOT runtime-togglable.
+  keyboardAutomation: false,
   ocr: false,
   imageRecognition: false,
   // Hard-coded true — ClickFlow remains simulation-only by default.
@@ -119,6 +122,12 @@ function setRuntimeFeatureFlag(flag, value) {
     return { ok: false, error: 'invalidFlag' };
   }
   if (_RUNTIME_TOGGLABLE_FLAGS.indexOf(flag) === -1) {
+    // Step 48: a forbidden flag toggle attempt is audited so the
+    // attempt is visible in the Safety Center audit log. We never
+    // throw and never enable the flag.
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('feature.flag.toggle.rejected', { flag: flag });
+    }
     return { ok: false, error: 'flagNotRuntimeTogglable' };
   }
   _runtimeFlags[flag] = !!value;
@@ -265,9 +274,19 @@ function getRealAdapterFeatureStatus() {
     realImageClick:                    false,  // hard-coded, never togglable
     realTextClick:                     false,  // hard-coded, never togglable
     keyboardActions:                   false,  // out of scope at Step 47
+    keyboardAutomation:                false,  // Step 48 — hard-coded false
     simulationOnly:                    f.simulationOnly === true,
     realCoordinateClickSessionEnabled: (f.realDesktopActions === true) &&
                                        (f.realCoordinateClick === true),
     realActionsAutoRun:                false   // hard-coded — never auto-run
   };
+}
+
+// Step 48 — convenience predicate used by the Safety Center, the
+// action pipeline pre-flight, and the gate. True only when BOTH the
+// umbrella and the per-action coordinate-click flags are enabled for
+// the current session. Never persisted; resets to false on reload.
+function isRealCoordinateClickSessionEnabled() {
+  var f = getFeatureFlags();
+  return (f.realDesktopActions === true) && (f.realCoordinateClick === true);
 }

@@ -67,3 +67,17 @@ not missing, action type `click` only, and explicit per-click
 confirmation. The main process re-validates the full context and is
 the authority. Session flags are never persisted and reset to `false`
 on restart. image/text real clicks and keyboard remain hard-disabled.
+
+
+
+---
+
+## Step 48 update — coordinate-click stabilization
+
+Added `getRealCoordinateClickGateStatus(settings, flags, permissions,
+adapterStatus, context)` — a default-deny superset of the Step 47 gate
+that also enforces per-action context: fresh user confirmation, one
+click per confirmation, action type `click` only, no batch, no repeat,
+no image/text real, no keyboard. `keyboardAutomation` is a new
+hard-coded-false, non-togglable flag. The renderer pipeline and the
+main adapter both re-validate independently. "When in doubt, block."

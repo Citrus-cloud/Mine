@@ -7254,6 +7254,172 @@ record(
   (i18nTxt46.match(/experimentalRealCoordinateClick:/g) || []).length >= 2
 );
 
+// --- Step 48: Real coordinate click stabilization + safety QA ---
+
+// 383. New docs exist.
+record('Step 48 doc exists: docs/REAL_COORDINATE_CLICK_STABILIZATION.md', fileExists('docs/REAL_COORDINATE_CLICK_STABILIZATION.md'));
+record('Step 48 doc exists: docs/REAL_COORDINATE_CLICK_QA.md', fileExists('docs/REAL_COORDINATE_CLICK_QA.md'));
+
+// 384. README / PROJECT_CONTEXT mention Step 48 + one click / fresh confirmation.
+var readmeTxt48 = readText('README.md');
+var pcTxt48 = readText('PROJECT_CONTEXT.md');
+var chTxt48 = readText('CHANGELOG.md');
+record(
+  'README or PROJECT_CONTEXT mentions Step 48 / шаг 48',
+  /step\s*48|шаг\s*48/i.test(readmeTxt48) || /step\s*48|шаг\s*48/i.test(pcTxt48)
+);
+record(
+  'CHANGELOG mentions Step 48 / шаг 48',
+  /step\s*48|шаг\s*48/i.test(chTxt48)
+);
+record(
+  'README or PROJECT_CONTEXT states one click per confirmation / fresh confirmation',
+  /one click per confirmation|fresh confirmation|один клик на одно подтверждение|нов(ого|ое) подтвержд/i.test(readmeTxt48) ||
+  /one click per confirmation|fresh confirmation|один клик на одно подтверждение|нов(ого|ое) подтвержд/i.test(pcTxt48)
+);
+
+// 385. package.json declares no robotjs / iohook / uiohook-napi / opencv.
+if (pkg) {
+  var allDeps48 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var forbidden48 = Object.keys(allDeps48).filter(function (name) {
+    var n = name.toLowerCase();
+    return n.indexOf('robotjs') !== -1 ||
+           n.indexOf('iohook') !== -1 ||
+           n.indexOf('uiohook') !== -1 ||
+           n.indexOf('opencv') !== -1;
+  });
+  record(
+    'Step 48 — package.json declares no robotjs/iohook/uiohook-napi/opencv',
+    forbidden48.length === 0,
+    forbidden48.join(', ')
+  );
+}
+
+// 386. feature-flags defaults in the frozen block.
+var ff48 = readText('src/feature-flags.js');
+var frozen48 = (ff48.match(/FEATURE_FLAGS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/) || [])[1] || '';
+record('Step 48 — feature-flags default realDesktopActions: false', /realDesktopActions:\s*false/.test(frozen48));
+record('Step 48 — feature-flags default realCoordinateClick: false', /realCoordinateClick:\s*false/.test(frozen48));
+record('Step 48 — feature-flags default realImageClick: false', /realImageClick:\s*false/.test(frozen48));
+record('Step 48 — feature-flags default realTextClick: false', /realTextClick:\s*false/.test(frozen48));
+record('Step 48 — feature-flags default keyboardAutomation: false', /keyboardAutomation:\s*false/.test(frozen48));
+record(
+  'Step 48 — feature-flags declares isRealCoordinateClickSessionEnabled',
+  ff48.indexOf('function isRealCoordinateClickSessionEnabled') !== -1
+);
+
+// 387. action-pipeline blocks image_click / text_click real mode and has the
+//      explicit blocked-reason helper + one-click context requirement.
+var apTxt48 = readText('src/action-pipeline.js');
+record(
+  'action-pipeline.js blocks image_click real mode',
+  /action\.type === 'image_click'[\s\S]{0,80}imageClickRealBlocked/.test(apTxt48) ||
+  apTxt48.indexOf('imageClickRealBlocked') !== -1
+);
+record(
+  'action-pipeline.js blocks text_click real mode',
+  apTxt48.indexOf('textClickRealBlocked') !== -1
+);
+record(
+  'action-pipeline.js declares getRealDesktopActionBlockReason',
+  apTxt48.indexOf('function getRealDesktopActionBlockReason') !== -1
+);
+record(
+  'action-pipeline.js real pre-flight requires oneClickOnly',
+  /oneClickOnly/.test(apTxt48) && /oneClickOnlyRequired/.test(apTxt48)
+);
+record(
+  'action-pipeline.js blocks repeat/batch real clicks',
+  /repeatRealClicksBlocked/.test(apTxt48) && /batchRealClicksBlocked/.test(apTxt48)
+);
+
+// 388. safety-gates stabilized gate exists.
+var sgTxt48 = readText('src/safety-gates.js');
+record(
+  'safety-gates.js declares getRealCoordinateClickGateStatus',
+  sgTxt48.indexOf('function getRealCoordinateClickGateStatus') !== -1
+);
+record(
+  'safety-gates.js stabilized gate is default-deny',
+  /getRealCoordinateClickGateStatus[\s\S]{0,2000}allowed\s*=\s*reasons\.length === 0/.test(sgTxt48)
+);
+
+// 389. main adapter requires oneClickOnly + sessionRealCoordinateClickEnabled,
+//      refuses repeat/batch, and carries a reason field.
+var rdaTxt48 = readText('main/real-desktop-adapter.js');
+record(
+  'real-desktop-adapter.js hard context requires oneClickOnly',
+  /oneClickOnly/.test(rdaTxt48)
+);
+record(
+  'real-desktop-adapter.js hard context requires sessionRealCoordinateClickEnabled',
+  /sessionRealCoordinateClickEnabled/.test(rdaTxt48)
+);
+record(
+  'real-desktop-adapter.js refuses repeat/batch real clicks',
+  /Repeat real clicks are blocked/.test(rdaTxt48) && /Batch real clicks are blocked/.test(rdaTxt48)
+);
+record(
+  'real-desktop-adapter.js blocked result carries a reason field',
+  /reason:\s*msg/.test(rdaTxt48)
+);
+
+// 390. audit allowlist includes the Step 48 events.
+[
+  "'realCoordinate.click.executed'",
+  "'realCoordinate.click.blocked'",
+  "'realCoordinate.safetyCheck.failed'",
+  "'emergencyStop.notReadyBlockedRealAction'",
+  "'feature.flag.toggle.rejected'"
+].forEach(function (needle) {
+  record('audit allowlist includes ' + needle.replace(/'/g, ''), auditTxt.indexOf(needle) !== -1);
+});
+
+// 391. Safety Center diagnostics + i18n + DOM-safety (Step 48).
+var scuiTxt48 = readText('src/safety-center-ui.js');
+record(
+  'safety-center-ui.js declares getRealCoordinateClickDiagnostics',
+  scuiTxt48.indexOf('function getRealCoordinateClickDiagnostics') !== -1
+);
+record(
+  'safety-center-ui.js per-click confirmation requires a checkbox',
+  /confirmSingleCoordinateClick/.test(scuiTxt48) && /requireCheckbox:\s*true/.test(scuiTxt48)
+);
+record(
+  'safety-center-ui.js never assigns innerHTML to user data (Step 48)',
+  (function () {
+    var lines = scuiTxt48.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var code = lines[i].replace(/\/\/.*$/, '').trim();
+      if (code.indexOf('innerHTML') === -1) continue;
+      if (!/innerHTML\s*=\s*(['"])\s*\1\s*;?\s*$/.test(code)) return false;
+    }
+    return true;
+  })()
+);
+var i18nTxt48 = readText('src/i18n.js');
+record(
+  'i18n declares confirmSingleCoordinateClick in RU and EN',
+  (i18nTxt48.match(/confirmSingleCoordinateClick:/g) || []).length >= 2
+);
+
+// 392. Electron security invariants still hold at Step 48.
+record(
+  'Step 48 — main.js still sets contextIsolation: true / nodeIntegration: false',
+  /contextIsolation\s*:\s*true/.test(mainTxt) && /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'Step 48 — index.html CSP not relaxed',
+  htmlTxt46.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt46.indexOf('unsafe-inline') === -1 &&
+  htmlTxt46.indexOf('unsafe-eval') === -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

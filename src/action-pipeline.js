@@ -519,33 +519,61 @@ function createRealActionBlockedResult(reason, action) {
 
 // Synchronous pre-flight gate. Returns true ONLY if every renderer-side
 // precondition holds. The authoritative gate still runs in main.
+//
+// Step 48: delegates to getRealDesktopActionBlockReason() so the exact
+// blocked reason is available to callers and audit logs.
 function canExecuteRealDesktopAction(action, context) {
+  return getRealDesktopActionBlockReason(action, context) === null;
+}
+
+// Step 48 — returns a STABLE blocked-reason id, or null if the real
+// coordinate click is permitted. "When in doubt, block." Every branch
+// returns a reason; only the all-clear path returns null.
+function getRealDesktopActionBlockReason(action, context) {
   var ctx = (context && typeof context === 'object') ? context : {};
 
-  // Coordinate click only. Everything else is blocked outright.
-  if (!action || action.type !== 'click') return false;
-  if (action.realClick !== true) return false;
-  if (typeof action.x !== 'number' || action.x < 0) return false;
-  if (typeof action.y !== 'number' || action.y < 0) return false;
-  if (['left', 'right', 'middle'].indexOf(action.button) === -1) return false;
+  // --- Prohibited / unsupported real action types ---
+  if (!action || typeof action !== 'object') return 'invalidAction';
+  if (action.type === 'image_click') return 'imageClickRealBlocked';
+  if (action.type === 'text_click')  return 'textClickRealBlocked';
+  if (action.type === 'key_press' || action.type === 'hotkey') return 'keyboardActionsDisabled';
+  if (action.type === 'scroll')      return 'scrollRealBlocked';
+  if (action.type === 'move_mouse')  return 'moveMouseRealBlocked';
+  if (action.type !== 'click')       return 'unsupportedRealActionType';
 
-  // Session feature gate: BOTH umbrella + coordinate-click flags must
-  // be enabled for this session.
+  // --- Coordinate click shape ---
+  if (action.realClick !== true) return 'realClickFlagMissing';
+  if (typeof action.x !== 'number' || action.x < 0) return 'invalidCoordinates';
+  if (typeof action.y !== 'number' || action.y < 0) return 'invalidCoordinates';
+  if (['left', 'right', 'middle'].indexOf(action.button) === -1) return 'invalidButton';
+
+  // --- No repeats / no batches: one click per confirmation ---
+  if (typeof action.repeatCount === 'number' && action.repeatCount > 1) return 'repeatRealClicksBlocked';
+  if (Array.isArray(action.actions) && action.actions.length > 1) return 'batchRealClicksBlocked';
+  if (ctx.oneClickOnly !== true) return 'oneClickOnlyRequired';
+
+  // --- Session feature gate: BOTH flags enabled for this session ---
   var ff = (typeof getRealAdapterFeatureStatus === 'function')
     ? getRealAdapterFeatureStatus()
     : { realCoordinateClickSessionEnabled: false };
-  if (ff.realCoordinateClickSessionEnabled !== true) return false;
-  // image/text real clicks can never be enabled.
-  if (ff.realImageClick === true || ff.realTextClick === true) return false;
+  if (ff.realDesktopActions !== true) return 'realModeDisabled';
+  if (ff.realCoordinateClick !== true) return 'coordinateClickDisabled';
+  if (ff.realCoordinateClickSessionEnabled !== true) return 'sessionRealModeDisabled';
+  // image/text/keyboard real can never be enabled.
+  if (ff.realImageClick === true) return 'imageClickRealBlocked';
+  if (ff.realTextClick === true) return 'textClickRealBlocked';
+  if (ff.keyboardActions === true || ff.keyboardAutomation === true) return 'keyboardActionsDisabled';
 
-  // Explicit per-call context. "When in doubt, block."
-  if (ctx.userConfirmed !== true) return false;
-  if (ctx.safetyCheckPassed !== true) return false;
-  if (ctx.emergencyStopReady !== true) return false;
-  if (ctx.auditLogsEnabled !== true) return false;
-  if (ctx.sessionRealModeEnabled !== true) return false;
+  // --- Explicit per-call context. ---
+  if (ctx.sessionRealModeEnabled !== true) return 'sessionRealModeDisabled';
+  if (ctx.sessionRealCoordinateClickEnabled !== true) return 'sessionRealCoordinateClickDisabled';
+  if (ctx.userConfirmed !== true) return 'userConfirmationMissing';
+  if (ctx.safetyCheckPassed !== true) return 'safetyCheckFailed';
+  if (ctx.emergencyStopReady !== true) return 'emergencyStopNotReady';
+  if (ctx.auditLogsEnabled !== true) return 'auditLogsUnavailable';
+  if (ctx.adapterAvailable !== true) return 'adapterUnavailable';
 
-  return true;
+  return null;
 }
 
 // Async. Delegates to the main-process adapter. Always returns a
@@ -572,13 +600,15 @@ async function executeRealDesktopAction(action, context) {
   }
 
   if (!canExecuteRealDesktopAction(action, context)) {
+    var reasonId = getRealDesktopActionBlockReason(action, context) || 'safetyGate';
     var blocked = createRealActionBlockedResult(
-      'Real coordinate click blocked by safety gate (session disabled or confirmation/gates missing)',
+      'Real coordinate click blocked: ' + reasonId,
       action
     );
+    blocked.reason = reasonId;
     if (typeof recordAuditEvent === 'function') {
       recordAuditEvent('realAction.coordinate.blocked', {
-        scenarioId: context && context.scenarioId, reason: 'safetyGate'
+        scenarioId: context && context.scenarioId, reason: reasonId
       });
     }
     return blocked;
@@ -601,6 +631,9 @@ async function executeRealDesktopAction(action, context) {
       emergencyStopReady: context.emergencyStopReady === true,
       auditLogsEnabled: context.auditLogsEnabled === true,
       sessionRealModeEnabled: context.sessionRealModeEnabled === true,
+      sessionRealCoordinateClickEnabled: context.sessionRealCoordinateClickEnabled === true,
+      adapterAvailable: context.adapterAvailable === true,
+      oneClickOnly: context.oneClickOnly === true,
       scenarioId: context.scenarioId || null
     });
     // Return the main-process result verbatim. We do NOT run it through

@@ -257,7 +257,28 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   RealActionCoordinateExecuted:       'realAction.coordinate.executed',
   RealActionCoordinateBlocked:        'realAction.coordinate.blocked',
   RealActionDisallowedBlocked:        'realAction.disallowed.blocked',
-  RealActionSafetyGateFailed:         'realAction.safetyGate.failed'
+  RealActionSafetyGateFailed:         'realAction.safetyGate.failed',
+  // Step 48 — Real coordinate click stabilization + safety QA. Payloads
+  // carry only stable ids, short reasons, numeric coordinates and the
+  // mouse button — never screenshots, base64, paths, or PII.
+  FeatureFlagToggleRejected:          'feature.flag.toggle.rejected',
+  EmergencyStopStatusChecked:         'emergencyStop.status.checked',
+  EmergencyStopRequiredForRealAction: 'emergencyStop.requiredForRealAction',
+  EmergencyStopNotReadyBlocked:       'emergencyStop.notReadyBlockedRealAction',
+  RealCoordSessionEnableRequested:    'realCoordinate.session.enable.requested',
+  RealCoordSessionEnabled:            'realCoordinate.session.enabled',
+  RealCoordSessionDisabled:           'realCoordinate.session.disabled',
+  RealCoordSafetyCheckStarted:        'realCoordinate.safetyCheck.started',
+  RealCoordSafetyCheckPassed:         'realCoordinate.safetyCheck.passed',
+  RealCoordSafetyCheckFailed:         'realCoordinate.safetyCheck.failed',
+  RealCoordConfirmationRequested:     'realCoordinate.confirmation.requested',
+  RealCoordConfirmationAccepted:      'realCoordinate.confirmation.accepted',
+  RealCoordConfirmationCancelled:     'realCoordinate.confirmation.cancelled',
+  RealCoordClickRequested:            'realCoordinate.click.requested',
+  RealCoordClickExecuted:             'realCoordinate.click.executed',
+  RealCoordClickBlocked:              'realCoordinate.click.blocked',
+  RealCoordAdapterUnavailable:        'realCoordinate.adapter.unavailable',
+  RealCoordUnsupportedActionBlocked:  'realCoordinate.unsupportedAction.blocked'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

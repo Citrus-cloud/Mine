@@ -105,3 +105,24 @@ simulation-only. Removing the optional dependency also reverts to
 Captcha/anti-bot bypass, ad-click automation, banking/payment/protected
 applications, hidden/background device control, game/service rule
 violations, keyloggers/input hooks. No safety review authorizes these.
+
+
+
+---
+
+## Step 48 update — stabilization + safety QA
+
+The prototype was hardened (no new action types). Highlights:
+- `keyboardAutomation` flag added (hard-coded false, not togglable).
+- One click per confirmation enforced; repeats/batches blocked in the
+  renderer pipeline **and** re-checked in main.
+- Per-click confirmation now requires a checkbox ("I confirm this
+  single coordinate click."); confirmation is never reused.
+- Emergency-stop readiness is checked before every real click; if not
+  ready the click is blocked.
+- Stabilized gate `getRealCoordinateClickGateStatus(...)` and explicit
+  blocked-reason ids (`getRealDesktopActionBlockReason`).
+- Adapter returns a `reason` field; "Test real coordinate click" is
+  disabled in the UI when the backend is unavailable.
+See `docs/REAL_COORDINATE_CLICK_STABILIZATION.md` and
+`docs/REAL_COORDINATE_CLICK_QA.md`.

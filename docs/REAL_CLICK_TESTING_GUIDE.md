@@ -66,3 +66,16 @@ revert to simulation-only.
 - **Real click blocked despite enabling:** main re-validates the full
   context; confirm every requirement and that the action is a plain
   coordinate `click`.
+
+
+
+---
+
+## Step 48 update
+
+- Each real click now requires a **fresh** confirmation with an
+  explicit "I confirm this single coordinate click." checkbox. The
+  previous confirmation is never reused.
+- Repeats and batches are blocked — exactly one click per confirmation.
+- If emergency stop is not ready, the real click is blocked.
+- Full manual QA checklist: `docs/REAL_COORDINATE_CLICK_QA.md`.
