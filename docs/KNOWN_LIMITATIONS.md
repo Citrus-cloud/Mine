@@ -905,3 +905,18 @@ but each is part of the manual QA briefing in
 - Prohibited forever: captcha/anti-bot bypass, ad-click automation,
   banking/payment/protected-app automation, hidden device control,
   keyloggers/input hooks.
+
+
+
+## Real coordinate click stabilization (Step 48)
+
+- Still coordinate click only, disabled by default, session-only, one
+  click per confirmation. No new real action types were added.
+- Repeats, batches, and loops of real clicks are blocked.
+- `image_click`/`text_click` real modes, keyboard, scroll, and hotkeys
+  remain unimplemented / blocked.
+- Without the optional native backend the real click cannot fire — only
+  dry-run and safety blocking can be demonstrated.
+- Permanently prohibited: captcha/anti-bot bypass, ad-click automation,
+  banking/payment/protected-app automation, hidden/background control,
+  keyloggers/input hooks.

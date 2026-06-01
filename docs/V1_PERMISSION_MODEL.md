@@ -62,3 +62,15 @@ These report **status/guidance only** and never enable real mode. On
 Windows the OS-level input permission is typically `notRequired` /
 `unknown`, but adapter availability (native backend loaded) is always
 checked. The manager still keeps `realModeEnabled:false`.
+
+
+
+---
+
+## Step 48 update — coordinate-click readiness items
+
+Added checklist items: `adapterDependencyAvailable` (checked live in
+main; shown as `unknown` in the sync checklist), `emergencyStopReady`,
+`auditLogsReady`, `sessionRealCoordinateClickEnabled`,
+`userConfirmationRequired` (alongside the Step 47 items). Status/guidance
+only; never enables real mode.

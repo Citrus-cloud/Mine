@@ -146,6 +146,7 @@ function blockRealDesktopAction(reason, action, context) {
     blocked: true,
     actionType: action && action.type ? action.type : null,
     error: msg,
+    reason: msg,               // Step 48 — explicit reason field
     timestamp: _now()
   };
   _lastRealActionResult = { blocked: true, error: msg, timestamp: result.timestamp };
@@ -160,10 +161,14 @@ function _checkHardContext(context) {
   var c = (context && typeof context === 'object') ? context : {};
   var missing = [];
   if (c.sessionRealModeEnabled !== true) missing.push('sessionRealModeEnabled');
+  // Step 48: the per-action coordinate-click session gate and the
+  // one-click-per-confirmation flag are now mandatory in main too.
+  if (c.sessionRealCoordinateClickEnabled !== true) missing.push('sessionRealCoordinateClickEnabled');
   if (c.userConfirmed !== true)          missing.push('userConfirmed');
   if (c.safetyCheckPassed !== true)      missing.push('safetyCheckPassed');
   if (c.emergencyStopReady !== true)     missing.push('emergencyStopReady');
   if (c.auditLogsEnabled !== true)       missing.push('auditLogsEnabled');
+  if (c.oneClickOnly !== true)           missing.push('oneClickOnly');
   return missing;
 }
 
@@ -205,6 +210,15 @@ async function executeRealCoordinateClick(action, context) {
       action.type === 'key_press' || action.type === 'hotkey' ||
       action.type === 'scroll' || action.type === 'move_mouse') {
     return blockRealDesktopAction('Action type not supported by the prototype: ' + action.type, action, context);
+  }
+
+  // 4b) Step 48: refuse repeats and batches. One click per
+  //     confirmation — never a loop, never an array of actions.
+  if (typeof action.repeatCount === 'number' && action.repeatCount > 1) {
+    return blockRealDesktopAction('Repeat real clicks are blocked (one click per confirmation)', action, context);
+  }
+  if (Array.isArray(action.actions) && action.actions.length > 1) {
+    return blockRealDesktopAction('Batch real clicks are blocked (one click per confirmation)', action, context);
   }
 
   // 5) Perform exactly ONE click. No loops, no extra movement beyond

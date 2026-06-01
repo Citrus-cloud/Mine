@@ -8,6 +8,62 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 48 — Real coordinate click stabilization and safety QA
+
+Hardening + QA of the Step 47 coordinate-click prototype. **No new real
+action types.** Real clicks stay **disabled by default**, **session-only**,
+**one click per confirmation**. Simulation-only by default
+(`realDesktopActions:false`, `realCoordinateClick:false`,
+`simulationOnly:true`, `contextIsolation:true`, `nodeIntegration:false`,
+CSP unchanged, no `robotjs`/`iohook`/`uiohook-napi`/`opencv`).
+
+### Added (docs)
+
+- `docs/REAL_COORDINATE_CLICK_STABILIZATION.md`,
+  `docs/REAL_COORDINATE_CLICK_QA.md`.
+
+### Changed
+
+- `src/feature-flags.js` — added `keyboardAutomation:false` (hard-coded,
+  not runtime-togglable); `isRealCoordinateClickSessionEnabled()`;
+  rejected forbidden-flag toggles now emit `feature.flag.toggle.rejected`.
+- `src/action-pipeline.js` — `getRealDesktopActionBlockReason` (stable
+  blocked-reason ids); real pre-flight now requires
+  `sessionRealCoordinateClickEnabled`, `adapterAvailable`,
+  `oneClickOnly`; repeats/batches blocked.
+- `src/safety-gates.js` — `getRealCoordinateClickGateStatus(settings,
+  flags, permissions, adapterStatus, context)` (default-deny; click
+  only; one click per confirmation; no batch/repeat; no image/text/
+  keyboard).
+- `main/real-desktop-adapter.js` — hard context now requires
+  `oneClickOnly` + `sessionRealCoordinateClickEnabled`; repeats/batches
+  refused; blocked result carries a `reason` field.
+- `src/safety-center-ui.js` — status badges; per-click confirmation now
+  requires a checkbox and is never reused; "Test real coordinate click"
+  disabled when the adapter is unavailable; emergency-stop checked
+  before each click; `getRealCoordinateClickDiagnostics()`.
+- `src/permission-manager.js` — `adapterDependencyAvailable`,
+  `emergencyStopReady`, `auditLogsReady`,
+  `sessionRealCoordinateClickEnabled`, `userConfirmationRequired`.
+- `src/audit-events.js` — Step 48 `realCoordinate.*`, `emergencyStop.*`,
+  `feature.flag.toggle.rejected` event types.
+- `src/i18n.js` — RU/EN keys; `src/styles.css` badge styles.
+- Docs updated: `REAL_ADAPTER_PROTOTYPE`, `REAL_CLICK_TESTING_GUIDE`,
+  `V1_SAFETY_MODEL`, `V1_ACTION_PIPELINE`, `V1_REAL_ADAPTER_REQUIREMENTS`,
+  `V1_AUDIT_LOGS`, `V1_PERMISSION_MODEL`, `SECURITY_CHECKLIST`,
+  `KNOWN_LIMITATIONS`, README, PROJECT_CONTEXT.
+
+### Safety invariants kept (Step 48)
+
+- Real clicks disabled by default; require session enable + fresh
+  confirmation; one click per confirmation; repeats/batches blocked.
+- `image_click`/`text_click` real blocked; keyboard automation blocked.
+- No real click during smoke or at app start. No prohibited
+  dependencies. `contextIsolation:true`, `nodeIntegration:false`, CSP
+  unchanged. No screenshots/base64/paths in audit logs.
+
+---
+
 ## [Unreleased] — Step 47 — Real desktop adapter prototype behind hard safety gate
 
 First **real** desktop action path: a single **coordinate click**

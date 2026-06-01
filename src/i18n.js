@@ -1048,7 +1048,35 @@ const translations = {
     realAdapterStatusTitle: "Статус прототипа реального адаптера",
     adapterAvailableLabel: "Адаптер доступен",
     dependencyLoadedLabel: "Зависимость загружена",
-    lastRealActionResultLabel: "Результат последнего реального действия"
+    lastRealActionResultLabel: "Результат последнего реального действия",
+
+    // Step 48 — Real coordinate click stabilization + safety QA
+    realCoordinateStabilization: "Стабилизация реального клика по координатам",
+    realCoordinateSafetyCheck: "Проверка безопасности реального клика",
+    runRealCoordinateSafetyCheck: "Запустить проверку безопасности реального клика",
+    dryRunCoordinateAction: "Dry-run действие по координатам",
+    sessionRealCoordinateEnabled: "Реальный клик по координатам включён для сессии",
+    sessionRealCoordinateDisabled: "Реальный клик по координатам выключен",
+    sessionRealCoordinateClickEnabled: "Реальный клик по координатам (сессия)",
+    defaultRealActionsDisabled: "Реальные действия по умолчанию: выключены",
+    unsupportedRealActionType: "Неподдерживаемый тип реального действия",
+    prohibitedRealActionType: "Запрещённый тип реального действия",
+    repeatRealClicksBlocked: "Повторные реальные клики заблокированы",
+    batchRealClicksBlocked: "Пакетные реальные клики заблокированы",
+    realClickRequiresFreshConfirmation: "Каждый реальный клик требует нового подтверждения",
+    confirmSingleCoordinateClick: "Я подтверждаю этот один клик по координатам.",
+    adapterDependencyUnavailable: "Зависимость реального адаптера недоступна",
+    adapterDependencyAvailable: "Зависимость адаптера доступна",
+    emergencyStopNotReady: "Аварийная остановка не готова",
+    auditLogsUnavailable: "Аудит-логи недоступны",
+    realCoordinateClickBlocked: "Реальный клик по координатам заблокирован",
+    realCoordinateClickExecuted: "Реальный клик по координатам выполнен",
+    realCoordinateClickRequested: "Запрошен реальный клик по координатам",
+    realCoordinateSessionEnabled: "Сессия реального клика включена",
+    realCoordinateSessionDisabled: "Сессия реального клика выключена",
+    safetyCheckFailed: "Проверка безопасности не пройдена",
+    noRealImageTextClicks: "Реальные image/text клики отключены",
+    noKeyboardAutomation: "Автоматизация клавиатуры отключена"
   },
   en: {
     // Main screen
@@ -2097,7 +2125,35 @@ const translations = {
     realAdapterStatusTitle: "Real adapter prototype status",
     adapterAvailableLabel: "Adapter available",
     dependencyLoadedLabel: "Dependency loaded",
-    lastRealActionResultLabel: "Last real action result"
+    lastRealActionResultLabel: "Last real action result",
+
+    // Step 48 — Real coordinate click stabilization + safety QA
+    realCoordinateStabilization: "Real coordinate click stabilization",
+    realCoordinateSafetyCheck: "Real coordinate safety check",
+    runRealCoordinateSafetyCheck: "Run real coordinate safety check",
+    dryRunCoordinateAction: "Dry-run coordinate action",
+    sessionRealCoordinateEnabled: "Real coordinate click enabled for session",
+    sessionRealCoordinateDisabled: "Real coordinate click disabled",
+    sessionRealCoordinateClickEnabled: "Real coordinate click (session)",
+    defaultRealActionsDisabled: "Default real actions: disabled",
+    unsupportedRealActionType: "Unsupported real action type",
+    prohibitedRealActionType: "Prohibited real action type",
+    repeatRealClicksBlocked: "Repeat real clicks blocked",
+    batchRealClicksBlocked: "Batch real clicks blocked",
+    realClickRequiresFreshConfirmation: "Each real click requires fresh confirmation",
+    confirmSingleCoordinateClick: "I confirm this single coordinate click.",
+    adapterDependencyUnavailable: "Real desktop adapter dependency is unavailable",
+    adapterDependencyAvailable: "Adapter dependency available",
+    emergencyStopNotReady: "Emergency stop not ready",
+    auditLogsUnavailable: "Audit logs unavailable",
+    realCoordinateClickBlocked: "Real coordinate click blocked",
+    realCoordinateClickExecuted: "Real coordinate click executed",
+    realCoordinateClickRequested: "Real coordinate click requested",
+    realCoordinateSessionEnabled: "Real coordinate session enabled",
+    realCoordinateSessionDisabled: "Real coordinate session disabled",
+    safetyCheckFailed: "Safety check failed",
+    noRealImageTextClicks: "Real image/text clicks disabled",
+    noKeyboardAutomation: "Keyboard automation disabled"
   }
 };
 

@@ -62,3 +62,16 @@ reports unavailable and every execute call is blocked unless the
 backend is installed. image/text real clicks, keyboard, scroll, loops,
 and background automation remain unsupported. See
 `docs/REAL_ADAPTER_PROTOTYPE.md`.
+
+
+
+---
+
+## Step 48 update
+
+Main adapter hardening: the full hard context now includes
+`sessionRealCoordinateClickEnabled` and `oneClickOnly`; repeats/batches
+are refused in main; the blocked result carries a `reason` field; the
+dependency-unavailable path returns
+`{ success:false, blocked:true, reason:"Real desktop adapter
+dependency is unavailable" }`. Still coordinate click only.

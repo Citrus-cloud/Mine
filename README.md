@@ -972,6 +972,37 @@ captcha/anti-bot/ad/banking/protected/hidden. realDesktopActions=false
 по умолчанию, simulationOnly=true, contextIsolation: true,
 nodeIntegration: false, CSP не ослаблен.**
 
+**Step 48 — Real coordinate click stabilization and safety QA:**
+прототип реального клика **стабилизирован** (без новых типов real
+actions). Реальные клики по-прежнему **выключены по умолчанию**,
+**session-only**, **one click per confirmation**.
+- feature flags: добавлен `keyboardAutomation: false` (hard-coded, не
+  runtime-togglable); `isRealCoordinateClickSessionEnabled()`;
+  попытка включить запрещённый флаг — ошибка + audit event;
+- action-pipeline: явные blocked reasons
+  (`getRealDesktopActionBlockReason`), новые требования контекста
+  (`sessionRealCoordinateClickEnabled`, `adapterAvailable`,
+  `oneClickOnly`), блокировка repeat/batch;
+- safety-gates: `getRealCoordinateClickGateStatus(...)` (default-deny,
+  one click per confirmation, click only, no batch/repeat, no
+  image/text/keyboard);
+- adapter (main): обязательны `oneClickOnly` и
+  `sessionRealCoordinateClickEnabled`, отказ repeat/batch, поле
+  `reason`, безопасный fallback при отсутствии зависимости;
+- Safety Center: status badges, **fresh confirmation на каждый клик**
+  (чекбокс «I confirm this single coordinate click.»), кнопка Test real
+  click **disabled**, если adapter unavailable, расширенная
+  диагностика;
+- emergency stop проверяется перед каждым real click; расширены audit
+  events (`realCoordinate.*`, `emergencyStop.*`); permissions/diagnostics
+  расширены; i18n RU/EN;
+- docs: `REAL_COORDINATE_CLICK_STABILIZATION.md`,
+  `REAL_COORDINATE_CLICK_QA.md` + обновления.
+**One click per confirmation; repeat/batch blocked; image/text real
+clicks disabled; keyboard automation disabled; realDesktopActions=false
+по умолчанию, simulationOnly=true, contextIsolation: true,
+nodeIntegration: false, CSP не ослаблен.**
+
 ### Towards Desktop v1
 
 - `v0.2.0-smart-beta` опубликован / готов как Smart Desktop Beta

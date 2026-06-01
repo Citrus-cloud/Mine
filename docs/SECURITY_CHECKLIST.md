@@ -1374,3 +1374,23 @@ For the manual QA checklist see
 - `contextIsolation: true`, `nodeIntegration: false`, CSP unchanged.
   No real action runs at app start. No screenshots/base64/paths in
   audit logs.
+
+
+
+## Real coordinate click stabilization (Step 48)
+
+- No new real action types. Coordinate click only; image/text real,
+  keyboard, scroll, hotkey, repeat, batch, background — all blocked.
+- One click per confirmation; confirmation is fresh each time and never
+  reused. Enable-session and each click both require explicit checkbox
+  confirmation.
+- Emergency-stop readiness is checked before every real click; not
+  ready ⇒ blocked.
+- `keyboardAutomation` flag is hard-coded false and not runtime-
+  togglable; rejected toggles are audited.
+- Renderer pipeline and main adapter both re-validate the full context.
+- Adapter unavailable (no backend) ⇒ real click blocked with a clear
+  reason; UI disables the real test button. App never crashes.
+- No `robotjs`/`iohook`/`uiohook-napi`/`opencv`. `contextIsolation:true`,
+  `nodeIntegration:false`, CSP unchanged. No real click at app start or
+  during smoke.

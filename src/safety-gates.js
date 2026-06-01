@@ -308,3 +308,69 @@ function getRealDesktopActionGateStatus(settings, flags, permissions, adapterSta
     requirements: requirements
   };
 }
+
+// =====================================================================
+// Step 48 — Stabilized real coordinate-click gate.
+// ---------------------------------------------------------------------
+// Superset of getRealDesktopActionGateStatus that ALSO evaluates the
+// per-action context: one click per confirmation, no batch, no repeat,
+// action type click only, fresh user confirmation. Default: NOT
+// allowed. Used by the Safety Center "Run real coordinate safety
+// check" and before each real test click.
+//
+// Inputs (all optional; missing ones count as not-ready):
+//   settings, flags, permissions, adapterStatus — as above
+//   context — { userConfirmed, oneClickOnly, action, repeatCount }
+//
+// Returns: { allowed, reasons: [], warnings: [], requirements: [] }
+// =====================================================================
+function getRealCoordinateClickGateStatus(settings, flags, permissions, adapterStatus, context) {
+  // Start from the base gate so all the flag/permission/adapter
+  // requirements are evaluated consistently.
+  var base = getRealDesktopActionGateStatus(settings, flags, permissions, adapterStatus);
+  var requirements = base.requirements.slice();
+  var reasons = base.reasons.slice();
+  var warnings = base.warnings.slice();
+  var ctx = (context && typeof context === 'object') ? context : {};
+
+  function req(key, met) {
+    requirements.push({ key: key, met: met === true });
+    if (met !== true && reasons.indexOf(key) === -1) reasons.push(key);
+  }
+
+  // Per-action requirements (Step 48).
+  req('userConfirmationRequired', ctx.userConfirmed === true);
+  req('oneClickPerConfirmation', ctx.oneClickOnly === true);
+
+  // Action type click only (when an action is supplied for evaluation).
+  var act = ctx.action;
+  if (act && typeof act === 'object') {
+    req('actionTypeClickOnly', act.type === 'click');
+    // No batch / no repeat real clicks at Step 48.
+    if (typeof act.repeatCount === 'number' && act.repeatCount > 1) {
+      req('noRepeatRealClicks', false);
+    }
+    if (Array.isArray(act.actions) && act.actions.length > 1) {
+      req('noBatchRealClicks', false);
+    }
+  }
+  // A repeatCount on the context itself is also rejected.
+  if (typeof ctx.repeatCount === 'number' && ctx.repeatCount > 1) {
+    req('noRepeatRealClicks', false);
+  }
+
+  // Hard invariants restated (image/text/keyboard real always off).
+  var f = (flags && typeof flags === 'object')
+    ? flags
+    : ((typeof getRealAdapterFeatureStatus === 'function') ? getRealAdapterFeatureStatus() : {});
+  req('noRealImageTextClicks', f.realImageClick !== true && f.realTextClick !== true);
+  req('noKeyboardAutomation', f.keyboardActions !== true && f.keyboardAutomation !== true);
+
+  var allowed = reasons.length === 0;
+  return {
+    allowed: allowed,
+    reasons: reasons,
+    warnings: warnings,
+    requirements: requirements
+  };
+}

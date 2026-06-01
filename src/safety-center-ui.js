@@ -31,6 +31,35 @@ var _realTestX = null;             // test coordinate X (null → use scenario)
 var _realTestY = null;             // test coordinate Y
 var _realTestButton = 'left';      // test mouse button
 var _realLastResultText = null;    // human-readable last test result
+// Step 48 — diagnostics state (renderer memory only; no PII).
+var _lastSafetyCheckAt = null;
+var _lastSafetyCheckAllowed = null;
+var _lastBlockedReason = null;
+var _lastRealClickAt = null;
+var _lastRealClickResult = null;
+
+// Step 48 — diagnostics snapshot for the Safety Center + QA.
+function getRealCoordinateClickDiagnostics() {
+  var feat = _scRealFeatureStatus();
+  var st = _realAdapterStatus || {};
+  return {
+    realDesktopActionsDefault: false,
+    realCoordinateClickDefault: false,
+    sessionRealDesktopActionsEnabled: feat.realDesktopActions === true,
+    sessionRealCoordinateClickEnabled: feat.realCoordinateClickSessionEnabled === true,
+    oneClickPerConfirmation: true,
+    imageClickRealEnabled: false,
+    textClickRealEnabled: false,
+    keyboardAutomationEnabled: false,
+    lastSafetyCheckAt: _lastSafetyCheckAt,
+    lastSafetyCheckAllowed: _lastSafetyCheckAllowed,
+    lastBlockedReason: _lastBlockedReason,
+    lastRealClickAt: _lastRealClickAt,
+    lastRealClickResult: _lastRealClickResult,
+    adapterDependencyStatus: st.dependencyLoaded ? 'loaded' : 'unavailable',
+    adapterAvailable: st.adapterAvailable === true
+  };
+}
 
 // --- Small DOM helpers (textContent only; never innerHTML w/ data) ---
 function _scEl(tag, className, text) {
@@ -585,6 +614,21 @@ function renderRealAdapterCard() {
   var feat = _scRealFeatureStatus();
   var status = _realAdapterStatus || {};
   var sessionEnabled = feat.realCoordinateClickSessionEnabled === true;
+  var adapterAvailable = status.adapterAvailable === true;
+
+  // --- Step 48: status badges ---
+  var badges = _scEl('div', 'sc-badges');
+  function badge(text, cls) {
+    badges.appendChild(_scEl('span', 'sc-badge ' + cls, text));
+  }
+  badge(_scLabel('defaultRealActionsDisabled', 'Default real actions: disabled'), 'sc-bad');
+  badge((_scLabel('sessionRealCoordinateClickEnabled', 'Session real coordinate') + ': ') +
+        (sessionEnabled ? _scLabel('permissionReady', 'enabled') : _scLabel('statusDisabled', 'disabled')),
+        sessionEnabled ? 'sc-ok' : 'sc-bad');
+  badge(_scLabel('oneClickPerConfirmation', 'One click per confirmation'), 'sc-ok');
+  badge(_scLabel('imageTextRealClickDisabled', 'image/text real click: disabled'), 'sc-bad');
+  badge(_scLabel('keyboardActionsDisabled', 'keyboard automation: disabled'), 'sc-bad');
+  card.appendChild(badges);
 
   // --- Diagnostics rows (Task 12) ---
   card.appendChild(_scRow(_scLabel('adapterAvailableLabel', 'Adapter available'),
@@ -674,8 +718,18 @@ function renderRealAdapterCard() {
     controls.appendChild(btnDisable);
 
     var btnReal = _scEl('button', 'sc-btn sc-btn-small sc-btn-danger', _scLabel('testRealCoordinateClick', 'Test real coordinate click'));
-    btnReal.addEventListener('click', testRealCoordinateClick);
+    if (!adapterAvailable) {
+      // Step 48: with no backend the adapter is unavailable — the real
+      // test click is disabled and the reason is shown.
+      btnReal.disabled = true;
+      btnReal.title = _scLabel('adapterDependencyUnavailable', 'Real desktop adapter dependency is unavailable');
+    } else {
+      btnReal.addEventListener('click', testRealCoordinateClick);
+    }
     controls.appendChild(btnReal);
+    if (!adapterAvailable) {
+      controls.appendChild(_scEl('span', 'sc-perm-guidance', _scLabel('adapterDependencyUnavailable', 'Real desktop adapter dependency is unavailable')));
+    }
   }
   card.appendChild(controls);
 
@@ -725,19 +779,23 @@ function _scShowModal(opts) {
 
 // --- Enable session (with confirmation) ---
 function enableRealCoordinateClickSession() {
-  if (typeof recordAuditEvent === 'function') recordAuditEvent('realAction.confirmation.requested', { source: 'enableSession' });
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('realCoordinate.session.enable.requested', { source: 'enableSession' });
+    recordAuditEvent('realAction.confirmation.requested', { source: 'enableSession' });
+  }
   _scShowModal({
     title: _scLabel('enableRealCoordinateClickForSession', 'Enable real coordinate click for this session'),
     lines: [
       _scLabel('realClickWarning', 'Warning: this will perform a real mouse click.'),
       _scLabel('realClicksSessionOnly', 'Session only.'),
       _scLabel('coordinateClickOnly', 'Coordinate click only.'),
+      _scLabel('oneClickPerConfirmation', 'One click per confirmation.'),
       _scLabel('imageTextRealClickDisabled', 'Real image/text click disabled.'),
       _scLabel('keyboardActionsDisabled', 'Keyboard actions disabled.'),
       _scLabel('prohibitedUseCases', 'Prohibited use cases.')
     ],
     requireCheckbox: true,
-    checkboxLabel: _scLabel('confirmRealClick', 'I understand this will allow real coordinate clicks for this session only.'),
+    checkboxLabel: _scLabel('confirmRealClick', 'I understand real coordinate clicks are enabled for this session only.'),
     confirmLabel: _scLabel('enableRealCoordinateClickForSession', 'Enable'),
     onConfirm: function () {
       if (typeof setRuntimeFeatureFlag === 'function') {
@@ -746,10 +804,11 @@ function enableRealCoordinateClickSession() {
       }
       if (typeof recordAuditEvent === 'function') {
         recordAuditEvent('realAction.confirmation.accepted', { source: 'enableSession' });
+        recordAuditEvent('realCoordinate.session.enabled', { adapter: 'real-desktop-prototype' });
         recordAuditEvent('realAdapter.session.enabled', { adapter: 'real-desktop-prototype' });
       }
       if (typeof recordAuditLogEvent === 'function') {
-        recordAuditLogEvent('realAdapter.session.enabled', { severity: 'safety', mode: 'real', message: 'Real coordinate click enabled for session' });
+        recordAuditLogEvent('realCoordinate.session.enabled', { severity: 'safety', mode: 'real', message: 'Real coordinate click enabled for session' });
       }
       _realLastResultText = null;
       renderSafetyCenter();
@@ -765,9 +824,12 @@ function disableRealCoordinateClickSession() {
     setRuntimeFeatureFlag('realDesktopActions', false);
     setRuntimeFeatureFlag('realCoordinateClick', false);
   }
-  if (typeof recordAuditEvent === 'function') recordAuditEvent('realAdapter.session.disabled', { adapter: 'real-desktop-prototype' });
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('realCoordinate.session.disabled', { adapter: 'real-desktop-prototype' });
+    recordAuditEvent('realAdapter.session.disabled', { adapter: 'real-desktop-prototype' });
+  }
   if (typeof recordAuditLogEvent === 'function') {
-    recordAuditLogEvent('realAdapter.session.disabled', { severity: 'info', mode: 'real', message: 'Real coordinate click disabled' });
+    recordAuditLogEvent('realCoordinate.session.disabled', { severity: 'info', mode: 'real', message: 'Real coordinate click disabled' });
   }
   _realLastResultText = null;
   renderSafetyCenter();
@@ -777,15 +839,26 @@ function disableRealCoordinateClickSession() {
 function runRealAdapterSafetyCheck() {
   var feat = _scRealFeatureStatus();
   var perms = (typeof getPermissionChecklist === 'function') ? getPermissionChecklist(_scSafeSettings(), _scFeatureFlags()) : null;
-  var gate = (typeof getRealDesktopActionGateStatus === 'function')
-    ? getRealDesktopActionGateStatus(_scSafeSettings(), feat, perms, _realAdapterStatus || {})
-    : { allowed: false, reasons: ['gateUnavailable'] };
-  if (!gate.allowed && typeof recordAuditEvent === 'function') {
+  if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.safetyCheck.started', {});
+  var c = _scResolveTestCoords();
+  var probeAction = { type: 'click', x: c.x, y: c.y, button: c.button, realClick: true };
+  var gate = (typeof getRealCoordinateClickGateStatus === 'function')
+    ? getRealCoordinateClickGateStatus(_scSafeSettings(), feat, perms, _realAdapterStatus || {}, { userConfirmed: true, oneClickOnly: true, action: probeAction })
+    : (typeof getRealDesktopActionGateStatus === 'function'
+        ? getRealDesktopActionGateStatus(_scSafeSettings(), feat, perms, _realAdapterStatus || {})
+        : { allowed: false, reasons: ['gateUnavailable'] });
+  if (gate.allowed) {
+    if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.safetyCheck.passed', {});
+  } else if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('realCoordinate.safetyCheck.failed', { reason: (gate.reasons || []).join(',').slice(0, 80) });
     recordAuditEvent('realAction.safetyGate.failed', { reason: (gate.reasons || []).join(',').slice(0, 80) });
   }
+  _lastSafetyCheckAt = new Date().toISOString();
+  _lastSafetyCheckAllowed = gate.allowed === true;
+  if (!gate.allowed) _lastBlockedReason = (gate.reasons || []).join(', ');
   _realLastResultText = gate.allowed
     ? _scLabel('safetyCheckPassed', 'Safety check passed')
-    : (_scLabel('safetyGateFailed', 'Safety check failed') + ': ' + (gate.reasons || []).join(', '));
+    : (_scLabel('safetyCheckFailed', 'Safety check failed') + ': ' + (gate.reasons || []).join(', '));
   renderSafetyCenter();
 }
 
@@ -816,24 +889,44 @@ function testRealCoordinateClick() {
     renderSafetyCenter();
     return;
   }
+  // Adapter must be available to even offer a real click.
+  if (!(_realAdapterStatus && _realAdapterStatus.adapterAvailable === true)) {
+    _realLastResultText = _scLabel('realActionBlocked', 'Real action blocked') + ': ' + _scLabel('adapterDependencyUnavailable', 'Real desktop adapter dependency is unavailable');
+    if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.adapter.unavailable', { source: 'testRealClick' });
+    renderSafetyCenter();
+    return;
+  }
   var c = _scResolveTestCoords();
-  if (typeof recordAuditEvent === 'function') recordAuditEvent('realAction.confirmation.requested', { source: 'testRealClick' });
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('realCoordinate.confirmation.requested', { source: 'testRealClick' });
+    recordAuditEvent('realAction.confirmation.requested', { source: 'testRealClick' });
+  }
   _scShowModal({
     title: _scLabel('testRealCoordinateClick', 'Test real coordinate click'),
     lines: [
       _scLabel('realClickWarning', 'Warning: this will perform a real mouse click.'),
+      _scLabel('currentMode', 'Current mode') + ': ' + _scLabel('realCoordinateClickEnabled', 'real coordinate click (session)'),
       'X: ' + c.x + '   Y: ' + c.y + '   ' + _scLabel('mouseButton', 'Button') + ': ' + c.button,
+      _scLabel('prohibitedUseCases', 'Prohibited use cases'),
       _scLabel('noProtectedApps', 'Do not click in banking / protected apps'),
       _scLabel('oneClickPerConfirmation', 'One click per confirmation'),
       'Emergency stop: Escape / Ctrl+Alt+E'
     ],
+    requireCheckbox: true,
+    checkboxLabel: _scLabel('confirmSingleCoordinateClick', 'I confirm this single coordinate click.'),
     confirmLabel: _scLabel('confirmRealClick', 'Confirm real click'),
     onConfirm: function () {
-      if (typeof recordAuditEvent === 'function') recordAuditEvent('realAction.confirmation.accepted', { source: 'testRealClick' });
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('realCoordinate.confirmation.accepted', { source: 'testRealClick' });
+        recordAuditEvent('realAction.confirmation.accepted', { source: 'testRealClick' });
+      }
       _runRealCoordinateClick(c);
     },
     onCancel: function () {
-      if (typeof recordAuditEvent === 'function') recordAuditEvent('realAction.confirmation.cancelled', { source: 'testRealClick' });
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('realCoordinate.confirmation.cancelled', { source: 'testRealClick' });
+        recordAuditEvent('realAction.confirmation.cancelled', { source: 'testRealClick' });
+      }
     }
   });
 }
@@ -841,15 +934,54 @@ function testRealCoordinateClick() {
 async function _runRealCoordinateClick(c) {
   var settings = _scSafeSettings();
   var safety = (settings && settings.safety) ? settings.safety : {};
+  var feat = _scRealFeatureStatus();
+  var emergencyStopReady = safety.emergencyStopEnabled === true;
+  var adapterAvailable = !!(_realAdapterStatus && _realAdapterStatus.adapterAvailable === true);
+  var auditLogsEnabled = (typeof getAuditLogManagerStatus === 'function');
+
+  // Step 48: emergency stop must be ready for a real action.
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('emergencyStop.status.checked', { source: 'testRealClick' });
+    recordAuditEvent('emergencyStop.requiredForRealAction', {});
+  }
+  if (!emergencyStopReady) {
+    if (typeof recordAuditEvent === 'function') recordAuditEvent('emergencyStop.notReadyBlockedRealAction', {});
+    _realLastResultText = _scLabel('realActionBlocked', 'Real action blocked') + ': ' + _scLabel('emergencyStopNotReady', 'emergency stop not ready');
+    renderSafetyCenter();
+    return;
+  }
+
   var action = { type: 'click', x: c.x, y: c.y, button: c.button, realClick: true };
+
+  // Step 48: run the stabilized gate as a fresh safety check.
+  if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.safetyCheck.started', {});
+  var perms = (typeof getPermissionChecklist === 'function') ? getPermissionChecklist(settings, _scFeatureFlags()) : null;
+  var gate = (typeof getRealCoordinateClickGateStatus === 'function')
+    ? getRealCoordinateClickGateStatus(settings, feat, perms, _realAdapterStatus || {}, { userConfirmed: true, oneClickOnly: true, action: action })
+    : { allowed: false, reasons: ['gateUnavailable'] };
+  if (!gate.allowed) {
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('realCoordinate.safetyCheck.failed', { reason: (gate.reasons || []).join(',').slice(0, 80) });
+      recordAuditEvent('realCoordinate.click.blocked', { reason: (gate.reasons || []).join(',').slice(0, 80) });
+    }
+    _realLastResultText = _scLabel('safetyCheckFailed', 'Safety check failed') + ': ' + (gate.reasons || []).join(', ');
+    renderSafetyCenter();
+    return;
+  }
+  if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.safetyCheck.passed', {});
+
   var context = {
     userConfirmed: true,
-    safetyCheckPassed: true,           // user ran/accepted; main re-checks
-    emergencyStopReady: safety.emergencyStopEnabled === true,
-    auditLogsEnabled: (typeof getAuditLogManagerStatus === 'function'),
-    sessionRealModeEnabled: _scRealFeatureStatus().realCoordinateClickSessionEnabled === true,
+    safetyCheckPassed: true,
+    emergencyStopReady: emergencyStopReady,
+    auditLogsEnabled: auditLogsEnabled,
+    sessionRealModeEnabled: feat.realCoordinateClickSessionEnabled === true,
+    sessionRealCoordinateClickEnabled: feat.realCoordinateClickSessionEnabled === true,
+    adapterAvailable: adapterAvailable,
+    oneClickOnly: true,
     scenarioId: null
   };
+  if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.click.requested', { actionType: 'click' });
   var result = null;
   try {
     if (typeof executeRealDesktopAction === 'function') {
@@ -858,15 +990,22 @@ async function _runRealCoordinateClick(c) {
   } catch (e) { result = null; }
 
   if (result && result.success && result.realAction === true && !result.blocked) {
-    _realLastResultText = _scLabel('realActionExecuted', 'Real action executed') + ' (X=' + c.x + ', Y=' + c.y + ', ' + c.button + ')';
+    _realLastResultText = _scLabel('realCoordinateClickExecuted', 'Real coordinate click executed') + ' (X=' + c.x + ', Y=' + c.y + ', ' + c.button + ')';
+    _lastRealClickAt = new Date().toISOString();
+    _lastRealClickResult = 'executed';
+    if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.click.executed', { actionType: 'click' });
     if (typeof recordAuditLogEvent === 'function') {
-      recordAuditLogEvent('realAction.coordinate.executed', { severity: 'safety', mode: 'real', actionType: 'click', message: 'Real coordinate click executed', metadata: { targetX: c.x, targetY: c.y } });
+      recordAuditLogEvent('realCoordinate.click.executed', { severity: 'safety', mode: 'real', actionType: 'click', message: 'Real coordinate click executed', metadata: { targetX: c.x, targetY: c.y } });
     }
   } else {
-    var reason = (result && result.error) ? result.error : _scLabel('realActionBlocked', 'Real action blocked');
-    _realLastResultText = _scLabel('realActionBlocked', 'Real action blocked') + ': ' + reason;
+    var reason = (result && (result.reason || result.error)) ? (result.reason || result.error) : _scLabel('realCoordinateClickBlocked', 'Real coordinate click blocked');
+    _realLastResultText = _scLabel('realCoordinateClickBlocked', 'Real coordinate click blocked') + ': ' + reason;
+    _lastRealClickAt = new Date().toISOString();
+    _lastRealClickResult = 'blocked';
+    _lastBlockedReason = String(reason).slice(0, 100);
+    if (typeof recordAuditEvent === 'function') recordAuditEvent('realCoordinate.click.blocked', { reason: String(reason).slice(0, 80) });
     if (typeof recordAuditLogEvent === 'function') {
-      recordAuditLogEvent('realAction.coordinate.blocked', { severity: 'warning', mode: 'real', actionType: 'click', message: 'Real coordinate click blocked', metadata: { reason: String(reason).slice(0, 100) } });
+      recordAuditLogEvent('realCoordinate.click.blocked', { severity: 'warning', mode: 'real', actionType: 'click', message: 'Real coordinate click blocked', metadata: { reason: String(reason).slice(0, 100) } });
     }
   }
   // Refresh adapter status (last attempt/result may have changed).
