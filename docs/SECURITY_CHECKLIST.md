@@ -1296,3 +1296,57 @@ See [`docs/REAL_OCR_USAGE.md`](./REAL_OCR_USAGE.md) for the
 end-user manual and
 [`docs/TESSERACT_PROVIDER.md`](./TESSERACT_PROVIDER.md) for the
 provider reference.
+
+
+
+## Smart beta safety (Step 42)
+
+Step 42 audited every smart-features chain end-to-end. The
+following invariants hold across the smart-beta surface and are
+checked by the Step-42 smoke invariants.
+
+- [x] **Screen capture only by user action.** The capture pipeline
+      runs only when the user clicks **Capture preview**. There
+      is no auto-capture loop.
+- [x] **Templates imported only by user action.** Imports go
+      through an explicit file dialog. The renderer never reads
+      filesystem paths on its own.
+- [x] **Real OCR only by session flag.** The Tesseract provider
+      is disabled by default. The user must click **Enable
+      Tesseract for this session** before Run Real OCR works.
+      The session flag wipes on reload.
+- [x] **OCR does not click.** `recognizeTextWithTesseract`
+      returns blocks; the action pipeline still rejects every
+      `realClick: true`. The action preview keeps `realClick:
+      false`.
+- [x] **`image_click` simulation only.** The action pipeline
+      emits `action.imageClick.simulated`; `realClick: true`
+      is blocked.
+- [x] **`text_click` simulation only.** Same. `realOcr: true` on
+      a text_click action is a SOURCE marker, not a real-input
+      flag.
+- [x] **Visual Builder drafts only.** The Visual Builder never
+      auto-saves and never auto-runs. The user must press
+      Save inside the existing scenario form.
+- [x] **Presets do not execute automatically.** The presets
+      registry returns plain-data drafts; the user opens the
+      form and presses Save manually.
+- [x] **action-pipeline blocks `realClick: true`.** `validateAction`
+      rejects every `realClick: true` for every scenario type.
+      Audit records `action.imageClick.realBlocked` /
+      `action.textClick.realBlocked` / `action.real.blocked`.
+- [x] **`realDesktopActions: false`.** Hard-coded in
+      `FEATURE_FLAGS`. Not in the runtime-togglable whitelist.
+      `setRuntimeFeatureFlag('realDesktopActions', true)`
+      returns `{ ok: false, error: 'flagNotRuntimeTogglable' }`.
+- [x] **No `robotjs` / `nut.js` / `iohook` / `uiohook-napi` /
+      `node-key-sender`.** `package.json` declares zero of
+      these.
+- [x] **No OpenCV.** `package.json` declares zero of
+      `opencv4nodejs`, `@u4/opencv4nodejs`, `opencv.js`,
+      `opencv-js`, `sharp`, `jimp`, `pixelmatch`, `looks-same`.
+
+For the per-platform release sign-offs see
+[`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./SMART_BETA_RELEASE_CHECKLIST.md).
+For the manual QA checklist see
+[`docs/SMART_BETA_MANUAL_TESTS.md`](./SMART_BETA_MANUAL_TESTS.md).

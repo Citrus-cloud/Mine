@@ -203,3 +203,58 @@ GitHub release assets are immutable. If a regression is found:
 
 This guide is documentation only. Every action above is a
 keystroke a maintainer must make in person.
+
+
+
+---
+
+## Smart Desktop Beta tag plan (`v0.2.0-smart-beta`)
+
+Step 43 introduces a new release tag that follows the same
+plan as the v0.1.0 beta but covers the smart-features chain.
+ClickFlow stays **simulation-only** in this release.
+
+### Suggested tag
+
+- **Tag:** `v0.2.0-smart-beta`
+- **`package.json` `version`:** `0.2.0-beta` (semver-clean
+  pre-release identifier).
+- **Pre-release flag on GitHub:** `yes`.
+
+### Tag procedure
+
+1. Confirm every item in
+   [`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./SMART_BETA_RELEASE_CHECKLIST.md).
+2. Run `npm run smoke`. Confirm `0 Failed`.
+3. Run `npm start` and walk
+   [`docs/SMART_BETA_MANUAL_TESTS.md`](./SMART_BETA_MANUAL_TESTS.md)
+   on the host OS.
+4. Run `npm run pack`. Inspect the unpacked dir under `dist/`
+   for stray files (`userData/`, screenshots, `.env`,
+   `dist/` recursion, `coverage/`).
+5. Run `npm run dist`. Take the installable artifacts
+   (`.exe`, `.dmg`, `.AppImage`).
+6. Manually QA the packaged build on Windows, macOS, Linux
+   using
+   [`docs/SMART_BETA_MANUAL_TESTS.md`](./SMART_BETA_MANUAL_TESTS.md)
+   sections 1-15.
+7. Tag locally: `git tag -a v0.2.0-smart-beta -m "ClickFlow
+   Smart Desktop Beta"`.
+8. Push the tag: `git push origin v0.2.0-smart-beta` (use
+   the team's release-tooling wrapper if applicable; never
+   `--force`).
+9. Open the GitHub release editor:
+   - Title: `ClickFlow Smart Desktop Beta`.
+   - Tag: `v0.2.0-smart-beta`.
+   - Pre-release: **yes**.
+   - Body: paste from
+     [`docs/SMART_BETA_RELEASE_DRAFT.md`](./SMART_BETA_RELEASE_DRAFT.md).
+   - Attach the three installable artifacts.
+10. Publish.
+
+### Rollback
+
+If a regression surfaces post-tag, file the issue with the
+`smart-beta` label, draft a hotfix branch from `main`, and
+re-tag with the next pre-release identifier (e.g.
+`v0.2.0-smart-beta.1`). NEVER force-push the original tag.

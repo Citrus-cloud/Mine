@@ -926,7 +926,26 @@ const translations = {
     targetTextNotFound: "Целевой текст не найден.",
     ocrProviderUsed: "Использованный OCR-провайдер",
     realOcrSource: "Источник настоящего OCR",
-    textClickStillSimulationOnly: "text_click по-прежнему simulation-only — реальных кликов нет."
+    textClickStillSimulationOnly: "text_click по-прежнему simulation-only — реальных кликов нет.",
+
+    // Step 42 — Smart OCR/Image QA + bugfix pass.
+    smartBetaStatus: "Статус Smart beta",
+    smartBetaQa: "Smart beta QA",
+    screenCaptureReady: "Захват экрана готов",
+    regionSelectorReady: "Region selector готов",
+    templatesReady: "Шаблоны готовы",
+    templateMatchingReady: "Template matching готов",
+    imageClickReady: "image_click готов",
+    ocrMockReady: "Mock OCR готов",
+    tesseractProviderReady: "Tesseract-провайдер готов",
+    textClickReady: "text_click готов",
+    visualBuilderReady: "Visual Builder готов",
+    presetsReady: "Пресеты сценариев готовы",
+    releaseBlockersCount: "Блокеры релиза",
+    readyAfterManualQa: "Готово после ручной QA пакетного приложения",
+    manualOcrTestingRequired: "Требуется ручное тестирование OCR — OCR зависит от локальной системы / сети / языковых данных.",
+    smartBetaManualTests: "Ручные тесты Smart beta",
+    smartBetaQaReport: "Отчёт Smart beta QA"
   },
   en: {
     // Main screen
@@ -1853,7 +1872,26 @@ const translations = {
     targetTextNotFound: "Target text not found.",
     ocrProviderUsed: "OCR provider used",
     realOcrSource: "Real OCR source",
-    textClickStillSimulationOnly: "text_click is still simulation-only — no real clicks."
+    textClickStillSimulationOnly: "text_click is still simulation-only — no real clicks.",
+
+    // Step 42 — Smart OCR/Image QA + bugfix pass.
+    smartBetaStatus: "Smart beta status",
+    smartBetaQa: "Smart beta QA",
+    screenCaptureReady: "Screen capture ready",
+    regionSelectorReady: "Region selector ready",
+    templatesReady: "Templates ready",
+    templateMatchingReady: "Template matching ready",
+    imageClickReady: "image_click ready",
+    ocrMockReady: "Mock OCR ready",
+    tesseractProviderReady: "Tesseract provider ready",
+    textClickReady: "text_click ready",
+    visualBuilderReady: "Visual Builder ready",
+    presetsReady: "Scenario presets ready",
+    releaseBlockersCount: "Release blockers",
+    readyAfterManualQa: "Ready after manual packaged-app QA",
+    manualOcrTestingRequired: "Manual OCR testing is required because OCR depends on local system / network / language data behavior.",
+    smartBetaManualTests: "Smart beta manual tests",
+    smartBetaQaReport: "Smart beta QA report"
   }
 };
 

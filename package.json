@@ -1,7 +1,7 @@
 {
   "name": "clickflow",
-  "version": "0.1.0",
-  "description": "ClickFlow — минималистичный кроссплатформенный кликер и визуальный автоматизатор (Electron, simulation-only beta).",
+  "version": "0.2.0-beta",
+  "description": "ClickFlow — минималистичный кроссплатформенный кликер и визуальный автоматизатор (Electron, simulation-only smart desktop beta).",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -41,11 +41,32 @@
       "RELEASE_NOTES.md",
       "CONTRIBUTING.md",
       "package.json",
+      "node_modules/tesseract.js/**/*",
+      "node_modules/tesseract.js-core/**/*",
+      "node_modules/wasm-feature-detect/**/*",
+      "node_modules/idb-keyval/**/*",
+      "node_modules/bmp-js/**/*",
+      "node_modules/regenerator-runtime/**/*",
+      "node_modules/zlibjs/**/*",
+      "node_modules/is-electron/**/*",
+      "node_modules/opencollective-postinstall/**/*",
       "!**/*.broken-*",
       "!**/.DS_Store",
       "!**/Thumbs.db",
       "!**/.git",
-      "!**/.gitignore"
+      "!**/.gitignore",
+      "!**/userData/**",
+      "!**/.env",
+      "!**/.env.*",
+      "!**/*.tmp",
+      "!**/*.log",
+      "!**/screenshots/**",
+      "!**/screenshot-*.png",
+      "!**/screenshot-*.jpg",
+      "!dist/**",
+      "!coverage/**",
+      "!.cache/**",
+      "!.npm/**"
     ],
     "win": {
       "target": "nsis"

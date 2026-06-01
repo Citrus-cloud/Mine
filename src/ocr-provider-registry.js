@@ -248,6 +248,11 @@ function setActiveOcrProvider(id) {
 // =====================================================================
 
 // Returns the diagnostics-shaped snapshot of the whole registry.
+// Step 42 — `realOcrEnabled` now reflects the runtime
+// (session-scoped) opt-in. `realOcrAllowed` retains the umbrella
+// safety semantics (false when `simulationOnly: true`). Call
+// sites that drive recognition use `realOcrEnabled`; call sites
+// that describe the umbrella safety stance use `realOcrAllowed`.
 function getOcrProviderRegistryStatus() {
   var providers = getOcrProviders();
   var mock = providers.filter(function (p) { return p.id === 'mock'; })[0] || null;
@@ -256,13 +261,16 @@ function getOcrProviderRegistryStatus() {
   var contract = (typeof getOcrProviderContract === 'function')
     ? getOcrProviderContract()
     : null;
+  var ocrFeatureSnapshot = (typeof getOcrFeatureStatus === 'function')
+    ? getOcrFeatureStatus() : null;
+  var realOcrEnabled = !!(ocrFeatureSnapshot && ocrFeatureSnapshot.realOcrEnabledForSession);
   return {
     activeProviderId:           active ? active.id : null,
     activeProviderName:         active ? active.name : null,
     mockProviderAvailable:      !!(mock && mock.available),
     tesseractProviderAvailable: !!(tess && tess.available),
     tesseractProviderEnabled:   !!(tess && tess.enabledByFeatureFlag),
-    realOcrEnabled:             _isRealOcrAllowedFromFlags(),
+    realOcrEnabled:             realOcrEnabled,
     realOcrAllowed:             _isRealOcrAllowedFromFlags(),
     supportedLanguages:         contract ? contract.supportedLanguages.slice() : ['ru', 'en', 'ru+en'],
     supportedProviders:         contract ? contract.supportedProviders.slice() : ['mock'],

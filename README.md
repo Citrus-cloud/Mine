@@ -29,9 +29,9 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.1.x` (beta polish + release prep + final stabilization + handoff design + safety hardening + adapter interface + dry-run sandbox + final beta QA + release packaging + release finalization + post-pack QA + final beta release preparation + screen capture foundation + region selector foundation + template asset manager + template matching mock + real template matching engine + image click scenario type + image click test tools + ocr foundation + text click scenario type + text click test tools + Visual Builder UX polish + Scenario Presets + Smart Features QA + Next Branch preparation + Real OCR Research + Safe Integration Plan + Real OCR Provider Integration Phase 1 + **Real OCR UI Activation + Real OCR for text_click and Visual Builder**).
-- Версия: **`0.1.0-beta`**.
-- Состояние: **smart visual desktop MVP, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, **Smart Features QA + Next Branch Plan (Step 37)**, **OCR provider architecture (Step 38)**, **Tesseract OCR provider Phase 1 (Step 39)**, и **Real OCR UI Activation + text_click / Visual Builder real OCR support (Steps 40-41)**: настоящий OCR можно вручную включить в OCR tab на текущую сессию, активный провайдер можно переключить на Tesseract, `Run Real OCR` запускает реальное распознавание только по явному действию пользователя; `text_click` scenarios теперь имеют поле `ocrProvider`; форма text_click и Visual Builder поддерживают выбор провайдера; runtime overlay не сохраняется и сбрасывается при перезапуске. Реальные клики **по-прежнему не реализованы** (action-pipeline блокирует `realClick: true`), `realDesktopActions` нельзя включить через UI, OpenCV **не подключён**, мобильной версии **нет**.
+- Линия: `0.2.x` (smart desktop beta — preparing `v0.2.0-smart-beta`).
+- Версия: **`0.2.0-beta`** (`package.json` `version`; release tag — `v0.2.0-smart-beta`, pre-release).
+- Состояние: **Smart Desktop Beta preparation, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, **Smart Features QA + Next Branch Plan (Step 37)**, **OCR provider architecture (Step 38)**, **Tesseract OCR provider Phase 1 (Step 39)**, **Real OCR UI Activation + text_click / Visual Builder real OCR support (Steps 40-41)**, **Smart OCR/Image QA + bugfix pass (Step 42)**, и **Smart Beta Packaging/Release Pass (Step 43)**: `package.json` `version: "0.2.0-beta"`, electron-builder `files` ужесточён, smart-beta release docs (QA report / manual tests / release checklist / release notes / GitHub draft / tag-plan). Реальные клики **по-прежнему не реализованы** (action-pipeline блокирует `realClick: true`), `realDesktopActions` нельзя включить через UI, OpenCV **не подключён**, мобильной версии **нет**.
   Перед публикацией тэга `v0.1.0-beta` обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
@@ -795,6 +795,42 @@ runtime overlay. Добавлено ~24 i18n-ключей RU + EN, parity
 true, nodeIntegration: false. realDesktopActions нельзя
 включить через UI.**
 
+contextIsolation: true, nodeIntegration: false. realDesktopActions нельзя
+включить через UI.**
+
+**Step 42 — Smart OCR/Image QA + Bugfix Pass:** проведён сквозной
+audit smart-features цепочки. Найдены и исправлены 5 багов:
+text_click preset не нёс `ocrProvider` (Step-41 регрессия);
+`applyVisualContextToPreset` не переносил активный OCR-провайдер;
+`buildVisualContextFromState` не консультировал
+`getActiveOcrProvider`; `isRealOcrAllowed` был Step-38 hard-stop
+(теперь честно отражает merged feature flags);
+`getOcrProviderRegistryStatus` сообщал `realOcrEnabled: false` после
+session opt-in (теперь читает `realOcrEnabledForSession`). Создан
+[`src/smart-beta-health.js`](./src/smart-beta-health.js)
+(`getSmartBetaHealth`, `countSmartBetaReleaseBlockers`). В `Copy
+diagnostics` — новая строка `Smart beta:` со всеми 10 readiness-
+флагами + `releaseBlockersCount`. 5 новых audit-типов в allowlist.
+i18n parity 835/835 (16 новых ключей). Созданы
+[`docs/SMART_BETA_QA_REPORT.md`](./docs/SMART_BETA_QA_REPORT.md) и
+[`docs/SMART_BETA_MANUAL_TESTS.md`](./docs/SMART_BETA_MANUAL_TESTS.md).
+Обновлены SMOKE_TESTS, SECURITY_CHECKLIST, KNOWN_LIMITATIONS.
+
+**Step 43 — Smart Beta Packaging/Release Pass:** в `package.json`
+`version` обновлён до **`0.2.0-beta`**. Релизный тег:
+**`v0.2.0-smart-beta`**. `build.files` ужесточён (явные include
+для tesseract.js node_modules + exclude для userData / .env /
+screenshots / dist / coverage / cache). Созданы три release-
+документа:
+[`docs/SMART_BETA_RELEASE_NOTES.md`](./docs/SMART_BETA_RELEASE_NOTES.md),
+[`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./docs/SMART_BETA_RELEASE_CHECKLIST.md),
+[`docs/SMART_BETA_RELEASE_DRAFT.md`](./docs/SMART_BETA_RELEASE_DRAFT.md).
+RELEASE_NOTES + TAG_AND_RELEASE_GUIDE дополнены smart-beta
+секциями. **Smart-beta release ready after manual packaged-app
+QA. Реальных кликов нет. realDesktopActions=false (hard-coded, не
+в runtime whitelist). simulationOnly=true. Все safety invariants
+сохранены.**
+
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
 (файлы, security-флаги, CSP, package.json wiring, отсутствие
@@ -1029,6 +1065,11 @@ npm run dist     # релизные артефакты в dist/
 - [`docs/OCR_PROVIDER_INTERFACE.md`](./docs/OCR_PROVIDER_INTERFACE.md) — формальный контракт OCR-провайдера: input/output shape, error IDs, registry, mock provider, planned Tesseract provider, self-test, safety rules (Step 38). Дополнен Step-39-секцией с Tesseract implementation notes.
 - [`docs/TESSERACT_PROVIDER.md`](./docs/TESSERACT_PROVIDER.md) — справка по Tesseract OCR provider: dependency, feature flags, why disabled by default, readiness, future activation plan, privacy/performance/safety (Step 39).
 - [`docs/REAL_OCR_USAGE.md`](./docs/REAL_OCR_USAGE.md) — пользовательская инструкция по Real OCR (Steps 40-41): как включить Tesseract на сессию, как запустить настоящий OCR вручную, выбор провайдера в OCR tab / text_click форме / Visual Builder, что осталось simulation-only, троuble-shooting, известные ограничения (language data / cancellation / region cropping).
+- [`docs/SMART_BETA_QA_REPORT.md`](./docs/SMART_BETA_QA_REPORT.md) — Step-42 audit + bugfix report: scope, environment, checked flows, results, known issues, blockers, safety verification, release recommendation.
+- [`docs/SMART_BETA_MANUAL_TESTS.md`](./docs/SMART_BETA_MANUAL_TESTS.md) — manual QA checklist для smart beta: 15 секций (install / smoke / screen capture / region / templates / template matching / image_click / OCR mock / real OCR session / text_click / Visual Builder / presets / diagnostics / safety / packaging) с `Status: Not tested`.
+- [`docs/SMART_BETA_RELEASE_NOTES.md`](./docs/SMART_BETA_RELEASE_NOTES.md) — full smart-beta release notes (Step 43).
+- [`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./docs/SMART_BETA_RELEASE_CHECKLIST.md) — engineering / packaging / QA sign-off для `v0.2.0-smart-beta`.
+- [`docs/SMART_BETA_RELEASE_DRAFT.md`](./docs/SMART_BETA_RELEASE_DRAFT.md) — body для GitHub release editor.
 - [`docs/SECURITY_CHECKLIST.md`](./docs/SECURITY_CHECKLIST.md) —
   Electron-security и UI-security.
 - [`docs/PACKAGING.md`](./docs/PACKAGING.md) — упаковка и

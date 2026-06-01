@@ -170,6 +170,16 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   OcrRealFailed:                    'ocr.real.failed',
   OcrRealBlocked:                   'ocr.real.blocked',
   OcrProviderSwitched:              'ocr.provider.switched',
+  // Step 42 — Smart OCR/Image QA + bugfix pass. These events are
+  // emitted by manual QA tooling / docs scripts, not by the runtime
+  // engine. Payloads carry only stable string ids, counts, and
+  // section names — never the full target text, never an
+  // `imageDataUrl`, never PII.
+  SmartBetaQaStarted:               'smartBeta.qa.started',
+  SmartBetaQaCompleted:             'smartBeta.qa.completed',
+  SmartBetaBlockerFound:            'smartBeta.blocker.found',
+  SmartBetaBlockerFixed:            'smartBeta.blocker.fixed',
+  SmartBetaReleaseCandidateChecked: 'smartBeta.releaseCandidate.checked',
   TextClickPreviewCreated:          'text.click.preview.created',
   // Step 33: text_click scenario type. Payloads carry only ids,
   // numeric metadata (confidence, target X / Y, durationMs),
