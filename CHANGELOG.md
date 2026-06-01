@@ -8,6 +8,49 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 50 — Real Coordinate Click QA + v1 Alpha Packaging
+
+Final QA of the real coordinate click flow and Desktop v1 Alpha
+packaging/release docs. **No new real action types.** Real coordinate
+click stays experimental, disabled by default, session-only, one click
+per fresh confirmation. `package.json` version bumped to
+`1.0.0-alpha.1` (release tag `v1.0.0-alpha.1`, pre-release/alpha).
+
+### Added (docs)
+
+- `docs/V1_ALPHA_QA_REPORT.md`, `docs/V1_ALPHA_MANUAL_TESTS.md`,
+  `docs/V1_ALPHA_RELEASE_CHECKLIST.md`, `docs/V1_ALPHA_RELEASE_NOTES.md`,
+  `docs/V1_ALPHA_RELEASE_DRAFT.md`.
+
+### Changed
+
+- Audited Step-49 real coordinate scenario mode (real mode off by
+  default; confirmation not reused; executionMode resets after a real
+  run; `repeatCount > 1` / image / text blocked; audit + run summary
+  correct) — no bugs found.
+- `package.json` — version `1.0.0-alpha.1`; description notes the
+  Desktop v1 alpha real-coordinate prototype.
+- `src/safety-center-ui.js` — compact "Desktop v1 Alpha status" card
+  (`getV1AlphaReleaseStatus` / `renderV1AlphaStatusCard`).
+- `RELEASE_NOTES.md` — Desktop v1 Alpha section.
+- `docs/TAG_AND_RELEASE_GUIDE.md` — Desktop v1 Alpha release section
+  (tag `v1.0.0-alpha.1`, manual QA, pre-release).
+- `scripts/smoke-check.js` — Step 50 invariants; version invariants
+  accept `1.0.0-alpha.1`.
+- README, PROJECT_CONTEXT updated to Step 50.
+
+### Safety invariants kept (Step 50)
+
+- Real coordinate disabled by default; session-only; fresh confirmation;
+  one click per confirmation; `repeatCount > 1` blocked; only
+  `simple_click`.
+- `image_click`/`text_click` real blocked; keyboard automation blocked.
+- No real click during smoke or at app start. No prohibited
+  dependencies. `contextIsolation:true`, `nodeIntegration:false`, CSP
+  unchanged.
+
+---
+
 ## [Unreleased] — Step 49 — Real Coordinate Click Scenario Mode
 
 A `simple_click` scenario may run **one** real coordinate click, but

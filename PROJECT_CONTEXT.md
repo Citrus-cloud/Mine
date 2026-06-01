@@ -7,6 +7,50 @@
 
 ## Текущий шаг
 
+**Шаг 50 завершён.** Real Coordinate Click QA + v1 Alpha Packaging.
+Текущий шаг — **50**.
+
+Главное: **Desktop v1 Alpha preparation.** Новых real action types не
+добавлено. Проведён аудит real coordinate flow и подготовлены v1 alpha
+QA + release docs.
+
+Что сделано на Step 50:
+
+- аудит Step-49 real-coordinate flow: real mode off by default,
+  confirmation не переиспользуется, executionMode сбрасывается после
+  real run, repeatCount>1 / image_click / text_click заблокированы,
+  audit events и run summary корректны — багов не найдено;
+- созданы v1 alpha docs: `docs/V1_ALPHA_QA_REPORT.md`,
+  `docs/V1_ALPHA_MANUAL_TESTS.md`, `docs/V1_ALPHA_RELEASE_CHECKLIST.md`,
+  `docs/V1_ALPHA_RELEASE_NOTES.md`, `docs/V1_ALPHA_RELEASE_DRAFT.md`;
+- **package version / release target**: `package.json` version
+  `1.0.0-alpha.1`, release tag `v1.0.0-alpha.1` (pre-release/alpha);
+- packaging config проверен (files include src/main/preload/docs/assets;
+  exclude userData/screenshots/dist/.env/logs/cache); adapter
+  dependency отсутствует → docs честно говорят "real adapter
+  unavailable on this build", сборка не ломается;
+- Safety Center: компактная карточка **Desktop v1 Alpha status**
+  (`getV1AlphaReleaseStatus`/`renderV1AlphaStatusCard`);
+- обновлены README, RELEASE_NOTES, TAG_AND_RELEASE_GUIDE, CHANGELOG;
+  smoke-check расширен Step-50 инвариантами.
+
+Безопасность (без изменений):
+
+- real coordinate disabled by default; session-only; fresh confirmation;
+  one click per confirmation; repeatCount>1 blocked; только simple_click;
+- image_click real disabled; text_click real disabled; keyboard
+  automation disabled;
+- нет robotjs/iohook/uiohook-napi/opencv; real click не происходит при
+  smoke / при старте; `contextIsolation: true`, `nodeIntegration: false`,
+  CSP не ослаблен.
+
+**Next step (Step 51):** финальная подготовка v1 alpha релиза — ручной
+packaged-app QA по `docs/V1_ALPHA_MANUAL_TESTS.md`, заполнение
+`docs/V1_ALPHA_QA_REPORT.md`, публикация тега `v1.0.0-alpha.1` как
+pre-release. real image/text и keyboard остаются вне scope.
+
+## Шаг 49 (real coordinate scenario mode)
+
 **Шаг 49 завершён.** Real Coordinate Click Scenario Mode. Текущий шаг —
 **49**.
 

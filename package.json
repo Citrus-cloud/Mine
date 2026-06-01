@@ -1,7 +1,7 @@
 {
   "name": "clickflow",
-  "version": "0.2.0-beta",
-  "description": "ClickFlow — минималистичный кроссплатформенный кликер и визуальный автоматизатор (Electron, simulation-only smart desktop beta).",
+  "version": "1.0.0-alpha.1",
+  "description": "ClickFlow — минималистичный кроссплатформенный кликер и визуальный автоматизатор (Electron, simulation-only smart desktop beta; Desktop v1 alpha real-coordinate-click prototype behind a hard safety gate).",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

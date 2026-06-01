@@ -258,3 +258,57 @@ If a regression surfaces post-tag, file the issue with the
 `smart-beta` label, draft a hotfix branch from `main`, and
 re-tag with the next pre-release identifier (e.g.
 `v0.2.0-smart-beta.1`). NEVER force-push the original tag.
+
+
+
+---
+
+## Desktop v1 Alpha release
+
+Suggested tag: `v1.0.0-alpha.1`
+
+### Commands
+
+```bash
+git status
+npm install
+npm run smoke
+npm start
+npm run pack
+npm run dist
+```
+
+### Manual QA
+
+- Use `docs/V1_ALPHA_MANUAL_TESTS.md` (full walkthrough).
+- Use `docs/V1_ALPHA_RELEASE_CHECKLIST.md` (sign-off boxes).
+- Record results in `docs/V1_ALPHA_QA_REPORT.md`.
+
+### Release
+
+```bash
+git add .
+git commit -m "Prepare ClickFlow Desktop v1 Alpha release"
+git tag -a v1.0.0-alpha.1 -m "ClickFlow Desktop v1 Alpha"
+git push origin main
+git push origin v1.0.0-alpha.1
+```
+
+> Do not tag from a broken working tree. `npm run smoke` must pass and
+> manual real-coordinate QA must be complete first.
+
+### GitHub
+
+- Create a release for the tag `v1.0.0-alpha.1`.
+- Title: **ClickFlow Desktop v1 Alpha**.
+- Paste `docs/V1_ALPHA_RELEASE_DRAFT.md` as the body.
+- Upload the `dist/` artifacts (Windows NSIS / macOS DMG / Linux
+  AppImage).
+- **Mark as pre-release (alpha).**
+
+### Safety reminder
+
+Real coordinate click is experimental, disabled by default,
+session-only, one click per confirmation. Real image/text clicks and
+keyboard automation remain disabled. No captcha / anti-bot / ad /
+banking / protected-app automation.

@@ -29,8 +29,16 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.2.x` (smart desktop beta).
-- Версия: **`0.2.0-beta`** (`package.json` `version`; release tag — `v0.2.0-smart-beta`, pre-release).
+- Линия: `1.0.x` (Desktop v1 alpha; предыдущая линия — `0.2.x` smart desktop beta).
+- Версия: **`1.0.0-alpha.1`** (`package.json` `version`; release tag — `v1.0.0-alpha.1`, pre-release/alpha).
+- **Desktop v1 Alpha preparation.** Real coordinate click — за жёстким
+  safety gate, **выключен по умолчанию**, session-only, fresh
+  confirmation, один клик на подтверждение; real `image_click` /
+  `text_click` mode disabled; keyboard automation disabled. Smart
+  visual features остаются доступны (simulation-only). **Desktop v1
+  alpha требует ручного QA перед релизом** (см.
+  `docs/V1_ALPHA_MANUAL_TESTS.md`,
+  `docs/V1_ALPHA_RELEASE_CHECKLIST.md`).
 - **`v0.2.0-smart-beta` готов / опубликован как Smart Desktop Beta
   pre-release.** Финальные релизные команды (`npm install`,
   `npm run smoke`, `npm start`, `npm run pack`, `npm run dist`)
@@ -1030,6 +1038,29 @@ nodeIntegration: false, CSP не ослаблен.**
 real disabled; keyboard disabled; realDesktopActions=false по
 умолчанию, simulationOnly=true, contextIsolation: true,
 nodeIntegration: false, CSP не ослаблен.**
+
+**Step 50 — Real Coordinate Click QA + v1 Alpha Packaging:** финальная
+QA-проверка real coordinate click и подготовка Desktop v1 Alpha
+packaging/release docs. **Новых real action types не добавлено.**
+- проведён аудит Step-49 real-coordinate flow (real mode off by
+  default; confirmation не переиспользуется; executionMode сбрасывается
+  после real run; repeatCount>1 / image / text заблокированы; audit и
+  run summary корректны) — багов не найдено;
+- добавлены v1 alpha docs: `docs/V1_ALPHA_QA_REPORT.md`,
+  `docs/V1_ALPHA_MANUAL_TESTS.md`, `docs/V1_ALPHA_RELEASE_CHECKLIST.md`,
+  `docs/V1_ALPHA_RELEASE_NOTES.md`, `docs/V1_ALPHA_RELEASE_DRAFT.md`;
+- `package.json` version → **`1.0.0-alpha.1`** (release tag
+  `v1.0.0-alpha.1`, pre-release); packaging config проверен (files
+  include src/main/preload/docs/assets; exclude userData/screenshots/
+  dist/.env/logs);
+- Safety Center: компактная карточка **Desktop v1 Alpha status**
+  (releaseTarget, simulation/dry-run ready, real-coordinate alpha,
+  image/text/keyboard disabled, audit/emergency stop, packagedQaRequired,
+  adapter dependency status);
+- обновлены RELEASE_NOTES, TAG_AND_RELEASE_GUIDE, smoke-check.
+**v1 alpha требует ручного QA перед релизом. real image/text/keyboard
+disabled; realDesktopActions=false по умолчанию; simulationOnly=true;
+contextIsolation: true; nodeIntegration: false; CSP не ослаблен.**
 
 ### Towards Desktop v1
 
