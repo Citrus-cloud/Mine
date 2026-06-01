@@ -6607,6 +6607,120 @@ record(
   /_RUNTIME_TOGGLABLE_FLAGS\s*=\s*\[\s*['"]realOcr['"],\s*['"]tesseractProvider['"]\s*\]/.test(ffSb)
 );
 
+// --- Step 45: post-release cleanup + feedback tracking ---
+
+// 350. The four new post-release docs exist.
+[
+  'docs/POST_RELEASE_CHECKLIST.md',
+  'docs/FEEDBACK_TRIAGE.md',
+  'docs/V0_2_1_PATCH_PLAN.md',
+  'docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md'
+].forEach(function (rel) {
+  record('Step 45 doc exists: ' + rel, fileExists(rel));
+});
+
+// 351. README / PROJECT_CONTEXT / CHANGELOG mention Step 45.
+var readmeTxt45 = readText('README.md');
+var pcTxt45 = readText('PROJECT_CONTEXT.md');
+var chTxt45 = readText('CHANGELOG.md');
+record(
+  'README.md mentions Step 45 / шаг 45',
+  /step\s*45|шаг\s*45/i.test(readmeTxt45)
+);
+record(
+  'PROJECT_CONTEXT.md mentions Step 45 / шаг 45',
+  /step\s*45|шаг\s*45/i.test(pcTxt45)
+);
+record(
+  'CHANGELOG.md mentions Step 45 / шаг 45',
+  /step\s*45|шаг\s*45/i.test(chTxt45)
+);
+
+// 352. README or PROJECT_CONTEXT explains Step 44 was a
+//      release/testing milestone (not a standalone runtime feature).
+function explainsStep44Milestone(txt) {
+  var m = txt.match(/Step\s*44[\s\S]{0,400}/i);
+  if (!m) return false;
+  var win = m[0];
+  return /milestone/i.test(win) &&
+         /(release|релиз)/i.test(win) &&
+         /(test|тест|проверк)/i.test(win);
+}
+record(
+  'README or PROJECT_CONTEXT explains Step 44 was a release/testing milestone',
+  explainsStep44Milestone(readmeTxt45) ||
+  explainsStep44Milestone(pcTxt45)
+);
+
+// 353. The new docs assert the simulation-only / planning-only stance.
+var prcl45 = readText('docs/POST_RELEASE_CHECKLIST.md').toLowerCase();
+record(
+  'docs/POST_RELEASE_CHECKLIST.md asserts simulation-only / no real clicks',
+  prcl45.indexOf('simulation-only') !== -1 ||
+  prcl45.indexOf('no real') !== -1
+);
+var raPlan45 = readText('docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md');
+record(
+  'docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md states real actions stay disabled until safety review',
+  /disabled\s+until[\s\S]{0,60}safety[\s\S]{0,20}review/i.test(raPlan45)
+);
+record(
+  'docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md bans captcha / anti-bot / ad-click / banking automation',
+  /captcha/i.test(raPlan45) &&
+  /anti-?bot/i.test(raPlan45) &&
+  /ad-?click/i.test(raPlan45) &&
+  /banking/i.test(raPlan45)
+);
+record(
+  'docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md keeps the real adapter behind a feature flag + pipeline blocks by default',
+  /feature\s+flag/i.test(raPlan45) &&
+  /block[\s\S]{0,40}default/i.test(raPlan45)
+);
+var patch45 = readText('docs/V0_2_1_PATCH_PLAN.md');
+record(
+  'docs/V0_2_1_PATCH_PLAN.md forbids real desktop clicks in the patch line',
+  /no real desktop clicks|real desktop clicks/i.test(patch45) &&
+  /not allowed|disallow|forbidden/i.test(patch45)
+);
+
+// 354. package.json declares none of the forbidden real-input /
+//      OpenCV modules at Step 45.
+if (pkg) {
+  var allDeps45 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var forbidden45 = Object.keys(allDeps45).filter(function (name) {
+    var n = name.toLowerCase();
+    return n.indexOf('robotjs') !== -1 ||
+           n.indexOf('nut.js') !== -1 ||
+           n.indexOf('nut-js') !== -1 ||
+           n.indexOf('nutjs') !== -1 ||
+           n.indexOf('@nut-tree') !== -1 ||
+           n.indexOf('iohook') !== -1 ||
+           n.indexOf('uiohook') !== -1 ||
+           n.indexOf('opencv') !== -1;
+  });
+  record(
+    'Step 45 — package.json declares no robotjs/nut.js/iohook/uiohook-napi/opencv',
+    forbidden45.length === 0,
+    forbidden45.join(', ')
+  );
+}
+
+// 355. feature flags still default realDesktopActions to false at Step 45.
+var ff45 = readText('src/feature-flags.js');
+record(
+  'Step 45 — feature-flags.js still pins realDesktopActions: false',
+  /realDesktopActions\s*:\s*false/.test(ff45)
+);
+record(
+  'Step 45 — feature-flags.js still pins simulationOnly: true',
+  /simulationOnly\s*:\s*true/.test(ff45)
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

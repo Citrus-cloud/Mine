@@ -7,6 +7,88 @@
 
 ## Текущий шаг
 
+**Шаг 45 завершён.** Post-release cleanup and feedback tracking.
+Проект дошёл до **шага 45**. ClickFlow остаётся simulation-only
+desktop MVP.
+
+Контекст релиза:
+
+- **`v0.2.0-smart-beta` готов / опубликован как Smart Desktop Beta
+  pre-release** (`package.json` `version: "0.2.0-beta"`, release
+  tag `v0.2.0-smart-beta`, pre-release).
+- **Step 44 был release / testing milestone, а не отдельная
+  runtime-фича.** Он не имеет файлов вроде `src/step-44.js`; это был
+  финальный этап проверки и релизной подготовки Smart Beta.
+- На Step 44 `v0.2.0-smart-beta` прошёл финальные команды:
+  - `npm install`;
+  - `npm run smoke`;
+  - `npm start`;
+  - `npm run pack`;
+  - `npm run dist`.
+- Packaged app был запущен вручную и **работает**.
+
+Что сделано на Step 45:
+
+- уточнено, что Step 44 был release/testing milestone, а не
+  отдельной runtime-фичей;
+- начат **post-release cleanup** — зафиксирован post-release /
+  post-smart-beta статус;
+- **feedback tracking prepared** — проверены GitHub issue-шаблоны
+  (bug_report / feature_request / safety_report), добавлен triage-
+  гайд;
+- создан [`docs/POST_RELEASE_CHECKLIST.md`](./docs/POST_RELEASE_CHECKLIST.md)
+  (release verification / smoke after release / feedback tracking /
+  follow-up);
+- создан [`docs/FEEDBACK_TRIAGE.md`](./docs/FEEDBACK_TRIAGE.md)
+  (purpose, issue labels, severity S0–S4, priority P0–P3, bug /
+  feature / safety processes, release-blocker criteria, when to make
+  v0.2.1 / defer to v0.3.0);
+- **v0.2.1 patch plan added** —
+  [`docs/V0_2_1_PATCH_PLAN.md`](./docs/V0_2_1_PATCH_PLAN.md)
+  (bugfix-only: crashes / broken UI / missing translations /
+  packaging / smoke-check / docs / minor UX; **не разрешены** real
+  desktop clicks / new OCR engine changes / new OpenCV / mobile /
+  major refactor);
+- **v0.3.0 real adapter branch plan added** —
+  [`docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md`](./docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md)
+  (только план; **real desktop actions must remain disabled until
+  safety review passes**; **no captcha / anti-bot / ad-click /
+  banking automation**; **real adapter behind feature flag**;
+  **action-pipeline blocks by default**);
+- обновлены README, PROJECT_CONTEXT, CHANGELOG, ROADMAP;
+- smoke-check расширен Step-45 инвариантами (наличие 4 новых docs +
+  README/PROJECT_CONTEXT/CHANGELOG mention Step 45 +
+  README/PROJECT_CONTEXT explain Step 44 was a release/testing
+  milestone + no robotjs/nut.js/iohook/uiohook-napi/opencv +
+  realDesktopActions false). Smoke-check НЕ запускает Electron / OCR
+  / screenshot / pack / dist / git / системные действия.
+
+Безопасность (без изменений):
+
+- **simulation-only remains. real clicks still disabled.**
+- real desktop clicks disabled, action-pipeline блокирует
+  `realClick: true`;
+- image_click simulation-only; text_click simulation-only;
+- Visual Builder creates drafts only; presets do not execute
+  automatically; OCR does not perform clicks;
+- `realDesktopActions: false` (hard-coded, не в runtime whitelist),
+  `simulationOnly: true`;
+- `contextIsolation: true`, `nodeIntegration: false`, CSP не
+  ослаблен;
+- никаких новых runtime-зависимостей; **нет robotjs / nut.js /
+  iohook / uiohook-napi / opencv**.
+
+На Step 45 **специально не сделано**: реальные системные клики,
+real desktop adapter, robotjs / nut.js / iohook / uiohook-napi,
+OpenCV / opencv.js, мобильная версия, обход капчи / антибот-систем /
+банковских приложений, любые новые большие функции. Логичный
+следующий шаг: собирать feedback, приоритизировать blockers, при
+необходимости выпустить `v0.2.1` (bugfixes), и начать `v0.3.0` как
+research/planning ветку реального адаптера за safety review. Real
+clicks остаются вне scope.
+
+## Шаги 42–44 (release preparation)
+
 **Шаги 42 и 43 завершены вместе.** Smart OCR/Image QA + Bugfix
 Pass + Smart Beta Packaging/Release Pass. Проект готовится к
 выпуску **`v0.2.0-smart-beta`** (Smart Desktop Beta).

@@ -19,6 +19,12 @@ assignees: []
   Please do not file these as regular feature requests.
 -->
 
+> ⚠️ **Do not include sensitive data.** Do not paste passwords,
+> API keys, tokens, personal information, or full screenshots of
+> private windows. Redact private filesystem paths, account names,
+> and any PII before submitting. If you cannot describe the issue
+> without sensitive data, contact a maintainer privately instead.
+
 ## Type
 
 - [ ] Safety regression in the current code (bug-level).
@@ -50,6 +56,19 @@ Tick all that apply:
 
 Steps that show the unsafe behavior. Include a diagnostics dump
 from **Advanced → Safety → Copy diagnostics** if relevant.
+**Redact any sensitive data first.**
+
+## Unsafe behavior
+
+Describe the unsafe behavior precisely: what ClickFlow does that it
+should not do.
+
+## Expected safe behavior
+
+Describe what the safe behavior should be instead (e.g. "the action
+pipeline should reject `realClick: true`", "diagnostics should not
+contain absolute home-directory paths", "the build should stay
+simulation-only").
 
 ## Threat model (if proposal)
 

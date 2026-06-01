@@ -8,6 +8,100 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 45 — Post-release cleanup and feedback tracking
+
+Post-release / post-smart-beta cleanup for `v0.2.0-smart-beta`
+(`package.json` `version: "0.2.0-beta"`). No new large features and
+**no real desktop actions** were added. ClickFlow stays
+**simulation-only**.
+
+### Clarified
+
+- **Step 44 was a final testing / release-preparation milestone**,
+  not a standalone runtime feature. It covered the final smart-beta
+  sign-off before the `v0.2.0-smart-beta` tag: `npm install`,
+  `npm run smoke`, `npm start`, `npm run pack`, `npm run dist`,
+  manual packaged-app QA, and verifying that the app launches, the
+  smoke-check passes, the packaged app works, real desktop clicks
+  are still disabled, and the release docs / tag plan / release
+  notes are in place. It therefore has **no** files such as
+  `src/step-44.js`.
+
+### Added (docs)
+
+- **`docs/POST_RELEASE_CHECKLIST.md` (new).** Post-release checklist
+  for `v0.2.0-smart-beta`: Release verification, Smoke after
+  release, Feedback tracking, Follow-up.
+- **`docs/FEEDBACK_TRIAGE.md` (new).** Feedback triage guide:
+  Purpose, Issue labels, Severity levels (S0 security/safety, S1
+  app cannot launch, S2 core flow broken, S3 feature bug, S4
+  polish/docs), Priority levels (P0 immediate, P1 next patch, P2
+  planned, P3 backlog), Bug triage process, Feature request process,
+  Safety report process, Release-blocker criteria, When to make
+  v0.2.1, When to defer to v0.3.0.
+- **`docs/V0_2_1_PATCH_PLAN.md` (new).** Bugfix-only patch plan:
+  Scope, Allowed changes (crash fixes / broken UI / missing
+  translations / packaging / smoke-check / docs / minor UX), Not
+  allowed changes (real desktop clicks / new OCR engine changes /
+  new OpenCV / mobile / major refactor), Candidate fixes, QA
+  checklist, Release checklist.
+- **`docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md` (new).** Real-adapter
+  research branch **plan only** (no real clicks implemented): Goal,
+  Why a separate branch, Safety prerequisites, Feature flags,
+  Adapter architecture, OS permissions, Emergency stop audit, Audit
+  log persistence, Manual confirmation flow, Test matrix, Rollback
+  plan, Disallowed use cases. States explicitly that real desktop
+  actions remain disabled until the safety review passes, that there
+  is no captcha / anti-bot / ad-click / banking automation, that the
+  real adapter must sit behind a feature flag, and that the action
+  pipeline blocks by default.
+
+### Changed
+
+- `README.md` — current status updated to the post-release / Step 45
+  phase; added Step 44 (release/testing milestone) and Step 45
+  history; links to the four new docs; how to send feedback; where
+  to read known limitations; next patch `v0.2.1`; future `v0.3.0`
+  real-adapter research line.
+- `PROJECT_CONTEXT.md` — current step set to Step 45; Step 44
+  explained as a release/testing milestone; final release commands
+  recorded; post-release cleanup + feedback tracking + v0.2.1 patch
+  plan + v0.3.0 branch plan noted; simulation-only and real clicks
+  disabled re-asserted.
+- `docs/ROADMAP.md` — refreshed `v0.2.1` (bugfixes / packaging / UI
+  / translation / docs) and `v0.3.0` (real desktop adapter research,
+  safety gates, audit persistence, feature flag, confirmation flow,
+  OS permissions, emergency stop audit) lines; Future research
+  (improved OCR, better template matching, Android research, plugin
+  system).
+
+### Smoke check (Step 45)
+
+- New invariants: the four new docs exist
+  (`POST_RELEASE_CHECKLIST.md`, `FEEDBACK_TRIAGE.md`,
+  `V0_2_1_PATCH_PLAN.md`, `V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md`);
+  README and PROJECT_CONTEXT mention Step 45; README or
+  PROJECT_CONTEXT explains Step 44 was a release/testing milestone;
+  CHANGELOG mentions Step 45; `package.json` declares none of
+  `robotjs` / `nut.js` / `iohook` / `uiohook-napi` / `opencv`;
+  feature flags still pin `realDesktopActions: false`. The
+  smoke-check does not launch Electron, OCR, screenshots, pack/dist,
+  git, or any system action.
+
+### Safety invariants kept (Step 45)
+
+- ClickFlow remains **simulation-only**. No real desktop actions
+  were added.
+- No `robotjs` / `nut.js` / `iohook` / `uiohook-napi` / OpenCV.
+- `realDesktopActions: false`, `simulationOnly: true`.
+- `image_click` and `text_click` stay simulation-only; OCR does not
+  click; Visual Builder creates drafts only; presets do not execute
+  automatically.
+- The action pipeline rejects every `realClick: true`.
+- `contextIsolation: true`, `nodeIntegration: false`, CSP unchanged.
+
+---
+
 ## [Unreleased] — Steps 15-43
 
 ClickFlow Smart Desktop Beta preparation (`v0.2.0-smart-beta`).
