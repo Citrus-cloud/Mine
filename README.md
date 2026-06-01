@@ -1062,6 +1062,29 @@ packaging/release docs. **Новых real action types не добавлено.*
 disabled; realDesktopActions=false по умолчанию; simulationOnly=true;
 contextIsolation: true; nodeIntegration: false; CSP не ослаблен.**
 
+**Step 51 — Final Desktop v1 Alpha Release Preparation:** финальная
+подготовка к публикации `v1.0.0-alpha.1` pre-release. **Новых функций и
+real actions не добавлено.** Tag/release выполняются **вручную** после
+QA.
+- добавлен final v1 alpha summary
+  (`docs/V1_ALPHA_FINAL_SUMMARY.md`);
+- добавлен pre-release checklist
+  (`docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md`);
+- добавлен tag plan (`docs/V1_ALPHA_TAG_PLAN.md`);
+- подготовлен release commit message
+  (`docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md`);
+- финализирован GitHub release draft
+  (`docs/V1_ALPHA_RELEASE_DRAFT.md`, tag `v1.0.0-alpha.1`, pre-release);
+- обновлены RELEASE_NOTES, TAG_AND_RELEASE_GUIDE, RELEASE_FINAL_CHECK,
+  RELEASE_BLOCKERS;
+- проверена safety model; подтверждено, что unsupported real actions
+  (image/text/keyboard) остаются disabled; smoke-check расширен Step-51
+  инвариантами.
+**Real coordinate click alpha — за hard safety gate, disabled by
+default, session-only, one click per confirmation. realDesktopActions=
+false; simulationOnly=true; contextIsolation: true; nodeIntegration:
+false; CSP не ослаблен. Tag/release — вручную после ручного QA.**
+
 ### Towards Desktop v1
 
 - `v0.2.0-smart-beta` опубликован / готов как Smart Desktop Beta

@@ -7674,6 +7674,117 @@ record(
   })()
 );
 
+// --- Step 51: Final Desktop v1 Alpha Release Preparation ---
+
+// 412. Final v1 alpha release docs exist.
+[
+  'docs/V1_ALPHA_FINAL_SUMMARY.md',
+  'docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md',
+  'docs/V1_ALPHA_TAG_PLAN.md',
+  'docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md'
+].forEach(function (rel) {
+  record('Step 51 doc exists: ' + rel, fileExists(rel));
+});
+
+// 413. Release draft is concrete to the v1 alpha tag + pre-release.
+var draft51 = readText('docs/V1_ALPHA_RELEASE_DRAFT.md');
+record(
+  'docs/V1_ALPHA_RELEASE_DRAFT.md contains v1.0.0-alpha.1',
+  draft51.indexOf('v1.0.0-alpha.1') !== -1
+);
+record(
+  'docs/V1_ALPHA_RELEASE_DRAFT.md marks pre-release / alpha',
+  /pre-?release|alpha/i.test(draft51)
+);
+
+// 414. Tag plan / commit message say tag & release are manual.
+record(
+  'docs/V1_ALPHA_TAG_PLAN.md states tag/release are manual',
+  /manual|will not create the tag|does not (create|commit|publish)/i.test(readText('docs/V1_ALPHA_TAG_PLAN.md'))
+);
+record(
+  'docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md provides the recommended title',
+  readText('docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md').indexOf('Prepare ClickFlow Desktop v1 Alpha release') !== -1
+);
+
+// 415. README / PROJECT_CONTEXT mention Step 51.
+var readmeTxt51 = readText('README.md');
+var pcTxt51 = readText('PROJECT_CONTEXT.md');
+record(
+  'README.md mentions Step 51 / шаг 51',
+  /step\s*51|шаг\s*51/i.test(readmeTxt51)
+);
+record(
+  'PROJECT_CONTEXT.md mentions Step 51 / шаг 51',
+  /step\s*51|шаг\s*51/i.test(pcTxt51)
+);
+record(
+  'CHANGELOG.md mentions Step 51 / шаг 51',
+  /step\s*51|шаг\s*51/i.test(readText('CHANGELOG.md'))
+);
+
+// 416. README / PROJECT_CONTEXT keep the key v1 alpha safety statements.
+record(
+  'README or PROJECT_CONTEXT states one click per confirmation',
+  /one click per confirmation|один клик на одно подтверждение|fresh confirmation|свеж|нов(ого|ое) подтвержд/i.test(readmeTxt51) ||
+  /one click per confirmation|один клик на одно подтверждение|fresh confirmation|свеж|нов(ого|ое) подтвержд/i.test(pcTxt51)
+);
+record(
+  'README or PROJECT_CONTEXT states real image/text disabled',
+  /real image\/text|image_click\s*\/\s*text_click|image\/text real|real image_click.{0,30}disabled|image\/text.{0,30}disabled|real image_click \/ text_click/i.test(readmeTxt51) ||
+  /real image\/text|image_click\s*\/\s*text_click|image\/text real|disabled.*image\/text|real image_click.{0,30}disabled/i.test(pcTxt51) ||
+  (readmeTxt51.indexOf('image_click') !== -1 && readmeTxt51.indexOf('text_click') !== -1 && /disabled/i.test(readmeTxt51)) ||
+  (pcTxt51.indexOf('image_click') !== -1 && pcTxt51.indexOf('text_click') !== -1 && /disabled/i.test(pcTxt51))
+);
+
+// 417. package.json declares no forbidden modules.
+if (pkg) {
+  var allDeps51 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var forbidden51 = Object.keys(allDeps51).filter(function (name) {
+    var n = name.toLowerCase();
+    return n.indexOf('robotjs') !== -1 ||
+           n.indexOf('nut.js') !== -1 ||
+           n.indexOf('nut-js') !== -1 ||
+           n.indexOf('@nut-tree') !== -1 ||
+           n.indexOf('iohook') !== -1 ||
+           n.indexOf('uiohook') !== -1 ||
+           n.indexOf('opencv') !== -1;
+  });
+  record(
+    'Step 51 — package.json declares no robotjs/nut.js/iohook/uiohook-napi/opencv',
+    forbidden51.length === 0,
+    forbidden51.join(', ')
+  );
+}
+
+// 418. feature-flags defaults still false.
+var ff51 = readText('src/feature-flags.js');
+var frozen51 = (ff51.match(/FEATURE_FLAGS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/) || [])[1] || '';
+record('Step 51 — feature-flags default realDesktopActions: false', /realDesktopActions:\s*false/.test(frozen51));
+record('Step 51 — feature-flags default realCoordinateClick: false', /realCoordinateClick:\s*false/.test(frozen51));
+
+// 419. action-pipeline still blocks unsupported real actions.
+var apTxt51 = readText('src/action-pipeline.js');
+record(
+  'Step 51 — action-pipeline blocks image/text real mode',
+  apTxt51.indexOf('imageClickRealBlocked') !== -1 && apTxt51.indexOf('textClickRealBlocked') !== -1
+);
+
+// 420. RELEASE_FINAL_CHECK / RELEASE_BLOCKERS reference the v1 alpha line.
+record(
+  'docs/RELEASE_FINAL_CHECK.md references the Desktop v1 Alpha line',
+  /v1\.0\.0-alpha\.1|Desktop v1 Alpha/i.test(readText('docs/RELEASE_FINAL_CHECK.md'))
+);
+record(
+  'docs/RELEASE_BLOCKERS.md states no known v1 alpha blockers',
+  /No known automated\/static blockers for Desktop v1 Alpha/i.test(readText('docs/RELEASE_BLOCKERS.md'))
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {

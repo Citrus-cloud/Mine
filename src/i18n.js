@@ -1100,7 +1100,17 @@ const translations = {
     freshConfirmationRequired: "Требуется новое подтверждение",
     confirmationResetAfterRun: "Подтверждение сброшено после запуска",
     prohibitedUseWarning: "Запрещено: капча/антибот, реклама, банковские/защищённые приложения, скрытые клики.",
-    realCoordinateRunSummary: "Сводка реального координатного запуска"
+    realCoordinateRunSummary: "Сводка реального координатного запуска",
+
+    // Step 51 — Final Desktop v1 Alpha release preparation
+    v1AlphaFinalSummary: "Итоговая сводка v1 alpha",
+    v1AlphaPreReleaseChecklist: "Чеклист перед релизом v1 alpha",
+    v1AlphaTagPlan: "План тега v1 alpha",
+    readyForV1Alpha: "Готовность к v1 alpha (после ручного QA)",
+    v1AlphaReleaseTarget: "Цель релиза v1 alpha",
+    manualPackagedQaRequired: "после ручного QA пакетного приложения",
+    unsupportedRealActionsDisabled: "Неподдерживаемые real-действия отключены",
+    adapterDependencyLabel: "Зависимость адаптера"
   },
   en: {
     // Main screen
@@ -2201,7 +2211,17 @@ const translations = {
     freshConfirmationRequired: "Fresh confirmation required",
     confirmationResetAfterRun: "Confirmation reset after run",
     prohibitedUseWarning: "Prohibited: captcha/anti-bot, ads, banking/protected apps, hidden clicks.",
-    realCoordinateRunSummary: "Real coordinate run summary"
+    realCoordinateRunSummary: "Real coordinate run summary",
+
+    // Step 51 — Final Desktop v1 Alpha release preparation
+    v1AlphaFinalSummary: "v1 alpha final summary",
+    v1AlphaPreReleaseChecklist: "v1 alpha pre-release checklist",
+    v1AlphaTagPlan: "v1 alpha tag plan",
+    readyForV1Alpha: "Ready for v1 alpha (after manual QA)",
+    v1AlphaReleaseTarget: "v1 alpha release target",
+    manualPackagedQaRequired: "after manual packaged-app QA",
+    unsupportedRealActionsDisabled: "Unsupported real actions disabled",
+    adapterDependencyLabel: "Adapter dependency"
   }
 };
 

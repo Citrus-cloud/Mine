@@ -99,3 +99,27 @@ the manual walk-through in `docs/PACKAGED_APP_QA.md` performed
 against an actual `npm run pack` / `npm run dist` artifact on at
 least one target OS. Update this page if that walk discovers any
 blocker.
+
+
+
+---
+
+## Desktop v1 Alpha blockers (Step 51)
+
+- **Current status (v1 alpha):** No known automated/static blockers for
+  Desktop v1 Alpha. `npm run smoke` reports `Failed: 0`. Manual
+  packaged-app QA on at least one target OS is still required before
+  publishing `v1.0.0-alpha.1`.
+- **Release target:** `v1.0.0-alpha.1` (pre-release/alpha).
+
+| ID | Severity | Area | Description | Status | Notes |
+|----|----------|------|-------------|--------|-------|
+| —  | —        | —    | _No known automated/static blockers for Desktop v1 Alpha._ | — | Manual packaged-app QA still required. |
+
+Safety posture unchanged: real coordinate click disabled by default,
+session-only, one click per fresh confirmation; real image/text and
+keyboard automation disabled; no prohibited dependencies;
+`contextIsolation: true`, `nodeIntegration: false`, CSP unchanged.
+
+**Release decision (v1 alpha):** Ready for Desktop v1 Alpha pre-release
+after manual packaged-app QA.

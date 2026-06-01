@@ -7,6 +7,52 @@
 
 ## Текущий шаг
 
+**Шаг 51 завершён.** Final Desktop v1 Alpha Release Preparation. Текущий
+шаг — **51**.
+
+Статус: **Desktop v1 Alpha pre-release preparation.** Release target —
+**`v1.0.0-alpha.1`** (pre-release/alpha). Новых функций и real actions
+не добавлено. **Tag/release выполняются вручную после ручного QA.**
+
+Что сделано на Step 51:
+
+- финальная v1 alpha readiness сверка (package.json version
+  `1.0.0-alpha.1`, README/PROJECT_CONTEXT/CHANGELOG/RELEASE_NOTES и
+  release docs согласованы; явных противоречий про real clicks /
+  image/text / version не найдено);
+- созданы финальные release-документы:
+  `docs/V1_ALPHA_FINAL_SUMMARY.md`,
+  `docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md`,
+  `docs/V1_ALPHA_TAG_PLAN.md`,
+  `docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md`;
+- финализирован `docs/V1_ALPHA_RELEASE_DRAFT.md` (полный набор секций,
+  tag `v1.0.0-alpha.1`, pre-release);
+- обновлены RELEASE_NOTES, TAG_AND_RELEASE_GUIDE, RELEASE_FINAL_CHECK,
+  RELEASE_BLOCKERS (добавлены Desktop v1 Alpha разделы; «No known
+  automated/static blockers; manual packaged-app QA still required»);
+- Safety Center: карточка Desktop v1 Alpha status расширена release-
+  полями (`readyForV1AlphaAfterManualQa`,
+  `realCoordinateAlphaEnabledByDefault: false`,
+  `unsupportedRealActionsEnabled: false`); i18n RU/EN;
+- smoke-check расширен Step-51 инвариантами.
+
+Безопасность (без изменений):
+
+- real coordinate click alpha доступен только за hard safety gate;
+  disabled by default; session-only; fresh confirmation; one click per
+  confirmation; repeatCount>1 blocked;
+- real image_click / text_click disabled; keyboard automation disabled;
+- нет robotjs/iohook/uiohook-napi/opencv; real click не происходит при
+  smoke / при старте; `contextIsolation: true`, `nodeIntegration: false`,
+  CSP не ослаблен.
+
+**Next step:** ручной packaged-app QA по `docs/V1_ALPHA_MANUAL_TESTS.md`,
+заполнение `docs/V1_ALPHA_QA_REPORT.md` и
+`docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md`, затем ручная публикация тега
+`v1.0.0-alpha.1` как pre-release (см. `docs/V1_ALPHA_TAG_PLAN.md`).
+
+## Шаг 50 (real coordinate QA + v1 alpha packaging)
+
 **Шаг 50 завершён.** Real Coordinate Click QA + v1 Alpha Packaging.
 Текущий шаг — **50**.
 

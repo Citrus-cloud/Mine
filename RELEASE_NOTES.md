@@ -380,3 +380,36 @@ ClickFlow remains **simulation-only by default**.
 - [`docs/V1_ALPHA_RELEASE_CHECKLIST.md`](./docs/V1_ALPHA_RELEASE_CHECKLIST.md)
 - [`docs/V1_ALPHA_MANUAL_TESTS.md`](./docs/V1_ALPHA_MANUAL_TESTS.md)
 - [`docs/V1_ALPHA_QA_REPORT.md`](./docs/V1_ALPHA_QA_REPORT.md)
+
+
+### How to run (v1 alpha)
+
+```bash
+npm install
+npm start
+```
+
+### How to test (v1 alpha)
+
+`npm run smoke` (static), then the manual walkthrough in
+`docs/V1_ALPHA_MANUAL_TESTS.md` + sign-off in
+`docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md`. Record results in
+`docs/V1_ALPHA_QA_REPORT.md`.
+
+### Packaging notes (v1 alpha)
+
+`npm run pack` / `npm run dist` produce Windows NSIS / macOS DMG / Linux
+AppImage. The real adapter native backend is not bundled, so on a stock
+build the real click is blocked ("dependency not installed"); dry-run
+and the safety blocking still work. macOS DMGs are not notarized and
+Windows installers are not signed in alpha.
+
+### Final v1 alpha release prep (Step 51)
+
+- `docs/V1_ALPHA_FINAL_SUMMARY.md`
+- `docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md`
+- `docs/V1_ALPHA_TAG_PLAN.md`
+- `docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md`
+
+Tag and GitHub release are created **manually** after QA — see
+`docs/V1_ALPHA_TAG_PLAN.md`.

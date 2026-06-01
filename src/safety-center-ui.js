@@ -1326,7 +1326,15 @@ function getV1AlphaReleaseStatus() {
     auditLogsReady: (typeof getAuditLogManagerStatus === 'function'),
     emergencyStopReady: safety.emergencyStopEnabled === true,
     packagedQaRequired: true,
-    realAdapterDependencyStatus: status.dependencyLoaded ? 'loaded' : 'unavailable'
+    realAdapterDependencyStatus: status.dependencyLoaded ? 'loaded' : 'unavailable',
+    // Step 51 — final release-readiness fields.
+    v1AlphaFinalSummaryPresent: true,
+    v1AlphaPreReleaseChecklistPresent: true,
+    v1AlphaTagPlanPresent: true,
+    v1AlphaReleaseDraftPresent: true,
+    readyForV1AlphaAfterManualQa: true,
+    realCoordinateAlphaEnabledByDefault: false,
+    unsupportedRealActionsEnabled: false
   };
 }
 
@@ -1348,5 +1356,10 @@ function renderV1AlphaStatusCard() {
   card.appendChild(_scRow('packagedQaRequired', st.packagedQaRequired ? 'yes' : 'no', 'sc-warn'));
   card.appendChild(_scRow(_scLabel('adapterDependencyLabel', 'Adapter dependency'),
     st.realAdapterDependencyStatus, st.realAdapterDependencyStatus === 'loaded' ? 'sc-ok' : 'sc-warn'));
+  card.appendChild(_scRow(_scLabel('readyForV1Alpha', 'Ready for v1 alpha (after manual QA)'),
+    st.readyForV1AlphaAfterManualQa ? _scLabel('manualPackagedQaRequired', 'after manual packaged-app QA') : 'no', 'sc-warn'));
+  card.appendChild(_scRow(_scLabel('unsupportedRealActionsDisabled', 'Unsupported real actions disabled'),
+    st.unsupportedRealActionsEnabled ? 'enabled' : _scLabel('statusDisabled', 'disabled'),
+    st.unsupportedRealActionsEnabled ? 'sc-bad' : 'sc-ok'));
   return card;
 }

@@ -312,3 +312,26 @@ Real coordinate click is experimental, disabled by default,
 session-only, one click per confirmation. Real image/text clicks and
 keyboard automation remain disabled. No captcha / anti-bot / ad /
 banking / protected-app automation.
+
+
+
+---
+
+## Desktop v1 Alpha release — final prep (Step 51)
+
+- Release target: `v1.0.0-alpha.1` (pre-release/alpha).
+- Run `npm install`.
+- Run `npm run smoke`.
+- Run `npm start`.
+- Run `npm run pack`.
+- Run `npm run dist`.
+- Complete `docs/V1_ALPHA_MANUAL_TESTS.md`.
+- Complete `docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md`.
+- Review `docs/V1_ALPHA_FINAL_SUMMARY.md` and sign off.
+- Create the tag **only after** manual QA (see
+  `docs/V1_ALPHA_TAG_PLAN.md`); use the commit message in
+  `docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md`.
+- Publish as a GitHub **pre-release** using
+  `docs/V1_ALPHA_RELEASE_DRAFT.md`.
+
+The repository does not create the tag or publish the release for you.
