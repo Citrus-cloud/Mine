@@ -240,7 +240,24 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   SafetyCenterDiagnosticsExported:    'safetyCenter.diagnostics.exported',
   AuditLogExported:                   'audit.log.exported',
   AuditLogCleared:                    'audit.log.cleared',
-  ScenarioRunSummaryRecorded:         'scenario.runSummary.recorded'
+  ScenarioRunSummaryRecorded:         'scenario.runSummary.recorded',
+  // Step 47 — Real desktop adapter prototype (coordinate click behind a
+  // hard gate). Payloads carry only stable string ids, short reasons,
+  // numeric coordinates, and the mouse button — never screenshots,
+  // never base64, never filesystem paths, never PII. The mere presence
+  // of these events does NOT mean a real click happened: most are
+  // availability/confirmation/block events.
+  RealAdapterAvailabilityChecked2:    'realAdapter.availability.checked',
+  RealAdapterSessionEnabled:          'realAdapter.session.enabled',
+  RealAdapterSessionDisabled:         'realAdapter.session.disabled',
+  RealActionConfirmationRequested:    'realAction.confirmation.requested',
+  RealActionConfirmationAccepted:     'realAction.confirmation.accepted',
+  RealActionConfirmationCancelled:    'realAction.confirmation.cancelled',
+  RealActionCoordinateRequested:      'realAction.coordinate.requested',
+  RealActionCoordinateExecuted:       'realAction.coordinate.executed',
+  RealActionCoordinateBlocked:        'realAction.coordinate.blocked',
+  RealActionDisallowedBlocked:        'realAction.disallowed.blocked',
+  RealActionSafetyGateFailed:         'realAction.safetyGate.failed'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

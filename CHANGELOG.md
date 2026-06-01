@@ -8,6 +8,74 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 47 — Real desktop adapter prototype behind hard safety gate
+
+First **real** desktop action path: a single **coordinate click**
+prototype, **disabled by default**, **session-only**, **one click per
+confirmation**. ClickFlow stays simulation-only by default
+(`realDesktopActions:false`, `realCoordinateClick:false`,
+`simulationOnly:true`, `contextIsolation:true`, `nodeIntegration:false`,
+CSP unchanged, no `robotjs`/`iohook`/`uiohook-napi`/`opencv`).
+
+### Added (source)
+
+- `main/real-desktop-adapter.js` — main-process adapter prototype:
+  `getRealDesktopAdapterInfo`, `checkRealDesktopAdapterAvailability`,
+  `validateRealClickAction`, `executeRealCoordinateClick`,
+  `blockRealDesktopAction`, `getRealDesktopAdapterStatus`, plus
+  `registerRealDesktopAdapterIpc`. Optional native backend
+  (`@nut-tree/nut-js`/`nut-js`) loaded in try/catch; **not** a declared
+  dependency → adapter reports unavailable and blocks; never crashes.
+
+### Added (docs)
+
+- `docs/REAL_ADAPTER_PROTOTYPE.md`, `docs/REAL_CLICK_TESTING_GUIDE.md`.
+
+### Changed
+
+- `main.js` — three narrow IPC channels (`real-adapter:get-status`,
+  `real-adapter:check-availability`,
+  `real-adapter:execute-coordinate-click`); the executor requires the
+  full hard context and main re-validates it. No generic action runner.
+- `preload.js` — `realAdapter` API (status / availability /
+  executeCoordinateClick) only; ipcRenderer not exposed.
+- `src/feature-flags.js` — added `realCoordinateClick`,
+  `realImageClick`, `realTextClick` (all false);
+  `_RUNTIME_TOGGLABLE_FLAGS` now allows `realDesktopActions` +
+  `realCoordinateClick` (session-only, never persisted); image/text/
+  keyboard real flags are NOT togglable; `getRealAdapterFeatureStatus()`.
+- `src/action-pipeline.js` — `canExecuteRealDesktopAction`,
+  `executeRealDesktopAction`, `createRealActionBlockedResult`. Real mode
+  blocked by default; coordinate click only; delegates real execution to
+  main; image/text/keyboard real blocked before any IPC.
+- `src/safety-gates.js` — `getRealDesktopActionGateStatus` (strict,
+  default-deny gate with reasons/warnings/requirements).
+- `src/safety-center-ui.js` — Experimental Real Coordinate Click card:
+  diagnostics, coordinate inputs, Run safety check, dry-run, enable-for-
+  session (modal with "I understand…" checkbox), Test real coordinate
+  click (per-click confirmation modal). No image/text real controls.
+- `src/permission-manager.js` — `realCoordinateClickPermission`,
+  `sessionRealModeEnabled`, `userConfirmationAvailable`,
+  `auditLogPersistenceReady`.
+- `src/audit-events.js` — Step 47 real-adapter event types.
+- `src/i18n.js` — RU/EN keys for the prototype; `src/styles.css` modal.
+- Docs updated: `V1_REAL_ADAPTER_REQUIREMENTS`, `V1_SAFETY_MODEL`,
+  `V1_ACTION_PIPELINE`, `V1_AUDIT_LOGS`, `V1_PERMISSION_MODEL`,
+  `SECURITY_CHECKLIST`, `KNOWN_LIMITATIONS`, README, PROJECT_CONTEXT.
+
+### Safety invariants kept (Step 47)
+
+- Real clicks disabled by default; `realCoordinateClick` disabled.
+- image_click / text_click real modes blocked; keyboard automation
+  absent; scroll/hotkey real absent.
+- One real click requires explicit confirmation; action-pipeline + main
+  block real without the full gate.
+- No real click during smoke or at app start. No prohibited
+  dependencies. `contextIsolation:true`, `nodeIntegration:false`, CSP
+  unchanged. No screenshots/base64/paths in audit logs.
+
+---
+
 ## [Unreleased] — Step 46 — Desktop v1 architecture and safety foundation
 
 Start of the full Desktop v1 development line. **No real system clicks

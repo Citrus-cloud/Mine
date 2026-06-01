@@ -1350,3 +1350,27 @@ For the per-platform release sign-offs see
 [`docs/SMART_BETA_RELEASE_CHECKLIST.md`](./SMART_BETA_RELEASE_CHECKLIST.md).
 For the manual QA checklist see
 [`docs/SMART_BETA_MANUAL_TESTS.md`](./SMART_BETA_MANUAL_TESTS.md).
+
+
+
+## Real desktop adapter prototype (Step 47)
+
+- Real input happens ONLY in the main process
+  (`main/real-desktop-adapter.js`); the renderer reaches it through
+  three narrow IPC channels (`real-adapter:get-status`,
+  `real-adapter:check-availability`,
+  `real-adapter:execute-coordinate-click`). No generic action runner.
+- Real coordinate click is **disabled by default** and **session-only**;
+  `realDesktopActions` / `realCoordinateClick` reset to `false` on
+  restart and are never persisted.
+- `realImageClick`, `realTextClick`, and keyboard/scroll real actions
+  are hard-disabled and not runtime-togglable.
+- Real click requires the full hard context (session enabled, user
+  confirmed, safety check passed, emergency stop ready, audit logs
+  enabled). Main re-validates; when in doubt it blocks.
+- Optional native backend (`@nut-tree/nut-js`/`nut-js`) is NOT a
+  declared dependency; absent backend → adapter unavailable, app keeps
+  working. No `robotjs`/`iohook`/`uiohook-napi`/OpenCV.
+- `contextIsolation: true`, `nodeIntegration: false`, CSP unchanged.
+  No real action runs at app start. No screenshots/base64/paths in
+  audit logs.

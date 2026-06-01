@@ -50,3 +50,17 @@ present, the manager uses it for `audit:load` / `audit:append` /
 `audit:clear` / `audit:export` against a redacted `audit-log.json` in
 `userData`. When absent, the manager stays fully in memory. The
 renderer never gets direct Node access; export is always user-driven.
+
+
+
+---
+
+## Step 47 update — real adapter events
+
+New event types: `realAdapter.availability.checked`,
+`realAdapter.session.enabled` / `.disabled`,
+`realAction.confirmation.requested` / `.accepted` / `.cancelled`,
+`realAction.coordinate.requested` / `.executed` / `.blocked`,
+`realAction.disallowed.blocked`, `realAction.safetyGate.failed`.
+Payloads carry only stable ids, short reasons, numeric coordinates, and
+the mouse button — never screenshots, base64, filesystem paths, or PII.

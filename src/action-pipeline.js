@@ -483,3 +483,149 @@ function executeAction(action, context) {
   // an explicit "real" request and any unknown / typo'd mode name.
   return blockRealAction(action, context);
 }
+
+
+
+// =====================================================================
+// Step 47 — Real desktop action path (renderer side).
+// ---------------------------------------------------------------------
+// The renderer NEVER performs real input. These helpers decide whether
+// a real coordinate click is permitted (pre-flight) and, if so, hand
+// the request to the main-process adapter through the narrow preload
+// bridge `window.clickflow.realAdapter.executeCoordinateClick`. The
+// main process re-validates the FULL hard context and is the actual
+// gate. Real mode is BLOCKED BY DEFAULT.
+//
+// Only `type:"click"` with `realClick:true` is ever eligible.
+// image_click / text_click / keyboard / scroll real modes are always
+// blocked here, before any IPC call is made.
+// =====================================================================
+
+function createRealActionBlockedResult(reason, action) {
+  return {
+    success: false,
+    mode: 'real',
+    simulated: false,
+    realAction: false,
+    blocked: true,
+    action: action || null,
+    result: null,
+    error: (typeof reason === 'string' && reason.length > 0)
+      ? reason
+      : 'Real desktop action blocked',
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Synchronous pre-flight gate. Returns true ONLY if every renderer-side
+// precondition holds. The authoritative gate still runs in main.
+function canExecuteRealDesktopAction(action, context) {
+  var ctx = (context && typeof context === 'object') ? context : {};
+
+  // Coordinate click only. Everything else is blocked outright.
+  if (!action || action.type !== 'click') return false;
+  if (action.realClick !== true) return false;
+  if (typeof action.x !== 'number' || action.x < 0) return false;
+  if (typeof action.y !== 'number' || action.y < 0) return false;
+  if (['left', 'right', 'middle'].indexOf(action.button) === -1) return false;
+
+  // Session feature gate: BOTH umbrella + coordinate-click flags must
+  // be enabled for this session.
+  var ff = (typeof getRealAdapterFeatureStatus === 'function')
+    ? getRealAdapterFeatureStatus()
+    : { realCoordinateClickSessionEnabled: false };
+  if (ff.realCoordinateClickSessionEnabled !== true) return false;
+  // image/text real clicks can never be enabled.
+  if (ff.realImageClick === true || ff.realTextClick === true) return false;
+
+  // Explicit per-call context. "When in doubt, block."
+  if (ctx.userConfirmed !== true) return false;
+  if (ctx.safetyCheckPassed !== true) return false;
+  if (ctx.emergencyStopReady !== true) return false;
+  if (ctx.auditLogsEnabled !== true) return false;
+  if (ctx.sessionRealModeEnabled !== true) return false;
+
+  return true;
+}
+
+// Async. Delegates to the main-process adapter. Always returns a
+// normalized result object. Never performs input in the renderer.
+async function executeRealDesktopAction(action, context) {
+  // Block every non-coordinate-click real action before any IPC.
+  if (!action || action.type !== 'click') {
+    var blk = createRealActionBlockedResult(
+      'Real mode supports coordinate click only (image_click / text_click / keyboard are disabled)',
+      action
+    );
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('realAction.coordinate.blocked', {
+        actionType: action && action.type, reason: 'unsupportedRealActionType'
+      });
+    }
+    return blk;
+  }
+
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('realAction.coordinate.requested', {
+      scenarioId: context && context.scenarioId, actionType: 'click'
+    });
+  }
+
+  if (!canExecuteRealDesktopAction(action, context)) {
+    var blocked = createRealActionBlockedResult(
+      'Real coordinate click blocked by safety gate (session disabled or confirmation/gates missing)',
+      action
+    );
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('realAction.coordinate.blocked', {
+        scenarioId: context && context.scenarioId, reason: 'safetyGate'
+      });
+    }
+    return blocked;
+  }
+
+  // Pre-flight passed — hand off to main. Main re-validates everything.
+  try {
+    if (!(typeof window !== 'undefined' && window.clickflow &&
+          window.clickflow.realAdapter &&
+          typeof window.clickflow.realAdapter.executeCoordinateClick === 'function')) {
+      var noBridge = createRealActionBlockedResult('Real adapter bridge unavailable', action);
+      if (typeof recordAuditEvent === 'function') {
+        recordAuditEvent('realAction.coordinate.blocked', { reason: 'bridgeUnavailable' });
+      }
+      return noBridge;
+    }
+    var res = await window.clickflow.realAdapter.executeCoordinateClick(action, {
+      userConfirmed: context.userConfirmed === true,
+      safetyCheckPassed: context.safetyCheckPassed === true,
+      emergencyStopReady: context.emergencyStopReady === true,
+      auditLogsEnabled: context.auditLogsEnabled === true,
+      sessionRealModeEnabled: context.sessionRealModeEnabled === true,
+      scenarioId: context.scenarioId || null
+    });
+    // Return the main-process result verbatim. We do NOT run it through
+    // normalizeActionResult() because that helper force-zeroes
+    // `realAction` (a Step-46 simulation-only invariant); a genuine,
+    // gated, confirmed real click must be allowed to report
+    // realAction:true so diagnostics and the UI are truthful.
+    if (typeof recordAuditEvent === 'function') {
+      if (res && res.success && res.realAction === true && !res.blocked) {
+        recordAuditEvent('realAction.coordinate.executed', {
+          scenarioId: context && context.scenarioId, actionType: 'click'
+        });
+      } else {
+        recordAuditEvent('realAction.coordinate.blocked', {
+          scenarioId: context && context.scenarioId,
+          reason: (res && res.error) ? 'mainBlocked' : 'unknown'
+        });
+      }
+    }
+    return res;
+  } catch (err) {
+    var failed = createRealActionBlockedResult('Real coordinate click failed', action);
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('realAction.coordinate.blocked', { reason: 'exception' });
+    }
+    return failed;
+  }
+}
