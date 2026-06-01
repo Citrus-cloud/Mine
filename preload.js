@@ -68,5 +68,14 @@ contextBridge.exposeInMainWorld('clickflow', {
     delete: (templateId) => ipcRenderer.invoke('templates:delete', templateId),
     reset: () => ipcRenderer.invoke('templates:reset'),
     getStats: () => ipcRenderer.invoke('templates:get-stats')
+  },
+  // Step 47 — Real Desktop Adapter prototype. Three narrow channels
+  // only; the renderer never reaches ipcRenderer directly and there is
+  // no generic action runner. executeCoordinateClick is coordinate-
+  // click specific and main re-validates the full hard context.
+  realAdapter: {
+    getStatus: () => ipcRenderer.invoke('real-adapter:get-status'),
+    checkAvailability: () => ipcRenderer.invoke('real-adapter:check-availability'),
+    executeCoordinateClick: (action, context) => ipcRenderer.invoke('real-adapter:execute-coordinate-click', action, context)
   }
 });

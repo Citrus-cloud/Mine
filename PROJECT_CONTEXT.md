@@ -7,6 +7,68 @@
 
 ## Текущий шаг
 
+**Шаг 47 завершён.** Real desktop adapter prototype behind hard safety
+gate. Текущий шаг — **47**.
+
+Главное: **реальные клики выключены по умолчанию.** Добавлен первый
+*прототип* реального desktop-адаптера — **только coordinate click**,
+**session-only**, **один клик на одно подтверждение**. ClickFlow по
+умолчанию остаётся simulation-only.
+
+Что сделано на Step 47:
+
+- `main/real-desktop-adapter.js` (main process only): функции
+  `getRealDesktopAdapterInfo`, `checkRealDesktopAdapterAvailability`,
+  `validateRealClickAction`, `executeRealCoordinateClick`,
+  `blockRealDesktopAction`, `getRealDesktopAdapterStatus` +
+  `registerRealDesktopAdapterIpc`. Опциональный backend
+  `@nut-tree/nut-js` / `nut-js` грузится через try/catch; **в
+  зависимости не добавлен** (network INTEGRATIONS_ONLY) → adapter
+  unavailable, сборка не ломается;
+- IPC (main.js): `real-adapter:get-status`,
+  `real-adapter:check-availability`,
+  `real-adapter:execute-coordinate-click` (требует полный hard context,
+  re-validation в main, нет универсального action-runner);
+- preload: `realAdapter.getStatus/checkAvailability/executeCoordinateClick`;
+- feature-flags: `realCoordinateClick`/`realImageClick`/`realTextClick`
+  (все false); whitelist runtime-toggle = `realOcr`, `tesseractProvider`,
+  `realDesktopActions`, `realCoordinateClick`; image/text/keyboard real
+  **нельзя** включить runtime; session-flags не сохраняются;
+- action-pipeline: `canExecuteRealDesktopAction`,
+  `executeRealDesktopAction`, `createRealActionBlockedResult` — real
+  mode blocked by default, делегирует в main;
+- safety-gates: `getRealDesktopActionGateStatus` (default deny);
+- Safety Center UI: карточка Experimental Real Coordinate Click,
+  enable-for-session с подтверждением, dry-run, test real click с
+  отдельным подтверждением, диагностика прототипа; без
+  image/text real;
+- audit events Step 47; permission-manager + diagnostics расширены;
+  i18n RU/EN; docs REAL_ADAPTER_PROTOTYPE.md +
+  REAL_CLICK_TESTING_GUIDE.md + обновления v1/security/limitations;
+- smoke-check расширен Step-47 инвариантами.
+
+Безопасность (по умолчанию):
+
+- real clicks disabled by default; realCoordinateClick disabled;
+- image_click / text_click real mode blocked; keyboard automation
+  отсутствует; scroll/hotkey real — нет;
+- один real click требует явного подтверждения; action-pipeline и main
+  блокируют real без gates;
+- real click не происходит при smoke / при старте приложения;
+- нет robotjs / iohook / uiohook-napi / opencv;
+- `realDesktopActions: false`, `simulationOnly: true`,
+  `contextIsolation: true`, `nodeIntegration: false`, CSP не ослаблен;
+- renderer без прямого Node-доступа; screenshots/base64 не пишутся в
+  scenarios/settings/audit logs.
+
+**Next step:** при наличии безопасного backend — расширять только за
+полным safety review (`docs/REAL_ACTIONS_GO_NO_GO.md`,
+`docs/V1_RELEASE_CRITERIA.md`): persisted audit, confirmation hardening,
+target allow/deny-list; image/text real остаются вне scope до отдельного
+ревью.
+
+## Шаг 46 (Desktop v1 foundation)
+
 **Шаг 46 завершён.** Desktop v1 architecture + safety foundation.
 Проект **перешёл к Desktop v1 foundation**. Текущий шаг — **46**.
 

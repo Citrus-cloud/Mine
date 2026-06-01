@@ -5995,7 +5995,17 @@ record(
 );
 record(
   'feature-flags.js runtime overlay can only flip realOcr / tesseractProvider',
-  /_RUNTIME_TOGGLABLE_FLAGS\s*=\s*\[\s*['"]realOcr['"],\s*['"]tesseractProvider['"]\s*\]/.test(ffTxt41)
+  (function () {
+    var m = ffTxt41.match(/_RUNTIME_TOGGLABLE_FLAGS\s*=\s*\[([^\]]*)\]/);
+    var arr = m ? m[1] : '';
+    // Step 47 expanded the whitelist to also allow the session-only
+    // real coordinate-click gate. image/text/keyboard real flags must
+    // still NOT be runtime-togglable.
+    return arr.indexOf('realOcr') !== -1 &&
+           arr.indexOf('tesseractProvider') !== -1 &&
+           arr.indexOf('realImageClick') === -1 &&
+           arr.indexOf('realTextClick') === -1;
+  })()
 );
 record(
   'feature-flags.js getOcrFeatureStatus exposes realOcrEnabledForSession',
@@ -6604,7 +6614,21 @@ record(
 );
 record(
   'Smart Beta — runtime overlay still whitelist-only',
-  /_RUNTIME_TOGGLABLE_FLAGS\s*=\s*\[\s*['"]realOcr['"],\s*['"]tesseractProvider['"]\s*\]/.test(ffSb)
+  (function () {
+    var m = ffSb.match(/_RUNTIME_TOGGLABLE_FLAGS\s*=\s*\[([^\]]*)\]/);
+    var arr = m ? m[1] : '';
+    // Expected whitelist (Step 47): realOcr, tesseractProvider,
+    // realDesktopActions, realCoordinateClick. image/text/keyboard
+    // real flags must NEVER be runtime-togglable.
+    return arr.indexOf('realOcr') !== -1 &&
+           arr.indexOf('tesseractProvider') !== -1 &&
+           arr.indexOf('realDesktopActions') !== -1 &&
+           arr.indexOf('realCoordinateClick') !== -1 &&
+           arr.indexOf('realImageClick') === -1 &&
+           arr.indexOf('realTextClick') === -1 &&
+           arr.indexOf('keyPress') === -1 &&
+           arr.indexOf('hotkey') === -1;
+  })()
 );
 
 // --- Step 45: post-release cleanup + feedback tracking ---
@@ -7026,6 +7050,208 @@ record(
   htmlTxt46.indexOf('Content-Security-Policy') !== -1 &&
   htmlTxt46.indexOf('unsafe-inline') === -1 &&
   htmlTxt46.indexOf('unsafe-eval') === -1
+);
+
+// --- Step 47: Real desktop adapter prototype (behind hard gate) ---
+
+// 372. New files exist.
+record('Step 47 file exists: main/real-desktop-adapter.js', fileExists('main/real-desktop-adapter.js'));
+record('Step 47 doc exists: docs/REAL_ADAPTER_PROTOTYPE.md', fileExists('docs/REAL_ADAPTER_PROTOTYPE.md'));
+record('Step 47 doc exists: docs/REAL_CLICK_TESTING_GUIDE.md', fileExists('docs/REAL_CLICK_TESTING_GUIDE.md'));
+
+// 373. README / PROJECT_CONTEXT mention Step 47 + session-only / disabled by default.
+var readmeTxt47 = readText('README.md');
+var pcTxt47 = readText('PROJECT_CONTEXT.md');
+var chTxt47 = readText('CHANGELOG.md');
+record(
+  'README or PROJECT_CONTEXT mentions Step 47 / шаг 47',
+  /step\s*47|шаг\s*47/i.test(readmeTxt47) || /step\s*47|шаг\s*47/i.test(pcTxt47)
+);
+record(
+  'CHANGELOG mentions Step 47 / шаг 47',
+  /step\s*47|шаг\s*47/i.test(chTxt47)
+);
+record(
+  'README or PROJECT_CONTEXT states session-only / disabled by default',
+  /session-only|session only|session-?only|disabled by default|выключен по умолчанию|session-only|только для (текущей )?сесси/i.test(readmeTxt47) ||
+  /session-only|disabled by default|выключен[ы]? по умолчанию|session-only|только для (текущей )?сесси/i.test(pcTxt47)
+);
+
+// 374. package.json declares no robotjs / iohook / uiohook-napi / opencv.
+if (pkg) {
+  var allDeps47 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var forbidden47 = Object.keys(allDeps47).filter(function (name) {
+    var n = name.toLowerCase();
+    return n.indexOf('robotjs') !== -1 ||
+           n.indexOf('iohook') !== -1 ||
+           n.indexOf('uiohook') !== -1 ||
+           n.indexOf('opencv') !== -1;
+  });
+  record(
+    'Step 47 — package.json declares no robotjs/iohook/uiohook-napi/opencv',
+    forbidden47.length === 0,
+    forbidden47.join(', ')
+  );
+}
+
+// 375. feature-flags defaults: real flags all false in the frozen block.
+var ff47 = readText('src/feature-flags.js');
+var frozenBlock = (ff47.match(/FEATURE_FLAGS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/) || [])[1] || '';
+record(
+  'feature-flags default realDesktopActions: false',
+  /realDesktopActions:\s*false/.test(frozenBlock)
+);
+record(
+  'feature-flags default realCoordinateClick: false',
+  /realCoordinateClick:\s*false/.test(frozenBlock)
+);
+record(
+  'feature-flags default realImageClick: false',
+  /realImageClick:\s*false/.test(frozenBlock)
+);
+record(
+  'feature-flags default realTextClick: false',
+  /realTextClick:\s*false/.test(frozenBlock)
+);
+record(
+  'feature-flags default simulationOnly: true',
+  /simulationOnly:\s*true/.test(frozenBlock)
+);
+
+// 376. main/real-desktop-adapter.js: coordinate-click only, blocks by default,
+//      no prohibited native module, defensive backend load.
+var rdaTxt = readText('main/real-desktop-adapter.js');
+[
+  'function getRealDesktopAdapterInfo',
+  'function checkRealDesktopAdapterAvailability',
+  'function validateRealClickAction',
+  'function executeRealCoordinateClick',
+  'function blockRealDesktopAction',
+  'function getRealDesktopAdapterStatus',
+  'function registerRealDesktopAdapterIpc'
+].forEach(function (needle) {
+  record('real-desktop-adapter.js declares ' + needle, rdaTxt.indexOf(needle) !== -1);
+});
+record(
+  'real-desktop-adapter.js requires the backend inside try/catch (no hard dependency)',
+  /try\s*\{[\s\S]{0,200}require\(/.test(rdaTxt)
+);
+record(
+  'real-desktop-adapter.js does not require robotjs/iohook/uiohook-napi/opencv',
+  rdaTxt.indexOf("require('robotjs')") === -1 &&
+  rdaTxt.indexOf("require('iohook')") === -1 &&
+  rdaTxt.indexOf("require('uiohook-napi')") === -1 &&
+  rdaTxt.indexOf('opencv') === -1
+);
+record(
+  'real-desktop-adapter.js blocks non-coordinate-click action types',
+  /image_click/.test(rdaTxt) && /text_click/.test(rdaTxt) &&
+  /Real adapter supports coordinate click only/.test(rdaTxt)
+);
+record(
+  'real-desktop-adapter.js requires the full hard context before a click',
+  /sessionRealModeEnabled/.test(rdaTxt) && /userConfirmed/.test(rdaTxt) &&
+  /safetyCheckPassed/.test(rdaTxt) && /emergencyStopReady/.test(rdaTxt) &&
+  /auditLogsEnabled/.test(rdaTxt)
+);
+
+// 377. main.js wires the real-adapter IPC, preload exposes the narrow API.
+record(
+  "main.js registers real-adapter IPC via registerRealDesktopAdapterIpc",
+  mainTxt.indexOf('registerRealDesktopAdapterIpc') !== -1
+);
+record(
+  'preload.js exposes realAdapter API (status/availability/executeCoordinateClick)',
+  /realAdapter\s*:\s*\{[\s\S]{0,400}executeCoordinateClick/.test(preloadTxt) &&
+  preloadTxt.indexOf("'real-adapter:get-status'") !== -1 &&
+  preloadTxt.indexOf("'real-adapter:execute-coordinate-click'") !== -1
+);
+
+// 378. action-pipeline real-mode helpers exist and block by default.
+var apTxt47 = readText('src/action-pipeline.js');
+[
+  'function canExecuteRealDesktopAction',
+  'function executeRealDesktopAction',
+  'function createRealActionBlockedResult'
+].forEach(function (needle) {
+  record('action-pipeline.js declares ' + needle, apTxt47.indexOf(needle) !== -1);
+});
+record(
+  'action-pipeline.js real mode is coordinate-click only (blocks other types)',
+  /action\.type !== 'click'/.test(apTxt47)
+);
+
+// 379. safety-gates strict real gate exists, default-deny.
+var sgTxt47 = readText('src/safety-gates.js');
+record(
+  'safety-gates.js declares getRealDesktopActionGateStatus',
+  sgTxt47.indexOf('function getRealDesktopActionGateStatus') !== -1
+);
+record(
+  'safety-gates.js real gate is default-deny (allowed only when no reasons)',
+  /allowed\s*=\s*reasons\.length === 0/.test(sgTxt47)
+);
+
+// 380. Safety Center UI exposes the prototype controls but NO image/text real enable.
+var scuiTxt47 = readText('src/safety-center-ui.js');
+record(
+  'safety-center-ui.js declares renderRealAdapterCard',
+  scuiTxt47.indexOf('function renderRealAdapterCard') !== -1
+);
+record(
+  'safety-center-ui.js has enable/disable session + dry-run + test real click',
+  scuiTxt47.indexOf('function enableRealCoordinateClickSession') !== -1 &&
+  scuiTxt47.indexOf('function disableRealCoordinateClickSession') !== -1 &&
+  scuiTxt47.indexOf('function testDryRunCoordinateClick') !== -1 &&
+  scuiTxt47.indexOf('function testRealCoordinateClick') !== -1
+);
+record(
+  'safety-center-ui.js never assigns innerHTML to user data (Step 47)',
+  (function () {
+    var lines = scuiTxt47.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var code = lines[i].replace(/\/\/.*$/, '').trim();
+      if (code.indexOf('innerHTML') === -1) continue;
+      if (!/innerHTML\s*=\s*(['"])\s*\1\s*;?\s*$/.test(code)) return false;
+    }
+    return true;
+  })()
+);
+
+// 381. audit allowlist includes the Step 47 real-adapter events.
+[
+  "'realAdapter.session.enabled'",
+  "'realAction.coordinate.requested'",
+  "'realAction.coordinate.executed'",
+  "'realAction.coordinate.blocked'",
+  "'realAction.safetyGate.failed'"
+].forEach(function (needle) {
+  record('audit allowlist includes ' + needle.replace(/'/g, ''), auditTxt.indexOf(needle) !== -1);
+});
+
+// 382. Electron security invariants still hold at Step 47.
+record(
+  'Step 47 — main.js still sets contextIsolation: true',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'Step 47 — main.js still sets nodeIntegration: false',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'Step 47 — index.html CSP not relaxed',
+  htmlTxt46.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt46.indexOf('unsafe-inline') === -1 &&
+  htmlTxt46.indexOf('unsafe-eval') === -1
+);
+record(
+  'Step 47 — i18n declares experimentalRealCoordinateClick in RU and EN',
+  (i18nTxt46.match(/experimentalRealCoordinateClick:/g) || []).length >= 2
 );
 
 // --- Report ---

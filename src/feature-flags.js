@@ -16,9 +16,20 @@
 const FEATURE_FLAGS = Object.freeze({
   // Hard-coded false until safety review is complete.
   realDesktopActions: false,
+  // Step 47 — Real desktop adapter prototype (behind a hard gate).
+  // The prototype supports ONLY a coordinate click, and even that is
+  // disabled by default. `realCoordinateClick` is the per-action gate.
+  // `realImageClick` and `realTextClick` are hard-coded false and are
+  // NOT runtime-togglable — image/text real clicks are out of scope at
+  // Step 47.
+  realCoordinateClick: false,
+  realImageClick: false,
+  realTextClick: false,
   ocr: false,
   imageRecognition: false,
-  // Hard-coded true — ClickFlow 0.1.x is simulation-only.
+  // Hard-coded true — ClickFlow remains simulation-only by default.
+  // A session override (realDesktopActions + realCoordinateClick) can
+  // allow a single, confirmed coordinate click without flipping this.
   simulationOnly: true,
   // Capabilities that ARE shipped in 0.1.x.
   globalHotkeys: true,
@@ -85,7 +96,20 @@ const FEATURE_FLAGS = Object.freeze({
 // consults the merged snapshot too.
 // =====================================================================
 
-var _RUNTIME_TOGGLABLE_FLAGS = ['realOcr', 'tesseractProvider'];
+// Step 47 adds two more runtime-togglable flags so the Safety Center
+// can enable the real coordinate-click prototype FOR THE CURRENT
+// SESSION ONLY:
+//   - `realDesktopActions`  (umbrella session gate for real actions)
+//   - `realCoordinateClick` (per-action gate: coordinate click only)
+//
+// `realImageClick`, `realTextClick`, and any keyboard/scroll/hotkey
+// real action are deliberately NOT runtime-togglable. Attempting to
+// flip them returns `{ ok: false, error: 'flagNotRuntimeTogglable' }`.
+//
+// Session flags are NOT persisted: no settings, no localStorage, no
+// disk. After a renderer reload the map is empty and every real flag
+// falls back to its frozen `false` default.
+var _RUNTIME_TOGGLABLE_FLAGS = ['realOcr', 'tesseractProvider', 'realDesktopActions', 'realCoordinateClick'];
 var _runtimeFlags = {};
 
 // Returns `{ ok: true }` on success or
@@ -214,5 +238,36 @@ function getOcrFeatureStatus() {
     realOcrAllowed:           realOcrAllowed,
     realOcrEnabledForSession: realOcrEnabledForSession,
     realOcrAutoRun:           false   // hard-coded — never auto-run real OCR
+  };
+}
+
+
+
+// ---------------------------------------------------------------------
+// Step 47 — Real desktop adapter prototype feature status.
+// ---------------------------------------------------------------------
+// Single source of truth for the real coordinate-click prototype's
+// flag state. Reads the MERGED base + runtime overlay so a session
+// opt-in is honoured immediately. NONE of these flags performs a real
+// click on its own — they are necessary preconditions evaluated by the
+// safety gate and the main-process adapter.
+//
+// `realCoordinateClickSessionEnabled` is true only when BOTH the
+// umbrella (`realDesktopActions`) and the per-action gate
+// (`realCoordinateClick`) have been flipped on for this session. It
+// does NOT bypass the rest of the safety gate (confirmation, audit
+// logs, emergency stop, adapter availability, permissions).
+function getRealAdapterFeatureStatus() {
+  var f = getFeatureFlags();
+  return {
+    realDesktopActions:                f.realDesktopActions === true,
+    realCoordinateClick:               f.realCoordinateClick === true,
+    realImageClick:                    false,  // hard-coded, never togglable
+    realTextClick:                     false,  // hard-coded, never togglable
+    keyboardActions:                   false,  // out of scope at Step 47
+    simulationOnly:                    f.simulationOnly === true,
+    realCoordinateClickSessionEnabled: (f.realDesktopActions === true) &&
+                                       (f.realCoordinateClick === true),
+    realActionsAutoRun:                false   // hard-coded — never auto-run
   };
 }

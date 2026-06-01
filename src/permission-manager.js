@@ -147,6 +147,35 @@ function getPermissionChecklist(settings, flags) {
       status: auditStatus,
       requiredForRealMode: true,
       guidanceKey: 'permissionGuidanceAuditLogs'
+    },
+    // Step 47 — real coordinate-click prototype readiness items.
+    {
+      id: 'realCoordinateClickPermission',
+      labelKey: 'realCoordinateClickPermission',
+      status: (ff.realCoordinateClick === true) ? 'ready' : 'missing',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceRealCoordinateClick'
+    },
+    {
+      id: 'sessionRealModeEnabled',
+      labelKey: 'sessionRealModeEnabled',
+      status: (ff.realDesktopActions === true && ff.realCoordinateClick === true) ? 'ready' : 'missing',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceSessionRealMode'
+    },
+    {
+      id: 'userConfirmationAvailable',
+      labelKey: 'userConfirmationAvailable',
+      status: 'ready',
+      requiredForRealMode: true,
+      guidanceKey: 'permissionGuidanceUserConfirmation'
+    },
+    {
+      id: 'auditLogPersistenceReady',
+      labelKey: 'auditLogPersistenceReady',
+      status: 'planned',
+      requiredForRealMode: false,
+      guidanceKey: 'permissionGuidanceAuditPersistence'
     }
   ];
 }

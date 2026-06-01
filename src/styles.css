@@ -4777,3 +4777,17 @@ body {
 .sc-audit-sev { font-size: 11px; text-transform: uppercase; color: #5a6068; }
 .sc-audit-item-meta { display: flex; gap: 10px; color: #5a6068; font-size: 11px; margin-top: 2px; }
 .sc-empty { color: #5a6068; font-size: 13px; font-style: italic; }
+
+
+/* Step 47 — Real adapter prototype + confirmation modal */
+.sc-btn-danger { border-color: #b00020; color: #b00020; }
+.sc-btn-danger:hover { background: #fdecef; }
+.sc-real-inputs { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; align-items: flex-end; }
+.sc-real-input { display: flex; flex-direction: column; font-size: 12px; gap: 2px; }
+.sc-real-num { padding: 4px 6px; border: 1px solid #c9ced6; border-radius: 6px; font-size: 13px; width: 90px; }
+.sc-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.sc-modal { background: #fff; border-radius: 10px; padding: 18px 20px; max-width: 460px; width: calc(100% - 40px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+.sc-modal-title { margin: 0 0 10px; font-size: 16px; }
+.sc-modal-line { margin: 4px 0; font-size: 13px; color: #333; }
+.sc-modal-check { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; font-size: 13px; }
+.sc-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }

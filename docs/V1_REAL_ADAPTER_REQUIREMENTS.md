@@ -46,3 +46,19 @@ The real adapter implements the same contract as the mock adapter
 No code path performs real input. See
 `docs/REAL_ACTIONS_GO_NO_GO.md` for the enabling gate and
 `docs/NUTJS_INTEGRATION_PLAN.md` for the candidate backend.
+
+
+
+---
+
+## Step 47 update — coordinate-click prototype
+
+A first real adapter **prototype** now exists in
+`main/real-desktop-adapter.js` (main process only). It supports a
+single coordinate `click` and is **disabled by default**. Availability
+depends on an optional native backend (`@nut-tree/nut-js`/`nut-js`)
+that is **not** declared as a dependency at Step 47 — so the adapter
+reports unavailable and every execute call is blocked unless the
+backend is installed. image/text real clicks, keyboard, scroll, loops,
+and background automation remain unsupported. See
+`docs/REAL_ADAPTER_PROTOTYPE.md`.

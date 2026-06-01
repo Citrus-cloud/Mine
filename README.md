@@ -938,6 +938,40 @@ contextIsolation: true, nodeIntegration: false, CSP не ослаблен.**
 contextIsolation: true, nodeIntegration: false, CSP не ослаблен,
 no robotjs/nut.js/iohook/uiohook-napi/opencv.**
 
+**Step 47 — Real desktop adapter prototype behind hard safety gate:**
+добавлен первый **прототип** реального desktop-адаптера — **только
+coordinate click**, **выключен по умолчанию**, **session-only**, **один
+клик на одно подтверждение**.
+- main-process модуль `main/real-desktop-adapter.js` (renderer не имеет
+  прямого доступа; три узких IPC-канала: status / availability /
+  execute-coordinate-click; нет универсального «run any action»);
+- опциональный backend `@nut-tree/nut-js` / `nut-js` **не добавлен в
+  зависимости** на этом шаге — adapter сообщает *unavailable* и
+  блокирует реальный клик, пока backend не установлен (require в
+  try/catch, сборка не ломается);
+- feature flags: `realCoordinateClick` / `realImageClick` /
+  `realTextClick` добавлены (все false); runtime-toggle разрешён только
+  для `realDesktopActions` и `realCoordinateClick` (session-only, не
+  сохраняется, сбрасывается при перезапуске);
+- action-pipeline: `canExecuteRealDesktopAction` /
+  `executeRealDesktopAction` / `createRealActionBlockedResult` — real
+  mode **заблокирован по умолчанию**, image/text/keyboard real —
+  заблокированы;
+- safety-gates: строгий `getRealDesktopActionGateStatus` (default
+  deny);
+- Safety Center: карточка **Experimental Real Coordinate Click**
+  (risk warning, dry-run, enable-for-session с модальным подтверждением
+  «I understand…», Test real coordinate click с отдельным
+  подтверждением, диагностика прототипа); кнопки image_click/text_click
+  real **отсутствуют**;
+- audit events для real adapter; permission/diagnostics расширены;
+  REAL_ADAPTER_PROTOTYPE.md + REAL_CLICK_TESTING_GUIDE.md; i18n RU/EN.
+**По умолчанию реальные клики выключены; image/text real clicks
+disabled; keyboard automation отсутствует; запрещены
+captcha/anti-bot/ad/banking/protected/hidden. realDesktopActions=false
+по умолчанию, simulationOnly=true, contextIsolation: true,
+nodeIntegration: false, CSP не ослаблен.**
+
 ### Towards Desktop v1
 
 - `v0.2.0-smart-beta` опубликован / готов как Smart Desktop Beta

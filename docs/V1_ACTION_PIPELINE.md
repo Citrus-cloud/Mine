@@ -54,3 +54,21 @@ list is empty **and** the adapter reports available — neither is
 possible in this build, so it returns `false`. A blocked real request
 emits an audit event and returns a friendly error:
 "Real desktop actions are not enabled in this build."
+
+
+
+---
+
+## Step 47 update — real mode (coordinate click only)
+
+The renderer pipeline (`src/action-pipeline.js`) adds
+`canExecuteRealDesktopAction(action, context)`,
+`executeRealDesktopAction(action, context)`, and
+`createRealActionBlockedResult(reason, action)`. Real mode is **blocked
+by default**. Only `type:"click"` with `realClick:true` is eligible;
+`image_click`/`text_click`/keyboard/scroll real modes are blocked
+before any IPC. When the pre-flight passes, execution is delegated to
+the main-process adapter (`main/real-desktop-adapter.js`), which
+re-validates everything. The result is returned verbatim (a genuine
+real click reports `realAction:true`); the simulation-only
+`normalizeActionResult` is intentionally not applied to real results.

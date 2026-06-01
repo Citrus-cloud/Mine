@@ -48,3 +48,17 @@ and guide the user on OS permissions — without enabling anything.
 
 The manager only reports status and guidance. It cannot grant
 permissions and cannot enable real actions.
+
+
+
+---
+
+## Step 47 update — real coordinate-click readiness
+
+New checklist items: `realCoordinateClickPermission`,
+`sessionRealModeEnabled`, `userConfirmationAvailable`,
+`auditLogPersistenceReady` (plus the existing `adapterAvailability`).
+These report **status/guidance only** and never enable real mode. On
+Windows the OS-level input permission is typically `notRequired` /
+`unknown`, but adapter availability (native backend loaded) is always
+checked. The manager still keeps `realModeEnabled:false`.

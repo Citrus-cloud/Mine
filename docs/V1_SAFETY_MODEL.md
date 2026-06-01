@@ -51,3 +51,19 @@ review can authorize these.
 renderer never gets direct Node access, no screenshots written to
 disk, no `imageDataUrl` persisted in scenarios/settings, no real action
 auto-runs at app start.
+
+
+
+---
+
+## Step 47 update — real coordinate-click gate
+
+The coordinate-click prototype adds a strict, defense-in-depth gate
+(`getRealDesktopActionGateStatus` in `src/safety-gates.js`) that is
+**default-deny**. A real click runs only if every requirement holds:
+session flags `realDesktopActions` + `realCoordinateClick` enabled,
+`safeMode`, emergency stop, audit logs, adapter available, permissions
+not missing, action type `click` only, and explicit per-click
+confirmation. The main process re-validates the full context and is
+the authority. Session flags are never persisted and reset to `false`
+on restart. image/text real clicks and keyboard remain hard-disabled.
