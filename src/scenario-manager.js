@@ -23,6 +23,10 @@ async function initScenarios() {
   } else {
     scenarios = [{ ...DEFAULT_SCENARIO }];
   }
+  // Step 46: migrate loaded scenarios to the v1 meta shape. Additive
+  // only — old scenarios keep working; missing meta fields (including
+  // version: 1) are filled in. Does not enable real actions.
+  scenarios = migrateScenariosToV1(scenarios);
 }
 
 function getScenariosCorrupted() { return scenariosCorrupted; }
@@ -30,6 +34,46 @@ function getScenarios() { return [...scenarios]; }
 function getScenarioById(id) { return scenarios.find(s => s.id === id) || null; }
 function getDefaultScenario() { return scenarios.find(s => s.id === DEFAULT_SCENARIO.id) || DEFAULT_SCENARIO; }
 function createScenarioId() { return 'scenario-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8); }
+
+
+// =====================================================================
+// Step 46 — Scenario metadata v1 migration
+// ---------------------------------------------------------------------
+// Extend every scenario's `meta` to the v1 shape WITHOUT breaking old
+// scenarios. Migration is purely additive: existing fields are kept,
+// only missing fields are filled in. It never changes a scenario's
+// `type`, `settings`, name, or behaviour, and it never enables real
+// actions (`safetyReviewed` defaults to false).
+//
+// v1 meta shape:
+//   { createdAt, updatedAt, isDefault, version: 1, lastRunAt,
+//     runCount, lastResult, safetyReviewed }
+// =====================================================================
+function migrateScenarioToV1(scenario) {
+  if (!scenario || typeof scenario !== 'object') return scenario;
+  var nowIso = new Date().toISOString();
+  var meta = (scenario.meta && typeof scenario.meta === 'object') ? scenario.meta : {};
+  var migratedMeta = {
+    // Preserve existing values; fill only what's missing.
+    createdAt:      (typeof meta.createdAt === 'string' && meta.createdAt.length > 0) ? meta.createdAt : nowIso,
+    updatedAt:      (typeof meta.updatedAt === 'string' && meta.updatedAt.length > 0) ? meta.updatedAt : nowIso,
+    isDefault:      meta.isDefault === true,
+    version:        (typeof meta.version === 'number' && meta.version >= 1) ? meta.version : 1,
+    lastRunAt:      (typeof meta.lastRunAt === 'string') ? meta.lastRunAt : null,
+    runCount:       (typeof meta.runCount === 'number' && meta.runCount >= 0) ? meta.runCount : 0,
+    lastResult:     (typeof meta.lastResult === 'string') ? meta.lastResult : null,
+    safetyReviewed: meta.safetyReviewed === true
+  };
+  // Keep any extra meta fields a future step may have added, but let
+  // the migrated values win for the known keys.
+  return { ...scenario, meta: { ...meta, ...migratedMeta } };
+}
+
+function migrateScenariosToV1(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(function (s) { return migrateScenarioToV1(s); });
+}
+
 
 
 function createScenario(input) {

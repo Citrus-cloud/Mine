@@ -225,7 +225,22 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   ScenarioPresetFormOpened:           'scenarioPreset.form.opened',
   VisualBuilderOverlayChanged:        'visualBuilder.overlay.changed',
   VisualBuilderRequirementMissing:    'visualBuilder.requirement.missing',
-  VisualBuilderDraftPreviewCreated:   'visualBuilder.draft.preview.created'
+  VisualBuilderDraftPreviewCreated:   'visualBuilder.draft.preview.created',
+  // Step 46 — Desktop v1 architecture + safety foundation.
+  // Architecture/readiness events only. Payloads carry only stable
+  // string ids, short reasons, counts, and flag booleans — never the
+  // full target text, never an `imageDataUrl`, never a screenshot,
+  // never a filesystem path, never PII. NONE of these events
+  // represent a real action: real desktop actions remain disabled.
+  RealAdapterBlocked:                 'real.adapter.blocked',
+  RealAdapterAvailabilityChecked:     'real.adapter.availability.checked',
+  PermissionsRefreshed:               'permission.refreshed',
+  PermissionMissing:                  'permission.missing',
+  SafetyCenterCheckRun:               'safetyCenter.check.run',
+  SafetyCenterDiagnosticsExported:    'safetyCenter.diagnostics.exported',
+  AuditLogExported:                   'audit.log.exported',
+  AuditLogCleared:                    'audit.log.cleared',
+  ScenarioRunSummaryRecorded:         'scenario.runSummary.recorded'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

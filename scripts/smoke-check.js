@@ -6721,6 +6721,313 @@ record(
   /simulationOnly\s*:\s*true/.test(ff45)
 );
 
+// --- Step 46: Desktop v1 architecture + safety foundation ---
+
+// 356. Step 46 docs exist.
+[
+  'docs/V1_DESKTOP_PRODUCT_PLAN.md',
+  'docs/V1_IMPLEMENTATION_CHECKLIST.md',
+  'docs/FULL_PRODUCT_BRANCH_PLAN.md',
+  'docs/V1_SAFETY_MODEL.md',
+  'docs/V1_ACTION_PIPELINE.md',
+  'docs/V1_REAL_ADAPTER_REQUIREMENTS.md',
+  'docs/V1_AUDIT_LOGS.md',
+  'docs/V1_PERMISSION_MODEL.md',
+  'docs/V1_RELEASE_CRITERIA.md',
+  'docs/NUTJS_INTEGRATION_PLAN.md'
+].forEach(function (rel) {
+  record('Step 46 doc exists: ' + rel, fileExists(rel));
+});
+
+// 357. Step 46 source modules exist.
+[
+  'src/audit-log-manager.js',
+  'src/permission-manager.js',
+  'src/real-desktop-adapter-interface.js',
+  'src/safety-center-ui.js'
+].forEach(function (rel) {
+  record('Step 46 file exists: ' + rel, fileExists(rel));
+});
+
+// 358. README / PROJECT_CONTEXT mention Desktop v1 / v1 and Step 46.
+var readmeTxt46 = readText('README.md');
+var pcTxt46 = readText('PROJECT_CONTEXT.md');
+var chTxt46 = readText('CHANGELOG.md');
+record(
+  'README or PROJECT_CONTEXT mentions Desktop v1 / v1',
+  /Desktop v1|\bv1\b/i.test(readmeTxt46) || /Desktop v1|\bv1\b/i.test(pcTxt46)
+);
+record(
+  'README mentions Step 46 / шаг 46',
+  /step\s*46|шаг\s*46/i.test(readmeTxt46)
+);
+record(
+  'PROJECT_CONTEXT mentions Step 46 / шаг 46',
+  /step\s*46|шаг\s*46/i.test(pcTxt46)
+);
+record(
+  'CHANGELOG mentions Step 46 / шаг 46',
+  /step\s*46|шаг\s*46/i.test(chTxt46)
+);
+
+// 359. package.json declares none of robotjs / iohook / uiohook-napi / opencv.
+if (pkg) {
+  var allDeps46 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var forbidden46 = Object.keys(allDeps46).filter(function (name) {
+    var n = name.toLowerCase();
+    return n.indexOf('robotjs') !== -1 ||
+           n.indexOf('nut.js') !== -1 ||
+           n.indexOf('nut-js') !== -1 ||
+           n.indexOf('@nut-tree') !== -1 ||
+           n.indexOf('iohook') !== -1 ||
+           n.indexOf('uiohook') !== -1 ||
+           n.indexOf('opencv') !== -1;
+  });
+  record(
+    'Step 46 — package.json declares no robotjs/iohook/uiohook-napi/opencv',
+    forbidden46.length === 0,
+    forbidden46.join(', ')
+  );
+}
+
+// 360. feature flags still default realDesktopActions false.
+var ff46 = readText('src/feature-flags.js');
+record(
+  'Step 46 — feature-flags.js still pins realDesktopActions: false',
+  /realDesktopActions\s*:\s*false/.test(ff46)
+);
+
+// 361. Real desktop adapter interface blocks every real execution.
+var raTxt = readText('src/real-desktop-adapter-interface.js');
+record(
+  'real-desktop-adapter-interface.js: checkRealAdapterAvailability returns available:false',
+  /function checkRealAdapterAvailability[\s\S]{0,400}available:\s*false/.test(raTxt)
+);
+[
+  'function executeRealClick',
+  'function executeRealImageClick',
+  'function executeRealTextClick',
+  'function blockRealAction'
+].forEach(function (needle) {
+  record('real-desktop-adapter-interface.js declares ' + needle, raTxt.indexOf(needle) !== -1);
+});
+record(
+  'real-desktop-adapter-interface.js: executeReal* all funnel through blockRealAction',
+  /function executeRealClick[\s\S]{0,160}blockRealAction/.test(raTxt) &&
+  /function executeRealImageClick[\s\S]{0,160}blockRealAction/.test(raTxt) &&
+  /function executeRealTextClick[\s\S]{0,160}blockRealAction/.test(raTxt)
+);
+record(
+  'real-desktop-adapter-interface.js does not import electron / ipcRenderer / native input',
+  raTxt.indexOf("require('electron')") === -1 &&
+  raTxt.indexOf('ipcRenderer.invoke') === -1 &&
+  raTxt.indexOf('ipcRenderer.on') === -1 &&
+  raTxt.indexOf("require('robotjs')") === -1 &&
+  raTxt.indexOf("require('nut") === -1
+);
+
+// 362. Permission manager exposes the documented API and never enables real mode.
+var pmTxt = readText('src/permission-manager.js');
+[
+  'function getPermissionStatus',
+  'function getPermissionChecklist',
+  'function getMissingPermissions',
+  'function refreshPermissions',
+  'function getPermissionManagerStatus'
+].forEach(function (needle) {
+  record('permission-manager.js declares ' + needle, pmTxt.indexOf(needle) !== -1);
+});
+record(
+  'permission-manager.js keeps realModeEnabled: false',
+  /realModeEnabled:\s*false/.test(pmTxt)
+);
+record(
+  'permission-manager.js does not import electron / ipcRenderer',
+  pmTxt.indexOf("require('electron')") === -1 && pmTxt.indexOf('ipcRenderer.invoke') === -1 && pmTxt.indexOf('ipcRenderer.on') === -1
+);
+
+// 363. Audit log manager: documented API + redaction (no pixel data persisted).
+var almTxt = readText('src/audit-log-manager.js');
+[
+  'function createAuditLogEvent',
+  'function addAuditLogEvent',
+  'function getAuditLogEvents',
+  'function clearAuditLogEvents',
+  'function getAuditLogSummary',
+  'function exportAuditLog'
+].forEach(function (needle) {
+  record('audit-log-manager.js declares ' + needle, almTxt.indexOf(needle) !== -1);
+});
+record(
+  'audit-log-manager.js denylists imageDataUrl / screenshot / base64 / paths',
+  /AUDIT_LOG_METADATA_DENYLIST/.test(almTxt) &&
+  almTxt.indexOf("'imageDataUrl'") !== -1 &&
+  almTxt.indexOf("'screenshot'") !== -1 &&
+  almTxt.indexOf("'base64'") !== -1
+);
+record(
+  'audit-log-manager.js forces realAction:false on every event',
+  /realAction:\s*false/.test(almTxt)
+);
+record(
+  'audit-log-manager.js does not import electron / ipcRenderer / fs',
+  almTxt.indexOf("require('electron')") === -1 &&
+  almTxt.indexOf('ipcRenderer.invoke') === -1 &&
+  almTxt.indexOf('ipcRenderer.on') === -1 &&
+  almTxt.indexOf("require('fs')") === -1
+);
+
+// 364. Action pipeline v1-ready: action-type taxonomy + uniform result
+//      + real-mode readiness gate + wait support, real mode still blocked.
+var apTxt = readText('src/action-pipeline.js');
+[
+  'function getActionTypeInfo',
+  'function normalizeActionResult',
+  'function evaluateRealModeReadiness'
+].forEach(function (needle) {
+  record('action-pipeline.js declares ' + needle, apTxt.indexOf(needle) !== -1);
+});
+record(
+  'action-pipeline.js taxonomy lists planned types (move_mouse/scroll/key_press/hotkey)',
+  apTxt.indexOf("'move_mouse'") !== -1 && apTxt.indexOf("'scroll'") !== -1 &&
+  apTxt.indexOf("'key_press'") !== -1 && apTxt.indexOf("'hotkey'") !== -1
+);
+record(
+  'action-pipeline.js recognizes the wait action type',
+  /action\.type === 'wait'/.test(apTxt)
+);
+record(
+  'action-pipeline.js normalizeActionResult forces realAction:false',
+  /function normalizeActionResult[\s\S]{0,600}realAction:\s*false/.test(apTxt)
+);
+record(
+  'action-pipeline.js canExecuteRealAction cannot return true (safetyReviewPassed always unmet)',
+  /unmet\.push\('safetyReviewPassed'\)/.test(apTxt)
+);
+
+// 365. Scenario v1 migration helpers present and additive.
+var smTxt = readText('src/scenario-manager.js');
+record('scenario-manager.js declares migrateScenarioToV1', smTxt.indexOf('function migrateScenarioToV1') !== -1);
+record('scenario-manager.js declares migrateScenariosToV1', smTxt.indexOf('function migrateScenariosToV1') !== -1);
+record(
+  'scenario-manager.js migration sets version: 1 and safetyReviewed default',
+  /version:\s*\(typeof meta\.version/.test(smTxt) && /safetyReviewed:/.test(smTxt)
+);
+record(
+  'scenario-manager.js initScenarios applies the v1 migration',
+  /scenarios\s*=\s*migrateScenariosToV1\(scenarios\)/.test(smTxt)
+);
+
+// 366. App-state run summaries slice + mutators.
+var asTxt46 = readText('src/app-state.js');
+record('app-state.js declares runSummaries slice', /runSummaries:\s*\{/.test(asTxt46));
+[
+  'function addRunSummary',
+  'function getLastRunSummary',
+  'function getRunSummaries'
+].forEach(function (needle) {
+  record('app-state.js declares ' + needle, asTxt46.indexOf(needle) !== -1);
+});
+record(
+  'app-state.js run summary forces realActionsPerformed:false',
+  /realActionsPerformed:\s*false/.test(asTxt46)
+);
+
+// 367. audit-events.js allowlist includes the Step 46 types.
+[
+  "'real.adapter.blocked'",
+  "'permission.refreshed'",
+  "'safetyCenter.check.run'",
+  "'scenario.runSummary.recorded'"
+].forEach(function (needle) {
+  record('audit allowlist includes ' + needle.replace(/'/g, ''), auditTxt.indexOf(needle) !== -1);
+});
+
+// 368. index.html wires the Safety Center tab + section + scripts in order.
+var htmlTxt46 = readText('src/index.html');
+record(
+  'index.html has Safety Center tab button',
+  /data-advanced-tab=['"]safetyCenter['"]/.test(htmlTxt46)
+);
+record(
+  'index.html has Safety Center section',
+  /id=['"]advanced-tab-safetyCenter['"]/.test(htmlTxt46)
+);
+[
+  'audit-log-manager.js',
+  'permission-manager.js',
+  'real-desktop-adapter-interface.js',
+  'safety-center-ui.js'
+].forEach(function (script) {
+  record('index.html loads ' + script, htmlTxt46.indexOf('src="' + script + '"') !== -1);
+});
+record(
+  'index.html loads safety-center-ui.js BEFORE renderer.js',
+  htmlTxt46.indexOf('src="safety-center-ui.js"') !== -1 &&
+  htmlTxt46.indexOf('src="renderer.js"') !== -1 &&
+  htmlTxt46.indexOf('src="safety-center-ui.js"') < htmlTxt46.indexOf('src="renderer.js"')
+);
+record(
+  'index.html loads audit-log-manager.js BEFORE safety-center-ui.js',
+  htmlTxt46.indexOf('src="audit-log-manager.js"') !== -1 &&
+  htmlTxt46.indexOf('src="audit-log-manager.js"') < htmlTxt46.indexOf('src="safety-center-ui.js"')
+);
+
+// 369. safety-center-ui.js is DOM-safe (innerHTML only used to clear).
+var scuiTxt = readText('src/safety-center-ui.js');
+record(
+  'safety-center-ui.js declares renderSafetyCenter',
+  scuiTxt.indexOf('function renderSafetyCenter') !== -1
+);
+record(
+  'safety-center-ui.js never assigns innerHTML to user data',
+  (function () {
+    var lines = scuiTxt.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var code = lines[i].replace(/\/\/.*$/, '').trim();
+      if (code.indexOf('innerHTML') === -1) continue;
+      if (!/innerHTML\s*=\s*(['"])\s*\1\s*;?\s*$/.test(code)) return false;
+    }
+    return true;
+  })()
+);
+record(
+  'safety-center-ui.js has no "Enable Real Clicks" control',
+  scuiTxt.toLowerCase().indexOf('enable real click') === -1
+);
+
+// 370. i18n has the Safety Center key in both languages.
+var i18nTxt46 = readText('src/i18n.js');
+record(
+  'i18n.js declares safetyCenter in RU and EN',
+  (i18nTxt46.match(/safetyCenter:/g) || []).length >= 2
+);
+record(
+  'i18n.js declares v1Readiness key',
+  i18nTxt46.indexOf('v1Readiness:') !== -1
+);
+
+// 371. Electron security invariants still hold at Step 46.
+record(
+  'Step 46 — main.js still sets contextIsolation: true',
+  /contextIsolation\s*:\s*true/.test(mainTxt)
+);
+record(
+  'Step 46 — main.js still sets nodeIntegration: false',
+  /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+record(
+  'Step 46 — index.html CSP not relaxed (no unsafe-inline / unsafe-eval)',
+  htmlTxt46.indexOf('Content-Security-Policy') !== -1 &&
+  htmlTxt46.indexOf('unsafe-inline') === -1 &&
+  htmlTxt46.indexOf('unsafe-eval') === -1
+);
+
 // --- Report ---
 console.log('ClickFlow smoke-check\n=====================');
 checks.forEach(function (c) {
