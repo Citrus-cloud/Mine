@@ -708,7 +708,7 @@ record(
 if (pkg) {
   record(
     'package.json version matches a known release target',
-    pkg.version === '0.1.0' || pkg.version === '0.2.0-beta',
+    pkg.version === '0.1.0' || pkg.version === '0.2.0-beta' || pkg.version === '1.0.0-alpha.1',
     'version = ' + pkg.version
   );
   // 40. package.json declares scripts.smoke (already checked above) — re-assert here.
@@ -6506,11 +6506,12 @@ record(
   record('Step-43 doc exists: ' + rel, fileExists(rel));
 });
 
-// 344. package.json declares the smart-beta version.
+// 344. package.json declares the smart-beta version (or, from Step 50,
+//      the Desktop v1 alpha version).
 if (pkg) {
   record(
-    'package.json version is 0.2.0-beta',
-    pkg.version === '0.2.0-beta'
+    'package.json version is 0.2.0-beta or 1.0.0-alpha.1',
+    pkg.version === '0.2.0-beta' || pkg.version === '1.0.0-alpha.1'
   );
   record(
     'package.json description mentions smart desktop beta',
@@ -7568,6 +7569,109 @@ record(
 record(
   'Step 49 — main.js still sets contextIsolation: true / nodeIntegration: false',
   /contextIsolation\s*:\s*true/.test(mainTxt) && /nodeIntegration\s*:\s*false/.test(mainTxt)
+);
+
+// --- Step 50: Real Coordinate Click QA + v1 Alpha Packaging ---
+
+// 405. v1 alpha docs exist.
+[
+  'docs/V1_ALPHA_QA_REPORT.md',
+  'docs/V1_ALPHA_MANUAL_TESTS.md',
+  'docs/V1_ALPHA_RELEASE_CHECKLIST.md',
+  'docs/V1_ALPHA_RELEASE_NOTES.md',
+  'docs/V1_ALPHA_RELEASE_DRAFT.md'
+].forEach(function (rel) {
+  record('Step 50 doc exists: ' + rel, fileExists(rel));
+});
+
+// 406. README / PROJECT_CONTEXT mention Step 50 + v1 alpha + one click.
+var readmeTxt50 = readText('README.md');
+var pcTxt50 = readText('PROJECT_CONTEXT.md');
+var chTxt50 = readText('CHANGELOG.md');
+record(
+  'README or PROJECT_CONTEXT mentions Step 50 / шаг 50',
+  /step\s*50|шаг\s*50/i.test(readmeTxt50) || /step\s*50|шаг\s*50/i.test(pcTxt50)
+);
+record(
+  'CHANGELOG mentions Step 50 / шаг 50',
+  /step\s*50|шаг\s*50/i.test(chTxt50)
+);
+record(
+  'README or PROJECT_CONTEXT mentions v1 alpha',
+  /v1\s*alpha|v1\.0\.0-alpha|desktop v1 alpha/i.test(readmeTxt50) ||
+  /v1\s*alpha|v1\.0\.0-alpha|desktop v1 alpha/i.test(pcTxt50)
+);
+record(
+  'README or PROJECT_CONTEXT mentions one click per confirmation',
+  /one click per confirmation|один клик на одно подтверждение|fresh confirmation|свеж|нов(ого|ое) подтвержд/i.test(readmeTxt50) ||
+  /one click per confirmation|один клик на одно подтверждение|fresh confirmation|свеж|нов(ого|ое) подтвержд/i.test(pcTxt50)
+);
+
+// 407. package.json declares no robotjs / iohook / uiohook-napi / opencv.
+if (pkg) {
+  var allDeps50 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var forbidden50 = Object.keys(allDeps50).filter(function (name) {
+    var n = name.toLowerCase();
+    return n.indexOf('robotjs') !== -1 ||
+           n.indexOf('iohook') !== -1 ||
+           n.indexOf('uiohook') !== -1 ||
+           n.indexOf('opencv') !== -1;
+  });
+  record(
+    'Step 50 — package.json declares no robotjs/iohook/uiohook-napi/opencv',
+    forbidden50.length === 0,
+    forbidden50.join(', ')
+  );
+  // 408. version is the v1 alpha target.
+  record(
+    'Step 50 — package.json version is 1.0.0-alpha.1',
+    pkg.version === '1.0.0-alpha.1',
+    'version = ' + pkg.version
+  );
+}
+
+// 409. feature-flags defaults still false.
+var ff50 = readText('src/feature-flags.js');
+var frozen50 = (ff50.match(/FEATURE_FLAGS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/) || [])[1] || '';
+record('Step 50 — feature-flags default realDesktopActions: false', /realDesktopActions:\s*false/.test(frozen50));
+record('Step 50 — feature-flags default realCoordinateClick: false', /realCoordinateClick:\s*false/.test(frozen50));
+
+// 410. action-pipeline still blocks image/text real mode.
+var apTxt50 = readText('src/action-pipeline.js');
+record(
+  'Step 50 — action-pipeline blocks image/text real mode',
+  apTxt50.indexOf('imageClickRealBlocked') !== -1 && apTxt50.indexOf('textClickRealBlocked') !== -1
+);
+
+// 411. Safety Center v1 alpha status card + RELEASE_NOTES mention.
+var scuiTxt50 = readText('src/safety-center-ui.js');
+record(
+  'safety-center-ui.js declares renderV1AlphaStatusCard / getV1AlphaReleaseStatus',
+  scuiTxt50.indexOf('function renderV1AlphaStatusCard') !== -1 &&
+  scuiTxt50.indexOf('function getV1AlphaReleaseStatus') !== -1
+);
+record(
+  'RELEASE_NOTES.md mentions Desktop v1 Alpha',
+  /Desktop v1 Alpha|v1\.0\.0-alpha/i.test(readText('RELEASE_NOTES.md'))
+);
+record(
+  'docs/V1_ALPHA_RELEASE_DRAFT.md marks pre-release / alpha + tag',
+  /pre-?release|alpha/i.test(readText('docs/V1_ALPHA_RELEASE_DRAFT.md')) &&
+  readText('docs/V1_ALPHA_RELEASE_DRAFT.md').indexOf('v1.0.0-alpha.1') !== -1
+);
+record(
+  'docs/V1_ALPHA_RELEASE_NOTES.md asserts real image/text + keyboard disabled',
+  (function () {
+    var t = readText('docs/V1_ALPHA_RELEASE_NOTES.md');
+    return /image_click.{0,40}text_click|image\/text|Real `image_click`/i.test(t) &&
+           /keyboard automation/i.test(t) &&
+           /intentionally disabled|disabled/i.test(t);
+  })()
 );
 
 // --- Report ---

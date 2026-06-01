@@ -150,6 +150,7 @@ function renderSafetyCenter() {
 
   container.appendChild(renderSafetyStatusCard());
   container.appendChild(renderV1ReadinessCard());
+  container.appendChild(renderV1AlphaStatusCard());
   container.appendChild(renderRealAdapterCard());
   container.appendChild(renderScenarioRealRunCard());
   container.appendChild(renderPermissionsCard());
@@ -1303,4 +1304,49 @@ function getRealCoordinateScenarioDiagnostics() {
     lastRealScenarioCoordinates: _lastRealScenarioCoordinates,
     repeatCountAllowedForReal: repeatCount === 1
   };
+}
+
+
+
+// =====================================================================
+// Step 50 — Desktop v1 Alpha status (compact diagnostics card).
+// =====================================================================
+function getV1AlphaReleaseStatus() {
+  var feat = _scRealFeatureStatus();
+  var settings = _scSafeSettings();
+  var safety = (settings && settings.safety) ? settings.safety : {};
+  var status = _realAdapterStatus || {};
+  return {
+    releaseTarget: 'v1.0.0-alpha.1',
+    simulationReady: true,
+    dryRunReady: true,
+    realCoordinateAlphaReady: feat.realCoordinateClickSessionEnabled === true && status.adapterAvailable === true,
+    realImageTextDisabled: true,
+    keyboardDisabled: true,
+    auditLogsReady: (typeof getAuditLogManagerStatus === 'function'),
+    emergencyStopReady: safety.emergencyStopEnabled === true,
+    packagedQaRequired: true,
+    realAdapterDependencyStatus: status.dependencyLoaded ? 'loaded' : 'unavailable'
+  };
+}
+
+function renderV1AlphaStatusCard() {
+  var card = _scCard('Desktop v1 Alpha — ' + 'v1.0.0-alpha.1');
+  var st = getV1AlphaReleaseStatus();
+  function row(label, ok, text) {
+    card.appendChild(_scRow(label, text || (ok ? _scLabel('statusReady', 'ready') : _scLabel('statusDisabled', 'disabled')), ok ? 'sc-ok' : 'sc-bad'));
+  }
+  card.appendChild(_scRow('releaseTarget', st.releaseTarget, 'sc-ok'));
+  row(_scLabel('simulationMode', 'Simulation'), st.simulationReady);
+  row(_scLabel('dryRunMode', 'Dry-run'), st.dryRunReady);
+  row(_scLabel('realCoordinateMode', 'Real coordinate (alpha)'), st.realCoordinateAlphaReady,
+    st.realCoordinateAlphaReady ? _scLabel('statusReady', 'ready') : _scLabel('statusDisabled', 'disabled (enable session)'));
+  row(_scLabel('noRealImageTextClicks', 'Real image/text disabled'), false, _scLabel('statusDisabled', 'disabled'));
+  row(_scLabel('noKeyboardAutomation', 'Keyboard disabled'), false, _scLabel('statusDisabled', 'disabled'));
+  row(_scLabel('auditLogs', 'Audit logs'), st.auditLogsReady);
+  row(_scLabel('emergencyStop', 'Emergency stop'), st.emergencyStopReady);
+  card.appendChild(_scRow('packagedQaRequired', st.packagedQaRequired ? 'yes' : 'no', 'sc-warn'));
+  card.appendChild(_scRow(_scLabel('adapterDependencyLabel', 'Adapter dependency'),
+    st.realAdapterDependencyStatus, st.realAdapterDependencyStatus === 'loaded' ? 'sc-ok' : 'sc-warn'));
+  return card;
 }

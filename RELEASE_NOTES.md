@@ -344,3 +344,39 @@ ClickFlow stays **simulation-only** in the smart beta:
   `looks-same`).
 - Mobile / Android / iOS port.
 - Bundled OCR language data (planned for Step 44+).
+
+
+
+---
+
+## Desktop v1 Alpha — `v1.0.0-alpha.1`
+
+> **Status: alpha pre-release preparation.** Full notes:
+> [`docs/V1_ALPHA_RELEASE_NOTES.md`](./docs/V1_ALPHA_RELEASE_NOTES.md).
+
+ClickFlow Desktop v1 Alpha adds the first **experimental** real desktop
+action — a single **coordinate click** — behind a hard safety gate.
+ClickFlow remains **simulation-only by default**.
+
+- Real coordinate click is **experimental** and **disabled by default**.
+- **Session-only** (never persisted; resets on restart).
+- **One click per fresh confirmation**; `repeatCount` must be `1`.
+- Real `image_click` / `text_click` mode is **disabled**.
+- **Keyboard automation is disabled.**
+- No captcha / anti-bot bypass, no ad-click automation, no banking /
+  payment / protected-application automation. No `robotjs` / `iohook` /
+  `uiohook-napi` / OpenCV. No mobile build.
+
+### Release target
+
+- Tag: `v1.0.0-alpha.1`
+- `package.json` `version`: `1.0.0-alpha.1`
+- Pre-release (alpha): yes
+
+### v1 alpha release docs
+
+- [`docs/V1_ALPHA_RELEASE_NOTES.md`](./docs/V1_ALPHA_RELEASE_NOTES.md)
+- [`docs/V1_ALPHA_RELEASE_DRAFT.md`](./docs/V1_ALPHA_RELEASE_DRAFT.md)
+- [`docs/V1_ALPHA_RELEASE_CHECKLIST.md`](./docs/V1_ALPHA_RELEASE_CHECKLIST.md)
+- [`docs/V1_ALPHA_MANUAL_TESTS.md`](./docs/V1_ALPHA_MANUAL_TESTS.md)
+- [`docs/V1_ALPHA_QA_REPORT.md`](./docs/V1_ALPHA_QA_REPORT.md)
