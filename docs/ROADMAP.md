@@ -12,6 +12,70 @@ roadmap is a commitment.
 
 ---
 
+## Current line — Smart Desktop Beta (`v0.2.0-smart-beta`)
+
+`v0.2.0-smart-beta` is the current Smart Desktop Beta pre-release
+(`package.json` `version: "0.2.0-beta"`). It is **simulation-only**.
+The smart-features chain (Screen Capture → Region Selector →
+Templates → Template Matching → image_click → Mock/Real-session OCR
+→ text_click → Visual Builder → Scenario Presets) is feature-complete
+and audited; the project is in post-release cleanup + feedback
+tracking (Step 45). See `docs/POST_RELEASE_CHECKLIST.md` and
+`docs/FEEDBACK_TRIAGE.md`.
+
+## v0.2.1 — Bugfix patch (next)
+
+Theme: stabilize the smart beta from feedback. **Bugfix-only — no
+new features, no real clicks.** See `docs/V0_2_1_PATCH_PLAN.md`.
+
+- [ ] Bugfixes (crash / core-flow / smart-features tab bugs).
+- [ ] Packaging fixes (installer / `build.files` / artifacts).
+- [ ] UI fixes (layout, dark theme, broken controls).
+- [ ] Translation fixes (RU / EN parity).
+- [ ] Docs fixes (wrong instructions, dead links, typos).
+
+Still simulation-only. No `robotjs` / `nut.js` / `iohook` /
+`uiohook-napi` / OpenCV. No new OCR engine, no mobile, no major
+refactor.
+
+## v0.3.0 — Real desktop adapter (research branch, gated)
+
+Theme: research a *possible* real desktop-action adapter. **Planning
+only — real desktop actions remain disabled until a written safety
+review passes.** See `docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md`.
+
+- [ ] Real desktop adapter research branch (separate from release
+      branches).
+- [ ] Safety gates (reuse the existing six-layer model).
+- [ ] Audit persistence (persisted audit logs; see
+      `docs/AUDIT_LOG_PLAN.md`).
+- [ ] Feature flag (real adapter behind a dedicated, default-off
+      flag; `realDesktopActions` stays off and out of the runtime
+      whitelist).
+- [ ] Confirmation flow (explicit, per-scenario, per-run user
+      confirmation).
+- [ ] OS permissions (macOS / Windows / Linux X11+Wayland; fail
+      closed when denied).
+- [ ] Emergency stop audit (Escape / global hotkey / focus-loss;
+      verified to halt a real run within one action cycle).
+
+The action pipeline must block real actions **by default**. No
+captcha / anti-bot bypass, no ad-click automation, no banking /
+payment / protected-app automation — ever.
+
+## Future research (no release line yet)
+
+No commitment that these will ship.
+
+- [ ] Improved OCR (local-only; never sends screenshots off-device).
+- [ ] Better template matching (local-only authoring helper).
+- [ ] Android research (read-only companion concept only; no
+      automation control from mobile).
+- [ ] Plugin system (heavily sandboxed; requires a separate safety
+      review and a permission model first).
+
+---
+
 ## 0.1.x — Beta polish (current line)
 
 Theme: harden, polish, document the simulation-only MVP.

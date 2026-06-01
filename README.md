@@ -29,10 +29,39 @@ safety review).
 
 ## 2. Current status
 
-- Линия: `0.2.x` (smart desktop beta — preparing `v0.2.0-smart-beta`).
+- Линия: `0.2.x` (smart desktop beta).
 - Версия: **`0.2.0-beta`** (`package.json` `version`; release tag — `v0.2.0-smart-beta`, pre-release).
-- Состояние: **Smart Desktop Beta preparation, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, **Smart Features QA + Next Branch Plan (Step 37)**, **OCR provider architecture (Step 38)**, **Tesseract OCR provider Phase 1 (Step 39)**, **Real OCR UI Activation + text_click / Visual Builder real OCR support (Steps 40-41)**, **Smart OCR/Image QA + bugfix pass (Step 42)**, и **Smart Beta Packaging/Release Pass (Step 43)**: `package.json` `version: "0.2.0-beta"`, electron-builder `files` ужесточён, smart-beta release docs (QA report / manual tests / release checklist / release notes / GitHub draft / tag-plan). Реальные клики **по-прежнему не реализованы** (action-pipeline блокирует `realClick: true`), `realDesktopActions` нельзя включить через UI, OpenCV **не подключён**, мобильной версии **нет**.
-  Перед публикацией тэга `v0.1.0-beta` обязательны:
+- **`v0.2.0-smart-beta` готов / опубликован как Smart Desktop Beta
+  pre-release.** Финальные релизные команды (`npm install`,
+  `npm run smoke`, `npm start`, `npm run pack`, `npm run dist`)
+  прошли, packaged app запущен вручную и работает.
+  **Step 44 был финальным testing / release-preparation milestone**
+  (final smart-beta sign-off перед тегом), а не отдельной runtime-
+  фичей — у него нет файлов вроде `src/step-44.js`.
+- **Текущий шаг — Step 45: post-release cleanup and feedback
+  tracking.** Зафиксирован post-release статус, подготовлены каналы
+  обратной связи и планы следующих веток. Новые большие функции и
+  реальные клики **не добавлялись**. См.
+  [`docs/POST_RELEASE_CHECKLIST.md`](./docs/POST_RELEASE_CHECKLIST.md),
+  [`docs/FEEDBACK_TRIAGE.md`](./docs/FEEDBACK_TRIAGE.md),
+  [`docs/V0_2_1_PATCH_PLAN.md`](./docs/V0_2_1_PATCH_PLAN.md),
+  [`docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md`](./docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md).
+- Состояние: **Smart Desktop Beta released, simulation-only**. Поддерживает coordinate / image / text scenario foundations, Screen Capture (Step 25), Region Selector (Step 26), Templates (Step 27), Template Matching mock + real preview (Step 28–29), `image_click` scenario + Test Match (Step 30–31), OCR mock (Step 32), `text_click` scenario + Test OCR (Step 33–34), **Visual Builder + Scenario Presets (Step 36)**, **Smart Features QA + Next Branch Plan (Step 37)**, **OCR provider architecture (Step 38)**, **Tesseract OCR provider Phase 1 (Step 39)**, **Real OCR UI Activation + text_click / Visual Builder real OCR support (Steps 40-41)**, **Smart OCR/Image QA + bugfix pass (Step 42)**, **Smart Beta Packaging/Release Pass (Step 43)**, **final testing/release milestone (Step 44)**, и **post-release cleanup + feedback tracking (Step 45)**: `package.json` `version: "0.2.0-beta"`, electron-builder `files` ужесточён, smart-beta release docs (QA report / manual tests / release checklist / release notes / GitHub draft / tag-plan) + post-release docs. Реальные клики **по-прежнему не реализованы** (action-pipeline блокирует `realClick: true`), `realDesktopActions` нельзя включить через UI, OpenCV **не подключён**, мобильной версии **нет**.
+- **Как отправить feedback:** через GitHub Issues по шаблонам
+  [`bug_report`](./.github/ISSUE_TEMPLATE/bug_report.md),
+  [`feature_request`](./.github/ISSUE_TEMPLATE/feature_request.md),
+  [`safety_report`](./.github/ISSUE_TEMPLATE/safety_report.md).
+  Процесс разбора — [`docs/FEEDBACK_TRIAGE.md`](./docs/FEEDBACK_TRIAGE.md).
+- **Известные ограничения:**
+  [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md).
+- **Следующий patch — `v0.2.1`** (только bugfixes, без новых
+  функций и без реальных кликов):
+  [`docs/V0_2_1_PATCH_PLAN.md`](./docs/V0_2_1_PATCH_PLAN.md).
+- **Будущая ветка `v0.3.0`** — real desktop adapter
+  research / planning (только план; real clicks остаются
+  отключёнными до прохождения safety review):
+  [`docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md`](./docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md).
+  Перед публикацией smart-beta тэга были обязательны:
   [`docs/PRE_RELEASE_CHECKLIST.md`](./docs/PRE_RELEASE_CHECKLIST.md) (все боксы тикнуты),
   [`docs/PACKAGED_APP_QA.md`](./docs/PACKAGED_APP_QA.md) (sign-off на хотя бы одной целевой ОС),
   Release decision = "Ready" в [`docs/RELEASE_BLOCKERS.md`](./docs/RELEASE_BLOCKERS.md).
@@ -831,6 +860,49 @@ QA. Реальных кликов нет. realDesktopActions=false (hard-coded, 
 в runtime whitelist). simulationOnly=true. Все safety invariants
 сохранены.**
 
+**Step 44 — Final smart-beta testing / release-preparation
+milestone:** Step 44 был **не отдельной продуктовой функцией, а
+финальным этапом проверки и релизной подготовки** Smart Beta перед
+тегом `v0.2.0-smart-beta`. Выполнены финальные команды и проверки:
+`npm install`, `npm run smoke`, `npm start`, `npm run pack`,
+`npm run dist`, ручной packaged-app QA, проверка что приложение
+запускается, что smoke-check проходит, что packaged app работает,
+что real desktop clicks всё ещё отключены, и что release docs /
+tag plan / release notes на месте. Поэтому **отдельных runtime-
+файлов вроде `src/step-44.js` у Step 44 нет** — он отражён в
+release docs / README / PROJECT_CONTEXT / CHANGELOG как
+testing/release milestone.
+
+**Step 45 — Post-release cleanup and feedback tracking:**
+зафиксирован post-release / post-smart-beta статус и подготовка к
+следующей большой ветке. Что сделано:
+- уточнено, что Step 44 был release/testing milestone, а не
+  отдельной runtime-фичей;
+- добавлен post-release checklist
+  [`docs/POST_RELEASE_CHECKLIST.md`](./docs/POST_RELEASE_CHECKLIST.md);
+- добавлен feedback triage guide
+  [`docs/FEEDBACK_TRIAGE.md`](./docs/FEEDBACK_TRIAGE.md)
+  (issue labels, severity S0–S4, priority P0–P3, bug/feature/safety
+  processes, release-blocker criteria, when to make v0.2.1 / defer
+  to v0.3.0);
+- добавлен план патча
+  [`docs/V0_2_1_PATCH_PLAN.md`](./docs/V0_2_1_PATCH_PLAN.md)
+  (bugfix-only: crash / UI / translations / packaging / smoke-check
+  / docs / minor UX; запрещены real clicks / new OCR engine /
+  OpenCV / mobile / major refactor);
+- добавлен план ветки
+  [`docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md`](./docs/V0_3_0_REAL_ADAPTER_BRANCH_PLAN.md)
+  (только план; real desktop actions disabled до прохождения safety
+  review; real adapter за feature flag; action-pipeline блокирует по
+  умолчанию; никаких captcha / anti-bot / ad-click / banking
+  automation);
+- обновлён post-release статус, README и PROJECT_CONTEXT;
+- smoke-check расширен Step-45 инвариантами;
+- подтверждена simulation-only safety model.
+**Новые большие функции и реальные клики на Step 45 не
+добавлялись. realDesktopActions=false, simulationOnly=true,
+contextIsolation: true, nodeIntegration: false, CSP не ослаблен.**
+
 ### Smoke check
 `npm run smoke` — статическая проверка целостности репозитория
 (файлы, security-флаги, CSP, package.json wiring, отсутствие
@@ -872,7 +944,7 @@ Linux (AppImage). Подробнее — [`docs/PACKAGING.md`](./docs/PACKAGING.
 
 ## 5. What is **not** implemented
 
-ClickFlow `0.1.0-beta` — **simulation-only**. Сознательно отсутствуют:
+ClickFlow `v0.2.0-smart-beta` — **simulation-only**. Сознательно отсутствуют:
 
 - реальные системные клики и реальный ввод с клавиатуры
   (нет `robotjs`, `nut.js`, `iohook`, `uiohook-napi`);
