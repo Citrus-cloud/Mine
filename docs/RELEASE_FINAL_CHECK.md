@@ -203,3 +203,32 @@ Walk the relevant section of
 - Platform(s) walked: ____
 - Reviewer: ____
 - Decision: Ready / Not ready
+
+
+
+---
+
+## Desktop v1 Alpha final check (Step 51)
+
+> Supersedes the `0.1.0-beta` target above for the current release line.
+> Release target is now **`v1.0.0-alpha.1`** (`package.json` version
+> `1.0.0-alpha.1`), marked as **pre-release (alpha)**.
+
+Cross-references for the v1 alpha release:
+
+- [`V1_ALPHA_FINAL_SUMMARY.md`](./V1_ALPHA_FINAL_SUMMARY.md)
+- [`V1_ALPHA_PRE_RELEASE_CHECKLIST.md`](./V1_ALPHA_PRE_RELEASE_CHECKLIST.md)
+- [`V1_ALPHA_TAG_PLAN.md`](./V1_ALPHA_TAG_PLAN.md)
+- [`V1_ALPHA_RELEASE_DRAFT.md`](./V1_ALPHA_RELEASE_DRAFT.md)
+- [`V1_ALPHA_RELEASE_COMMIT_MESSAGE.md`](./V1_ALPHA_RELEASE_COMMIT_MESSAGE.md)
+- [`V1_ALPHA_QA_REPORT.md`](./V1_ALPHA_QA_REPORT.md)
+- [`V1_ALPHA_MANUAL_TESTS.md`](./V1_ALPHA_MANUAL_TESTS.md)
+
+Safety reminders (unchanged): real coordinate click is disabled by
+default, session-only, one click per fresh confirmation; real
+`image_click`/`text_click` and keyboard automation are disabled;
+`contextIsolation: true`, `nodeIntegration: false`, CSP unchanged; no
+`robotjs`/`iohook`/`uiohook-napi`/`opencv`.
+
+**Final status:** Ready for Desktop v1 Alpha pre-release after manual
+packaged-app QA.

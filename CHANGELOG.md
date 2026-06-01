@@ -8,6 +8,55 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 51 — Final Desktop v1 Alpha Release Preparation
+
+Final preparation for the `v1.0.0-alpha.1` pre-release. **No new
+features, no expanded real actions.** Tag and GitHub release are created
+**manually** after QA. ClickFlow stays simulation-only by default; real
+coordinate click remains experimental, disabled by default, session-only,
+one click per fresh confirmation.
+
+### Added (docs)
+
+- `docs/V1_ALPHA_FINAL_SUMMARY.md` — single-page final summary +
+  sign-off.
+- `docs/V1_ALPHA_PRE_RELEASE_CHECKLIST.md` — pre-release sign-off boxes.
+- `docs/V1_ALPHA_TAG_PLAN.md` — manual tag/release command sequence.
+- `docs/V1_ALPHA_RELEASE_COMMIT_MESSAGE.md` — recommended commit message
+  (+ forbidden lines).
+
+### Changed
+
+- `docs/V1_ALPHA_RELEASE_DRAFT.md` — finalized with the full section set
+  (Summary, Highlights, Real coordinate click alpha, Safety model, Smart
+  visual features, OCR notes, What works, What is intentionally disabled,
+  Installation from source, Packaged builds, Testing notes, Known
+  limitations, Feedback, Security note); tag `v1.0.0-alpha.1`,
+  pre-release.
+- `RELEASE_NOTES.md` — how to run / test / packaging notes + final v1
+  alpha prep links.
+- `docs/TAG_AND_RELEASE_GUIDE.md`, `docs/RELEASE_FINAL_CHECK.md`,
+  `docs/RELEASE_BLOCKERS.md` — Desktop v1 Alpha sections (target
+  `v1.0.0-alpha.1`, manual tag/release, manual packaged-app QA required;
+  no known automated/static blockers).
+- `src/safety-center-ui.js` — Desktop v1 Alpha status card extended with
+  release-readiness fields (`readyForV1AlphaAfterManualQa`,
+  `realCoordinateAlphaEnabledByDefault: false`,
+  `unsupportedRealActionsEnabled: false`); RU/EN i18n keys.
+- `scripts/smoke-check.js` — Step 51 invariants.
+- README, PROJECT_CONTEXT updated to Step 51.
+
+### Safety invariants kept (Step 51)
+
+- Real coordinate disabled by default; session-only; fresh confirmation;
+  one click per confirmation; `repeatCount > 1` blocked.
+- Real `image_click`/`text_click` blocked; keyboard automation blocked.
+- No real click during smoke or at app start. No prohibited
+  dependencies. `contextIsolation:true`, `nodeIntegration:false`, CSP
+  unchanged. Tag/release remain manual.
+
+---
+
 ## [Unreleased] — Step 50 — Real Coordinate Click QA + v1 Alpha Packaging
 
 Final QA of the real coordinate click flow and Desktop v1 Alpha
