@@ -278,7 +278,22 @@ var AUDIT_EVENT_TYPES = Object.freeze({
   RealCoordClickExecuted:             'realCoordinate.click.executed',
   RealCoordClickBlocked:              'realCoordinate.click.blocked',
   RealCoordAdapterUnavailable:        'realCoordinate.adapter.unavailable',
-  RealCoordUnsupportedActionBlocked:  'realCoordinate.unsupportedAction.blocked'
+  RealCoordUnsupportedActionBlocked:  'realCoordinate.unsupportedAction.blocked',
+  // Step 49 — Real coordinate click SCENARIO mode. Payloads carry only
+  // stable ids, short reasons, scenario type, numeric coordinates and
+  // the mouse button — never screenshots, base64, paths, or PII.
+  ScenarioRealCoordRunRequested:        'scenario.realCoordinate.run.requested',
+  ScenarioRealCoordConfirmationRequested: 'scenario.realCoordinate.confirmation.requested',
+  ScenarioRealCoordConfirmationAccepted:  'scenario.realCoordinate.confirmation.accepted',
+  ScenarioRealCoordConfirmationCancelled: 'scenario.realCoordinate.confirmation.cancelled',
+  ScenarioRealCoordSafetyCheckPassed:   'scenario.realCoordinate.safetyCheck.passed',
+  ScenarioRealCoordSafetyCheckFailed:   'scenario.realCoordinate.safetyCheck.failed',
+  ScenarioRealCoordBlocked:             'scenario.realCoordinate.blocked',
+  ScenarioRealCoordExecuted:            'scenario.realCoordinate.executed',
+  ScenarioRealCoordCompleted:           'scenario.realCoordinate.completed',
+  ScenarioRealCoordFailed:              'scenario.realCoordinate.failed',
+  ScenarioRealCoordRepeatBlocked:       'scenario.realCoordinate.repeatBlocked',
+  ScenarioRealCoordUnsupportedBlocked:  'scenario.realCoordinate.unsupportedScenarioBlocked'
 });var KNOWN_TYPES = Object.freeze(
   Object.keys(AUDIT_EVENT_TYPES).map(function (k) { return AUDIT_EVENT_TYPES[k]; })
 );

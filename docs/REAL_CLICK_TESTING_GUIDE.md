@@ -79,3 +79,14 @@ revert to simulation-only.
 - Repeats and batches are blocked — exactly one click per confirmation.
 - If emergency stop is not ready, the real click is blocked.
 - Full manual QA checklist: `docs/REAL_COORDINATE_CLICK_QA.md`.
+
+
+
+---
+
+## Step 49 update — running a scenario in real mode
+
+You can now run a `simple_click` scenario as one real coordinate click:
+Safety Center → Scenario real run readiness → set Execution mode to
+**Real coordinate** → confirm. `repeatCount` must be 1; the mode resets
+to simulation after the run. See `docs/REAL_COORDINATE_SCENARIO_QA.md`.

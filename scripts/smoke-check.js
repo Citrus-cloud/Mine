@@ -6958,8 +6958,8 @@ record('app-state.js declares runSummaries slice', /runSummaries:\s*\{/.test(asT
   record('app-state.js declares ' + needle, asTxt46.indexOf(needle) !== -1);
 });
 record(
-  'app-state.js run summary forces realActionsPerformed:false',
-  /realActionsPerformed:\s*false/.test(asTxt46)
+  'app-state.js run summary defaults realActionsPerformed safely (true only on explicit real run)',
+  /realActionsPerformed:\s*\(summary\.realActionsPerformed === true\)/.test(asTxt46)
 );
 
 // 367. audit-events.js allowlist includes the Step 46 types.
@@ -7418,6 +7418,156 @@ record(
   htmlTxt46.indexOf('Content-Security-Policy') !== -1 &&
   htmlTxt46.indexOf('unsafe-inline') === -1 &&
   htmlTxt46.indexOf('unsafe-eval') === -1
+);
+
+// --- Step 49: Real coordinate click SCENARIO mode ---
+
+// 393. New docs exist.
+record('Step 49 doc exists: docs/REAL_COORDINATE_SCENARIO_MODE.md', fileExists('docs/REAL_COORDINATE_SCENARIO_MODE.md'));
+record('Step 49 doc exists: docs/REAL_COORDINATE_SCENARIO_QA.md', fileExists('docs/REAL_COORDINATE_SCENARIO_QA.md'));
+
+// 394. README / PROJECT_CONTEXT mention Step 49 + repeatCount/one click.
+var readmeTxt49 = readText('README.md');
+var pcTxt49 = readText('PROJECT_CONTEXT.md');
+var chTxt49 = readText('CHANGELOG.md');
+record(
+  'README or PROJECT_CONTEXT mentions Step 49 / шаг 49',
+  /step\s*49|шаг\s*49/i.test(readmeTxt49) || /step\s*49|шаг\s*49/i.test(pcTxt49)
+);
+record(
+  'CHANGELOG mentions Step 49 / шаг 49',
+  /step\s*49|шаг\s*49/i.test(chTxt49)
+);
+record(
+  'README or PROJECT_CONTEXT states repeatCount must be 1 / one click',
+  /repeatCount\s*(must be|===|=|должен быть|обязан быть|=\s*1)\s*1|repeatCount === 1|one (real )?click|один (реальный )?клик/i.test(readmeTxt49) ||
+  /repeatCount\s*(must be|===|=|должен быть|обязан быть)\s*1|repeatCount === 1|one (real )?click|один (реальный )?клик/i.test(pcTxt49)
+);
+
+// 395. package.json declares no robotjs / iohook / uiohook-napi / opencv.
+if (pkg) {
+  var allDeps49 = Object.assign(
+    {},
+    pkg.dependencies || {},
+    pkg.devDependencies || {},
+    pkg.optionalDependencies || {}
+  );
+  var forbidden49 = Object.keys(allDeps49).filter(function (name) {
+    var n = name.toLowerCase();
+    return n.indexOf('robotjs') !== -1 ||
+           n.indexOf('iohook') !== -1 ||
+           n.indexOf('uiohook') !== -1 ||
+           n.indexOf('opencv') !== -1;
+  });
+  record(
+    'Step 49 — package.json declares no robotjs/iohook/uiohook-napi/opencv',
+    forbidden49.length === 0,
+    forbidden49.join(', ')
+  );
+}
+
+// 396. feature-flags defaults still false.
+var ff49 = readText('src/feature-flags.js');
+var frozen49 = (ff49.match(/FEATURE_FLAGS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/) || [])[1] || '';
+record('Step 49 — feature-flags default realDesktopActions: false', /realDesktopActions:\s*false/.test(frozen49));
+record('Step 49 — feature-flags default realCoordinateClick: false', /realCoordinateClick:\s*false/.test(frozen49));
+
+// 397. action-pipeline blocks image_click/text_click real mode + scenario wrapper.
+var apTxt49 = readText('src/action-pipeline.js');
+record(
+  'Step 49 — action-pipeline still blocks image_click/text_click real mode',
+  apTxt49.indexOf('imageClickRealBlocked') !== -1 && apTxt49.indexOf('textClickRealBlocked') !== -1
+);
+record(
+  'action-pipeline.js declares executeRealCoordinateScenarioAction',
+  apTxt49.indexOf('function executeRealCoordinateScenarioAction') !== -1
+);
+record(
+  'action-pipeline.js scenario wrapper uses mode real-coordinate + oneClickOnly',
+  /mode:\s*'real-coordinate'/.test(apTxt49) && /oneClickOnly:\s*true/.test(apTxt49)
+);
+
+// 398. click-engine has the real-coordinate execution path.
+var ceTxt49 = readText('src/click-engine.js');
+record(
+  'click-engine.js contains real-coordinate execution mode',
+  /real-coordinate/.test(ceTxt49)
+);
+record(
+  'click-engine.js declares runSimpleClickRealCoordinate',
+  ceTxt49.indexOf('function runSimpleClickRealCoordinate') !== -1
+);
+record(
+  'click-engine.js enforces repeatCount === 1 for real mode',
+  /Number\(s\.repeatCount\)\s*!==\s*1/.test(ceTxt49) || /repeatCount.{0,20}!==\s*1/.test(ceTxt49)
+);
+record(
+  'click-engine.js blocks real mode for image_click/text_click scenarios',
+  /Real mode is only available for coordinate click scenarios/.test(ceTxt49)
+);
+
+// 399. app-state execution mode API.
+var asTxt49 = readText('src/app-state.js');
+[
+  'function setExecutionMode',
+  'function getExecutionMode',
+  'function isRealCoordinateModeSelected',
+  'function resetExecutionModeToSimulation'
+].forEach(function (needle) {
+  record('app-state.js declares ' + needle, asTxt49.indexOf(needle) !== -1);
+});
+record(
+  'app-state.js execution mode defaults to simulation',
+  /executionMode:\s*"simulation"/.test(asTxt49)
+);
+
+// 400. scenario-manager real-mode validation (runtime-only).
+var smTxt49 = readText('src/scenario-manager.js');
+record(
+  'scenario-manager.js declares validateSimpleClickRealMode',
+  smTxt49.indexOf('function validateSimpleClickRealMode') !== -1
+);
+
+// 401. Safety Center scenario real run card + auto reset to simulation.
+var scuiTxt49 = readText('src/safety-center-ui.js');
+record(
+  'safety-center-ui.js declares renderScenarioRealRunCard',
+  scuiTxt49.indexOf('function renderScenarioRealRunCard') !== -1
+);
+record(
+  'safety-center-ui.js resets execution mode to simulation after a real run',
+  /resetExecutionModeToSimulation/.test(scuiTxt49)
+);
+record(
+  'safety-center-ui.js scenario run requires a fresh confirmation checkbox',
+  /confirmOneRealClick/.test(scuiTxt49) && /requireCheckbox:\s*true/.test(scuiTxt49)
+);
+
+// 402. audit allowlist includes the Step 49 scenario events.
+[
+  "'scenario.realCoordinate.executed'",
+  "'scenario.realCoordinate.blocked'",
+  "'scenario.realCoordinate.repeatBlocked'",
+  "'scenario.realCoordinate.unsupportedScenarioBlocked'"
+].forEach(function (needle) {
+  record('audit allowlist includes ' + needle.replace(/'/g, ''), auditTxt.indexOf(needle) !== -1);
+});
+
+// 403. i18n declares the scenario-mode keys in RU and EN.
+var i18nTxt49 = readText('src/i18n.js');
+record(
+  'i18n declares realCoordinateMode in RU and EN',
+  (i18nTxt49.match(/realCoordinateMode:/g) || []).length >= 2
+);
+record(
+  'i18n declares confirmOneRealClick in RU and EN',
+  (i18nTxt49.match(/confirmOneRealClick:/g) || []).length >= 2
+);
+
+// 404. Electron security invariants still hold at Step 49.
+record(
+  'Step 49 — main.js still sets contextIsolation: true / nodeIntegration: false',
+  /contextIsolation\s*:\s*true/.test(mainTxt) && /nodeIntegration\s*:\s*false/.test(mainTxt)
 );
 
 // --- Report ---

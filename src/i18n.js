@@ -1076,7 +1076,31 @@ const translations = {
     realCoordinateSessionDisabled: "Сессия реального клика выключена",
     safetyCheckFailed: "Проверка безопасности не пройдена",
     noRealImageTextClicks: "Реальные image/text клики отключены",
-    noKeyboardAutomation: "Автоматизация клавиатуры отключена"
+    noKeyboardAutomation: "Автоматизация клавиатуры отключена",
+
+    // Step 49 — Real Coordinate Click Scenario Mode
+    dryRunMode: "Предпросмотр (dry-run)",
+    realCoordinateMode: "Реальный координатный клик",
+    realCoordinateModeDisabled: "Реальный координатный режим выключен",
+    realCoordinateModeUnavailable: "Реальный координатный режим недоступен",
+    realModeOnlyForCoordinateClick: "Реальный режим доступен только для одного coordinate click после подтверждения.",
+    oneRealClickWillBePerformed: "Будет выполнен один реальный клик.",
+    confirmOneRealClick: "Я подтверждаю один реальный клик по указанным координатам.",
+    realScenarioRun: "Запустить один реальный координатный клик",
+    runScenarioSafetyCheck: "Проверка безопасности сценария",
+    scenarioRealRunReadiness: "Готовность реального запуска сценария",
+    activeScenarioRealRunnable: "Готов к запуску",
+    repeatCountMustBeOneForRealMode: "Для реального режима repeatCount должен быть 1",
+    repeatBlockedForRealMode: "Повторы заблокированы в реальном режиме",
+    unsupportedScenarioForRealMode: "Этот тип сценария не поддерживается в реальном режиме",
+    resetExecutionModeToSimulation: "Сбросить режим в Имитацию",
+    realCoordinateScenarioExecuted: "Реальный координатный сценарий выполнен",
+    realCoordinateScenarioBlocked: "Реальный координатный сценарий заблокирован",
+    realCoordinateScenarioFailed: "Реальный координатный сценарий не выполнен",
+    freshConfirmationRequired: "Требуется новое подтверждение",
+    confirmationResetAfterRun: "Подтверждение сброшено после запуска",
+    prohibitedUseWarning: "Запрещено: капча/антибот, реклама, банковские/защищённые приложения, скрытые клики.",
+    realCoordinateRunSummary: "Сводка реального координатного запуска"
   },
   en: {
     // Main screen
@@ -2153,7 +2177,31 @@ const translations = {
     realCoordinateSessionDisabled: "Real coordinate session disabled",
     safetyCheckFailed: "Safety check failed",
     noRealImageTextClicks: "Real image/text clicks disabled",
-    noKeyboardAutomation: "Keyboard automation disabled"
+    noKeyboardAutomation: "Keyboard automation disabled",
+
+    // Step 49 — Real Coordinate Click Scenario Mode
+    dryRunMode: "Dry-run",
+    realCoordinateMode: "Real coordinate",
+    realCoordinateModeDisabled: "Real coordinate mode disabled",
+    realCoordinateModeUnavailable: "Real coordinate mode unavailable",
+    realModeOnlyForCoordinateClick: "Real mode is available only for one coordinate click after confirmation.",
+    oneRealClickWillBePerformed: "One real click will be performed.",
+    confirmOneRealClick: "I confirm one real click at the specified coordinates.",
+    realScenarioRun: "Run one real coordinate click",
+    runScenarioSafetyCheck: "Run scenario safety check",
+    scenarioRealRunReadiness: "Scenario real run readiness",
+    activeScenarioRealRunnable: "Ready to run",
+    repeatCountMustBeOneForRealMode: "Real mode requires repeatCount = 1",
+    repeatBlockedForRealMode: "Repeats are blocked in real mode",
+    unsupportedScenarioForRealMode: "This scenario type is not supported in real mode",
+    resetExecutionModeToSimulation: "Reset execution mode to Simulation",
+    realCoordinateScenarioExecuted: "Real coordinate scenario executed",
+    realCoordinateScenarioBlocked: "Real coordinate scenario blocked",
+    realCoordinateScenarioFailed: "Real coordinate scenario failed",
+    freshConfirmationRequired: "Fresh confirmation required",
+    confirmationResetAfterRun: "Confirmation reset after run",
+    prohibitedUseWarning: "Prohibited: captcha/anti-bot, ads, banking/protected apps, hidden clicks.",
+    realCoordinateRunSummary: "Real coordinate run summary"
   }
 };
 

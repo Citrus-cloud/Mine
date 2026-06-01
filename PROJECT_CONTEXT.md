@@ -7,6 +7,62 @@
 
 ## Текущий шаг
 
+**Шаг 49 завершён.** Real Coordinate Click Scenario Mode. Текущий шаг —
+**49**.
+
+Главное: сценарий **`simple_click`** теперь можно запустить как **один**
+реальный координатный клик через строгий safety flow. Реальный режим
+**выключен по умолчанию**, **session-only**, **fresh confirmation на
+каждый запуск**, `repeatCount` обязан быть **1**. real image/text mode
+по-прежнему disabled; keyboard disabled.
+
+Что сделано на Step 49:
+
+- app-state: runtime `executionMode` (`simulation` | `dry-run` |
+  `real-coordinate`, default simulation, не сохраняется) +
+  `setExecutionMode`/`getExecutionMode`/`isRealCoordinateModeSelected`/
+  `resetExecutionModeToSimulation`;
+- click-engine: `runSimpleClickRealCoordinate` (один real click для
+  simple_click, repeatCount===1; прогресс/аудит/блокировки); dry-run
+  через `ctx.executionMode='dry-run'`; real mode для image/text →
+  block с понятным сообщением;
+- action-pipeline: `executeRealCoordinateScenarioAction(action,
+  context)` (result `mode:"real-coordinate"`, `oneClickOnly:true`,
+  делегирует в main, image/text/repeat/batch blocked);
+- scenario-manager: `validateSimpleClickRealMode` (executionMode хранится
+  в runtime, НЕ в сценарии; repeatCount===1, x/y/button валидны);
+- Safety Center: блок **Scenario real run readiness** — селектор режима
+  (real-coordinate disabled с причиной, если не готов), readiness rows,
+  badges (real mode / session only / one click only / fresh
+  confirmation), кнопки Run scenario safety check / Reset execution mode
+  to Simulation / Run one real coordinate click (с confirmation modal и
+  чекбоксом «I confirm one real click…»);
+- после real run: executionMode сбрасывается в simulation, confirmation
+  не переиспользуется; run summary (`executionMode`,
+  `realActionsPerformed`, `oneClickOnly`, `x`/`y`/`button`, `status`,
+  `blockedReason`); audit events `scenario.realCoordinate.*`;
+  diagnostics `getRealCoordinateScenarioDiagnostics`; i18n RU/EN; docs
+  `REAL_COORDINATE_SCENARIO_MODE.md` + `REAL_COORDINATE_SCENARIO_QA.md`;
+  smoke-check расширен Step-49 инвариантами.
+
+Безопасность:
+
+- real mode disabled by default; session enable + fresh confirmation
+  обязательны; repeatCount>1 → blocked; только simple_click;
+- image_click real blocked; text_click real blocked; keyboard
+  automation blocked;
+- execution mode возвращается в simulation после real run; real click
+  не происходит при smoke / при старте;
+- нет robotjs/iohook/uiohook-napi/opencv; `contextIsolation: true`,
+  `nodeIntegration: false`, CSP не ослаблен; renderer без прямого
+  Node-доступа; screenshots/base64 не пишутся.
+
+**Next step:** при наличии безопасного backend — только за полным
+safety review: persisted audit, OS permission probes, target
+allow/deny-list; image/text real и keyboard остаются вне scope.
+
+## Шаг 48 (real coordinate click stabilization)
+
 **Шаг 48 завершён.** Real coordinate click stabilization + safety QA.
 Текущий шаг — **48**.
 

@@ -662,3 +662,50 @@ async function executeRealDesktopAction(action, context) {
     return failed;
   }
 }
+
+
+
+// =====================================================================
+// Step 49 — Real coordinate click SCENARIO mode (renderer side).
+// ---------------------------------------------------------------------
+// Thin wrapper over executeRealDesktopAction for the scenario-run path.
+// Only a single coordinate click is ever eligible (image_click /
+// text_click / keyboard are blocked before any IPC). Returns the
+// Step-49 result shape with `mode: "real-coordinate"` and
+// `oneClickOnly: true`. The main process still re-validates everything.
+// =====================================================================
+async function executeRealCoordinateScenarioAction(action, context) {
+  var ctx = (context && typeof context === 'object') ? context : {};
+
+  // Guard: scenario real mode is coordinate click only.
+  if (!action || action.type !== 'click') {
+    var blk = createRealActionBlockedResult('Real mode is only available for coordinate click scenarios.', action);
+    blk.mode = 'real-coordinate';
+    blk.oneClickOnly = true;
+    blk.realAction = false;
+    blk.reason = blk.error;
+    if (typeof recordAuditEvent === 'function') {
+      recordAuditEvent('scenario.realCoordinate.unsupportedScenarioBlocked', {
+        scenarioId: ctx.scenarioId, actionType: action && action.type
+      });
+    }
+    return blk;
+  }
+
+  // Delegate to the hardened Step 47/48 real path (pre-flight + IPC).
+  var res = await executeRealDesktopAction(action, ctx);
+
+  // Normalize to the Step-49 scenario result shape.
+  var success = !!(res && res.success && res.realAction === true && !res.blocked);
+  return {
+    success: success,
+    blocked: !success,
+    mode: 'real-coordinate',
+    realAction: success === true,
+    oneClickOnly: true,
+    action: action,
+    result: res || null,
+    reason: (res && (res.reason || res.error)) ? (res.reason || res.error) : (success ? null : 'Real coordinate click blocked'),
+    timestamp: new Date().toISOString()
+  };
+}

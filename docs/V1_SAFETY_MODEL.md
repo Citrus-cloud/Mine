@@ -81,3 +81,15 @@ click per confirmation, action type `click` only, no batch, no repeat,
 no image/text real, no keyboard. `keyboardAutomation` is a new
 hard-coded-false, non-togglable flag. The renderer pipeline and the
 main adapter both re-validate independently. "When in doubt, block."
+
+
+
+---
+
+## Step 49 update — real coordinate scenario mode
+
+`simple_click` may run one real coordinate click through the same
+default-deny gate, with the execution mode held in runtime state
+(never persisted), `repeatCount === 1` enforced, a fresh per-run
+confirmation, and an automatic reset to simulation after the run.
+image/text real modes and keyboard remain disabled.

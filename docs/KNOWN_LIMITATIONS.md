@@ -920,3 +920,16 @@ but each is part of the manual QA briefing in
 - Permanently prohibited: captcha/anti-bot bypass, ad-click automation,
   banking/payment/protected-app automation, hidden/background control,
   keyloggers/input hooks.
+
+
+
+## Real coordinate scenario mode (Step 49)
+
+- Only `simple_click` can run in real coordinate mode, and only one
+  click per fresh confirmation with `repeatCount === 1`.
+- Real `image_click`/`text_click`, keyboard, scroll, hotkeys, repeats
+  and batches remain unimplemented / blocked.
+- Execution mode is runtime-only and resets to simulation after a real
+  run and on restart — a real run can never be silently repeated.
+- Without the optional native backend, the real click is blocked
+  ("dependency not installed"); simulation/dry-run still work.

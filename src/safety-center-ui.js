@@ -37,6 +37,11 @@ var _lastSafetyCheckAllowed = null;
 var _lastBlockedReason = null;
 var _lastRealClickAt = null;
 var _lastRealClickResult = null;
+// Step 49 — scenario real-run diagnostics state.
+var _lastRealScenarioRunAt = null;
+var _lastRealScenarioRunStatus = null;
+var _lastRealScenarioBlockedReason = null;
+var _lastRealScenarioCoordinates = null;
 
 // Step 48 — diagnostics snapshot for the Safety Center + QA.
 function getRealCoordinateClickDiagnostics() {
@@ -146,6 +151,7 @@ function renderSafetyCenter() {
   container.appendChild(renderSafetyStatusCard());
   container.appendChild(renderV1ReadinessCard());
   container.appendChild(renderRealAdapterCard());
+  container.appendChild(renderScenarioRealRunCard());
   container.appendChild(renderPermissionsCard());
   container.appendChild(renderAuditLogsCard());
 
@@ -1011,4 +1017,290 @@ async function _runRealCoordinateClick(c) {
   // Refresh adapter status (last attempt/result may have changed).
   _realAdapterStatus = null;
   renderSafetyCenter();
+}
+
+
+
+// =====================================================================
+// Step 49 — Scenario real run readiness card.
+// ---------------------------------------------------------------------
+// Execution-mode selector (simulation / dry-run / real-coordinate) +
+// readiness rows + run/reset controls. real-coordinate is only offered
+// for a simple_click scenario with repeatCount === 1, the session
+// enabled, the adapter available, and the safety gate passing. After a
+// real run the execution mode is reset to simulation.
+// =====================================================================
+
+function _scActiveScenario() {
+  try {
+    var st = getState();
+    if (typeof getScenarioById === 'function') return getScenarioById(st.selectedScenarioId);
+  } catch (e) {}
+  return null;
+}
+
+// Returns { ready: bool, reasons: [], scenario, gate } for a real run.
+function _scScenarioRealReadiness() {
+  var scenario = _scActiveScenario();
+  var feat = _scRealFeatureStatus();
+  var settings = _scSafeSettings();
+  var status = _realAdapterStatus || {};
+  var reasons = [];
+
+  if (!scenario) reasons.push('noActiveScenario');
+  var type = scenario && (scenario.type || 'simple_click');
+  if (scenario && type !== 'simple_click') reasons.push('unsupportedScenarioForRealMode');
+  var repeatCount = scenario && scenario.settings ? Number(scenario.settings.repeatCount) : null;
+  if (scenario && type === 'simple_click' && repeatCount !== 1) reasons.push('repeatCountMustBeOneForRealMode');
+  if (feat.realCoordinateClickSessionEnabled !== true) reasons.push('sessionRealModeDisabled');
+  if (status.adapterAvailable !== true) reasons.push('adapterUnavailable');
+  var safety = (settings && settings.safety) ? settings.safety : {};
+  if (safety.emergencyStopEnabled !== true) reasons.push('emergencyStopNotReady');
+  if (typeof getAuditLogManagerStatus !== 'function') reasons.push('auditLogsUnavailable');
+
+  // Stabilized gate for the concrete action (if scenario is valid).
+  var gate = null;
+  if (scenario && type === 'simple_click' && scenario.settings) {
+    var act = { type: 'click', x: scenario.settings.x, y: scenario.settings.y, button: scenario.settings.button, realClick: true };
+    var perms = (typeof getPermissionChecklist === 'function') ? getPermissionChecklist(settings, _scFeatureFlags()) : null;
+    if (typeof getRealCoordinateClickGateStatus === 'function') {
+      gate = getRealCoordinateClickGateStatus(settings, feat, perms, status, { userConfirmed: true, oneClickOnly: true, action: act });
+    }
+  }
+  return { ready: reasons.length === 0, reasons: reasons, scenario: scenario, gate: gate };
+}
+
+function renderScenarioRealRunCard() {
+  var card = _scCard(_scLabel('scenarioRealRunReadiness', 'Scenario real run readiness'));
+  card.id = 'sc-scenario-real-run-section';
+
+  var mode = (typeof getExecutionMode === 'function') ? getExecutionMode() : 'simulation';
+  var info = _scScenarioRealReadiness();
+  var scenario = info.scenario;
+  var type = scenario ? (scenario.type || 'simple_click') : '—';
+  var repeatCount = (scenario && scenario.settings && typeof scenario.settings.repeatCount === 'number')
+    ? scenario.settings.repeatCount : '—';
+  var feat = _scRealFeatureStatus();
+  var status = _realAdapterStatus || {};
+
+  // Execution mode selector.
+  var selWrap = _scEl('div', 'sc-real-input');
+  selWrap.appendChild(_scEl('span', null, _scLabel('executionMode', 'Execution mode')));
+  var sel = document.createElement('select');
+  sel.className = 'sc-real-num';
+  var realDisabled = !info.ready;
+  [
+    ['simulation', _scLabel('simulationMode', 'Simulation')],
+    ['dry-run', _scLabel('dryRunMode', 'Dry-run')],
+    ['real-coordinate', _scLabel('realCoordinateMode', 'Real coordinate')]
+  ].forEach(function (pair) {
+    var o = document.createElement('option');
+    o.value = pair[0]; o.textContent = pair[1];
+    if (pair[0] === mode) o.selected = true;
+    if (pair[0] === 'real-coordinate' && realDisabled) o.disabled = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', function () {
+    if (typeof setExecutionMode === 'function') setExecutionMode(sel.value);
+    renderSafetyCenter();
+  });
+  selWrap.appendChild(sel);
+  card.appendChild(selWrap);
+
+  card.appendChild(_scEl('p', 'sc-perm-guidance', _scLabel('realModeOnlyForCoordinateClick', 'Real mode is available only for one coordinate click after confirmation.')));
+
+  // Readiness rows.
+  card.appendChild(_scRow(_scLabel('scenario', 'Scenario type'), String(type), 'sc-ok'));
+  card.appendChild(_scRow('repeatCount', String(repeatCount), (repeatCount === 1 ? 'sc-ok' : 'sc-warn')));
+  card.appendChild(_scRow(_scLabel('executionMode', 'Execution mode'), mode, mode === 'real-coordinate' ? 'sc-warn' : 'sc-ok'));
+  card.appendChild(_scRow(_scLabel('sessionRealCoordinateClickEnabled', 'Session real coordinate'),
+    feat.realCoordinateClickSessionEnabled ? _scLabel('permissionReady', 'enabled') : _scLabel('statusDisabled', 'disabled'),
+    feat.realCoordinateClickSessionEnabled ? 'sc-ok' : 'sc-bad'));
+  card.appendChild(_scRow(_scLabel('adapterAvailableLabel', 'Adapter available'),
+    status.adapterAvailable ? _scLabel('statusReady', 'ready') : _scLabel('adapterUnavailable', 'unavailable'),
+    status.adapterAvailable ? 'sc-ok' : 'sc-bad'));
+  card.appendChild(_scRow(_scLabel('emergencyStop', 'Emergency stop'),
+    (_scSafeSettings().safety && _scSafeSettings().safety.emergencyStopEnabled) ? _scLabel('statusReady', 'ready') : _scLabel('permissionMissing', 'missing'),
+    (_scSafeSettings().safety && _scSafeSettings().safety.emergencyStopEnabled) ? 'sc-ok' : 'sc-warn'));
+  card.appendChild(_scRow(_scLabel('oneClickPerConfirmation', 'One click per confirmation'), _scLabel('statusReady', 'ready'), 'sc-ok'));
+  card.appendChild(_scRow(_scLabel('activeScenarioRealRunnable', 'Ready to run'),
+    info.ready ? _scLabel('permissionReady', 'yes') : (_scLabel('permissionMissing', 'no') + ': ' + info.reasons.join(', ')),
+    info.ready ? 'sc-ok' : 'sc-warn'));
+
+  // Badges.
+  var badges = _scEl('div', 'sc-badges');
+  if (mode === 'real-coordinate') {
+    badges.appendChild(_scEl('span', 'sc-badge sc-bad', _scLabel('realCoordinateMode', 'Real coordinate mode')));
+  }
+  badges.appendChild(_scEl('span', 'sc-badge sc-warn', _scLabel('realClicksSessionOnly', 'Session only')));
+  badges.appendChild(_scEl('span', 'sc-badge sc-warn', _scLabel('oneClickPerConfirmation', 'One click only')));
+  badges.appendChild(_scEl('span', 'sc-badge sc-warn', _scLabel('freshConfirmationRequired', 'Fresh confirmation required')));
+  card.appendChild(badges);
+
+  if (_lastRealScenarioRunStatus) {
+    card.appendChild(_scRow(_scLabel('realCoordinateRunSummary', 'Last real run'),
+      String(_lastRealScenarioRunStatus) + (_lastRealScenarioBlockedReason ? (': ' + _lastRealScenarioBlockedReason) : ''),
+      _lastRealScenarioRunStatus === 'executed' ? 'sc-ok' : 'sc-warn'));
+  }
+
+  // Controls.
+  var controls = _scEl('div', 'sc-actions');
+  var btnCheck = _scEl('button', 'sc-btn sc-btn-small', _scLabel('runScenarioSafetyCheck', 'Run scenario safety check'));
+  btnCheck.addEventListener('click', runScenarioSafetyCheck);
+  controls.appendChild(btnCheck);
+
+  var btnReset = _scEl('button', 'sc-btn sc-btn-small', _scLabel('resetExecutionModeToSimulation', 'Reset execution mode to Simulation'));
+  btnReset.addEventListener('click', function () {
+    if (typeof resetExecutionModeToSimulation === 'function') resetExecutionModeToSimulation();
+    renderSafetyCenter();
+  });
+  controls.appendChild(btnReset);
+
+  if (mode === 'real-coordinate') {
+    var btnRun = _scEl('button', 'sc-btn sc-btn-small sc-btn-danger', _scLabel('realScenarioRun', 'Run one real coordinate click'));
+    if (!info.ready) {
+      btnRun.disabled = true;
+      btnRun.title = info.reasons.join(', ');
+    } else {
+      btnRun.addEventListener('click', confirmAndRunRealCoordinateScenario);
+    }
+    controls.appendChild(btnRun);
+  }
+  card.appendChild(controls);
+  return card;
+}
+
+function runScenarioSafetyCheck() {
+  var info = _scScenarioRealReadiness();
+  if (info.ready && info.gate && info.gate.allowed) {
+    if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.realCoordinate.safetyCheck.passed', { scenarioId: info.scenario && info.scenario.id });
+    _lastRealScenarioBlockedReason = null;
+  } else {
+    var reasons = info.reasons.concat(info.gate && !info.gate.allowed ? (info.gate.reasons || []) : []);
+    if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.realCoordinate.safetyCheck.failed', { reason: reasons.join(',').slice(0, 80) });
+    _lastRealScenarioBlockedReason = reasons.join(', ');
+  }
+  renderSafetyCenter();
+}
+
+function confirmAndRunRealCoordinateScenario() {
+  var info = _scScenarioRealReadiness();
+  if (!info.ready || !info.scenario) {
+    _lastRealScenarioRunStatus = 'blocked';
+    _lastRealScenarioBlockedReason = info.reasons.join(', ');
+    renderSafetyCenter();
+    return;
+  }
+  var sc = info.scenario;
+  var s = sc.settings || {};
+  if (typeof recordAuditEvent === 'function') {
+    recordAuditEvent('scenario.realCoordinate.run.requested', { scenarioId: sc.id });
+    recordAuditEvent('scenario.realCoordinate.confirmation.requested', { scenarioId: sc.id });
+  }
+  _scShowModal({
+    title: _scLabel('realScenarioRun', 'Run one real coordinate click'),
+    lines: [
+      (sc.name || 'simple_click'),
+      'X: ' + s.x + '   Y: ' + s.y + '   ' + _scLabel('mouseButton', 'Button') + ': ' + s.button,
+      'repeatCount: ' + s.repeatCount + '   ' + _scLabel('executionMode', 'Execution mode') + ': real-coordinate',
+      _scLabel('oneRealClickWillBePerformed', 'One real click will be performed.'),
+      _scLabel('prohibitedUseCases', 'Prohibited use cases'),
+      'Emergency stop: Escape / Ctrl+Alt+E'
+    ],
+    requireCheckbox: true,
+    checkboxLabel: _scLabel('confirmOneRealClick', 'I confirm one real click at the specified coordinates.'),
+    confirmLabel: _scLabel('realScenarioRun', 'Run one real click'),
+    onConfirm: function () {
+      if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.realCoordinate.confirmation.accepted', { scenarioId: sc.id });
+      _runRealCoordinateScenario(sc);
+    },
+    onCancel: function () {
+      if (typeof recordAuditEvent === 'function') recordAuditEvent('scenario.realCoordinate.confirmation.cancelled', { scenarioId: sc.id });
+    }
+  });
+}
+
+async function _runRealCoordinateScenario(sc) {
+  var settings = _scSafeSettings();
+  var safety = (settings && settings.safety) ? settings.safety : {};
+  var feat = _scRealFeatureStatus();
+  var s = sc.settings || {};
+  var startedAt = new Date().toISOString();
+  // FRESH per-run context — never reused, never persisted.
+  var realContext = {
+    userConfirmed: true,
+    sessionRealModeEnabled: feat.realCoordinateClickSessionEnabled === true,
+    sessionRealCoordinateClickEnabled: feat.realCoordinateClickSessionEnabled === true,
+    safetyCheckPassed: true,
+    emergencyStopReady: safety.emergencyStopEnabled === true,
+    auditLogsEnabled: (typeof getAuditLogManagerStatus === 'function'),
+    adapterAvailable: !!(_realAdapterStatus && _realAdapterStatus.adapterAvailable === true),
+    oneClickOnly: true,
+    executionSource: 'scenario-run',
+    scenarioId: sc.id
+  };
+
+  var done = false;
+  function finish(status, reason) {
+    if (done) return; done = true;
+    var completedAt = new Date().toISOString();
+    _lastRealScenarioRunAt = completedAt;
+    _lastRealScenarioRunStatus = status;
+    _lastRealScenarioBlockedReason = reason || null;
+    _lastRealScenarioCoordinates = { x: s.x, y: s.y, button: s.button };
+    if (typeof addRunSummary === 'function') {
+      addRunSummary({
+        scenarioId: sc.id,
+        scenarioType: 'simple_click',
+        executionMode: 'real-coordinate',
+        realActionsPerformed: status === 'executed',
+        oneClickOnly: true,
+        x: s.x, y: s.y, button: s.button,
+        status: status,
+        blockedReason: reason || '',
+        startedAt: startedAt,
+        completedAt: completedAt,
+        durationMs: Date.parse(completedAt) - Date.parse(startedAt),
+        mode: 'real'
+      });
+    }
+    // Step 49: ALWAYS reset execution mode to simulation after a real
+    // run so consent can never carry over.
+    if (typeof resetExecutionModeToSimulation === 'function') resetExecutionModeToSimulation();
+    _realAdapterStatus = null;
+    renderSafetyCenter();
+  }
+
+  try {
+    if (typeof runScenario === 'function') {
+      await runScenario(sc, {
+        onComplete: function () { finish('executed', null); },
+        onError: function (reason) { finish('blocked', typeof reason === 'string' ? reason : 'blocked'); }
+      }, { executionMode: 'real-coordinate', realContext: realContext, safety: safety });
+    } else {
+      finish('blocked', 'engine-unavailable');
+    }
+  } catch (e) {
+    finish('failed', 'exception');
+  }
+}
+
+// Step 49 — diagnostics snapshot for the scenario real-run mode.
+function getRealCoordinateScenarioDiagnostics() {
+  var mode = (typeof getExecutionMode === 'function') ? getExecutionMode() : 'simulation';
+  var info = _scScenarioRealReadiness();
+  var feat = _scRealFeatureStatus();
+  var sc = info.scenario;
+  var repeatCount = (sc && sc.settings && typeof sc.settings.repeatCount === 'number') ? sc.settings.repeatCount : null;
+  return {
+    selectedExecutionMode: mode,
+    activeScenarioRealRunnable: info.ready === true,
+    realCoordinateSessionEnabled: feat.realCoordinateClickSessionEnabled === true,
+    realScenarioSafetyReady: !!(info.gate && info.gate.allowed),
+    lastRealScenarioRunAt: _lastRealScenarioRunAt,
+    lastRealScenarioRunStatus: _lastRealScenarioRunStatus,
+    lastRealScenarioBlockedReason: _lastRealScenarioBlockedReason,
+    lastRealScenarioCoordinates: _lastRealScenarioCoordinates,
+    repeatCountAllowedForReal: repeatCount === 1
+  };
 }
