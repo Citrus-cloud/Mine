@@ -8,6 +8,90 @@ This project is currently in **beta** — `simulation-only`.
 
 ---
 
+## [Unreleased] — Step 46 — Desktop v1 architecture and safety foundation
+
+Start of the full Desktop v1 development line. **No real system clicks
+were added.** ClickFlow remains **simulation-only**:
+`realDesktopActions:false`, `simulationOnly:true`,
+`contextIsolation:true`, `nodeIntegration:false`, CSP unchanged, no
+`robotjs`/`nut.js`/`iohook`/`uiohook-napi`/`opencv`.
+
+### Added (docs)
+
+- `docs/V1_DESKTOP_PRODUCT_PLAN.md`, `docs/V1_IMPLEMENTATION_CHECKLIST.md`,
+  `docs/FULL_PRODUCT_BRANCH_PLAN.md` — v1 product plan, checklist, and
+  branch model (`main`, `v1-desktop`, `hotfix/v0.2.x`,
+  `v1-android-research`).
+- `docs/V1_SAFETY_MODEL.md`, `docs/V1_ACTION_PIPELINE.md`,
+  `docs/V1_REAL_ADAPTER_REQUIREMENTS.md`, `docs/V1_AUDIT_LOGS.md`,
+  `docs/V1_PERMISSION_MODEL.md`, `docs/V1_RELEASE_CRITERIA.md` — v1
+  safety/architecture docs.
+- `docs/NUTJS_INTEGRATION_PLAN.md` — candidate real-input backend
+  **plan only**; nut.js is NOT added as a dependency.
+
+### Added (source)
+
+- `src/audit-log-manager.js` — in-memory v1 audit log manager with
+  strict redaction (no screenshots/base64/`imageDataUrl`/paths/PII);
+  file persistence prepared/planned via an optional preload bridge.
+- `src/permission-manager.js` — permission/readiness checklist
+  (status + guidance only; never enables real mode).
+- `src/real-desktop-adapter-interface.js` — real adapter contract;
+  `checkRealAdapterAvailability()` returns unavailable and every
+  `executeReal*()` blocks.
+- `src/safety-center-ui.js` — Advanced → Safety Center tab: current
+  mode, V1 readiness, permissions checklist, audit logs (filters /
+  refresh / clear / export), Run safety check, Export diagnostics. No
+  "enable real clicks" control.
+
+### Changed
+
+- `src/action-pipeline.js` — v1-ready: action-type taxonomy
+  (`click`/`image_click`/`text_click`/`wait` active;
+  `move_mouse`/`scroll`/`key_press`/`hotkey` planned/disabled),
+  `normalizeActionResult()` uniform result shape, and
+  `evaluateRealModeReadiness()` multi-condition gate that blocks real
+  mode by default. `canExecuteRealAction()` can never return true
+  (`safetyReviewPassed` always unmet).
+- `src/scenario-manager.js` — `migrateScenarioToV1` /
+  `migrateScenariosToV1` add `meta.version:1` + run fields additively;
+  applied on load. Old scenarios keep working.
+- `src/app-state.js` — `runSummaries` slice + `addRunSummary` /
+  `getLastRunSummary` / `getRunSummaries`; `realActionsPerformed`
+  forced false. Run summaries recorded on scenario complete/stop.
+- `src/audit-events.js` — allowlist extended with Step 46 types
+  (`real.adapter.blocked`, `permission.refreshed`,
+  `safetyCenter.check.run`, `scenario.runSummary.recorded`, …).
+- `src/index.html` — Safety Center tab + section + module scripts.
+- `src/i18n.js` — RU/EN keys for Safety Center, permissions, audit
+  logs, V1 readiness, run summary.
+- `src/styles.css` — Safety Center styles.
+- `README.md`, `PROJECT_CONTEXT.md`, `docs/ROADMAP.md` — Desktop v1
+  foundation / Step 46.
+
+### Smoke check (Step 46)
+
+- New invariants: all v1 docs + new src modules exist;
+  README/PROJECT_CONTEXT mention Desktop v1; README/PROJECT_CONTEXT/
+  CHANGELOG mention Step 46; `package.json` declares no
+  `robotjs`/`iohook`/`uiohook-napi`/`opencv`; `realDesktopActions:false`;
+  real adapter `executeReal*` all block; permission manager keeps
+  `realModeEnabled:false`; audit manager denylists pixel data and
+  forces `realAction:false`; pipeline has `wait` + planned types +
+  `normalizeActionResult` + `evaluateRealModeReadiness`;
+  Safety Center UI is DOM-safe with no real-clicks control;
+  `contextIsolation:true`, `nodeIntegration:false`, CSP unchanged.
+
+### Safety invariants kept (Step 46)
+
+- No real desktop actions added; simulation-only model preserved.
+- Action pipeline blocks `realClick:true` and real mode by default.
+- Audit logs never store screenshots/base64/paths/PII.
+- Visual Builder drafts only; presets do not execute automatically;
+  OCR does not click.
+
+---
+
 ## [Unreleased] — Step 45 — Post-release cleanup and feedback tracking
 
 Post-release / post-smart-beta cleanup for `v0.2.0-smart-beta`

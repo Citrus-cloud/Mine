@@ -23,6 +23,35 @@ and audited; the project is in post-release cleanup + feedback
 tracking (Step 45). See `docs/POST_RELEASE_CHECKLIST.md` and
 `docs/FEEDBACK_TRIAGE.md`.
 
+## Desktop v1 (`v1-desktop` branch) — Step 46 foundation
+
+The full Desktop v1 line. **Real desktop actions remain disabled until
+a written safety review passes** — Step 46 only lays the architecture +
+safety foundation (no real clicks).
+
+- [x] v1 product plan + implementation checklist + branch model
+      (`docs/V1_DESKTOP_PRODUCT_PLAN.md`,
+      `docs/V1_IMPLEMENTATION_CHECKLIST.md`,
+      `docs/FULL_PRODUCT_BRANCH_PLAN.md`).
+- [x] v1 safety docs + action pipeline v1-ready (blocks real by
+      default).
+- [x] Persistent audit log manager (in-memory + prepared persistence).
+- [x] Permission manager (status/guidance only).
+- [x] Real desktop adapter **interface** (execution disabled).
+- [x] Safety Center UI + V1 readiness + scenario v1 metadata + run
+      summaries.
+- [ ] **Real desktop adapter** (separate `v1-desktop` branch, behind a
+      feature flag, after safety review). Candidate backend: nut.js
+      (`docs/NUTJS_INTEGRATION_PLAN.md` — plan only).
+- [ ] Per-run confirmation flow, OS permission probes, persisted audit
+      file, real-mode test matrix.
+
+Branch model: `main` (stable smart beta), `v1-desktop` (real desktop
+work), `hotfix/v0.2.x` (smart-beta bugfixes, no real clicks),
+`v1-android-research` (Android future research). See
+`docs/FULL_PRODUCT_BRANCH_PLAN.md`. No captcha / anti-bot / ad-click /
+banking automation, ever.
+
 ## v0.2.1 — Bugfix patch (next)
 
 Theme: stabilize the smart beta from feedback. **Bugfix-only — no

@@ -102,6 +102,17 @@ const appState = {
     lastError:         null,
     lastRunAt:         null
   },
+  // Step 46 — Desktop v1 scenario run summaries. Renderer-side memory
+  // only. Holds the last run summary plus a bounded history of the
+  // most recent runs. A run summary is plain-data metadata
+  // (ids / numbers / enums) — it NEVER holds a screenshot, an
+  // imageDataUrl, pixel data, or the full OCR target text, and it is
+  // never persisted to disk. `realActionsPerformed` is always false in
+  // this build.
+  runSummaries: {
+    last: null,
+    history: []
+  },
   settings: {
     language: "ru",
     theme: "system",
@@ -118,6 +129,9 @@ const appState = {
     }
   }
 };
+
+// Step 46 — bound the run-summary history.
+var RUN_SUMMARY_HISTORY_MAX = 10;
 
 function getState() {
   return {
@@ -175,7 +189,11 @@ function getState() {
       safety: { ...appState.settings.safety }
     },
     activeAdvancedTab: appState.activeAdvancedTab,
-    importPreview: appState.importPreview
+    importPreview: appState.importPreview,
+    runSummaries: {
+      last: appState.runSummaries.last ? { ...appState.runSummaries.last } : null,
+      history: appState.runSummaries.history.map(function (r) { return { ...r }; })
+    }
   };
 }
 
@@ -682,4 +700,63 @@ function _cloneOcrSliceResult(result) {
     durationMs:       typeof result.durationMs === 'number' ? result.durationMs : 0,
     createdAt:        typeof result.createdAt === 'string' ? result.createdAt : ''
   };
+}
+
+
+
+// --- Step 46: Scenario run summary state (renderer memory only) ---
+// A run summary is plain-data metadata only. The setter strips
+// anything that could carry pixel data or PII (no imageDataUrl, no
+// full target text), clamps strings, and forces realActionsPerformed
+// to false. The history is bounded to the last RUN_SUMMARY_HISTORY_MAX
+// runs. Nothing here is persisted to disk.
+function _cloneRunSummary(summary) {
+  if (!summary || typeof summary !== 'object') return null;
+  function s(v, max) {
+    if (typeof v !== 'string') return '';
+    var lim = max || 80;
+    return v.length > lim ? v.slice(0, lim) : v;
+  }
+  function n(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
+  return {
+    scenarioId:           s(summary.scenarioId, 80),
+    scenarioType:         s(summary.scenarioType, 40),
+    startedAt:            s(summary.startedAt, 40),
+    completedAt:          s(summary.completedAt, 40),
+    durationMs:           n(summary.durationMs),
+    status:               s(summary.status, 40),
+    actionsCount:         n(summary.actionsCount),
+    matched:              (typeof summary.matched === 'boolean') ? summary.matched : null,
+    confidence:           n(summary.confidence),
+    targetPoint:          (summary.targetPoint && typeof summary.targetPoint === 'object')
+                            ? { x: n(summary.targetPoint.x), y: n(summary.targetPoint.y) }
+                            : null,
+    mode:                 (summary.mode === 'real' || summary.mode === 'dry-run') ? summary.mode : 'simulation',
+    // Hard guarantee: this build never performs real actions.
+    realActionsPerformed: false
+  };
+}
+
+function addRunSummary(summary) {
+  var clean = _cloneRunSummary(summary);
+  if (!clean) return null;
+  appState.runSummaries.last = clean;
+  appState.runSummaries.history.push(clean);
+  if (appState.runSummaries.history.length > RUN_SUMMARY_HISTORY_MAX) {
+    appState.runSummaries.history.splice(0, appState.runSummaries.history.length - RUN_SUMMARY_HISTORY_MAX);
+  }
+  return clean;
+}
+
+function getLastRunSummary() {
+  return appState.runSummaries.last ? { ...appState.runSummaries.last } : null;
+}
+
+function getRunSummaries() {
+  return appState.runSummaries.history.map(function (r) { return { ...r }; });
+}
+
+function resetRunSummaries() {
+  appState.runSummaries.last = null;
+  appState.runSummaries.history = [];
 }

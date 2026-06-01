@@ -24,9 +24,36 @@ function getActionPipelineStatus() {
     simulationOnly: true,
     realActionsEnabled: false,
     realActionsImplemented: false,
-    pipelineReady: true
+    pipelineReady: true,
+    // Step 46 — Desktop v1 readiness metadata.
+    pipelineVersion: 1,
+    realModeBlockedByDefault: true,
+    activeActionTypes: ['click', 'image_click', 'text_click', 'wait'],
+    plannedActionTypes: ['move_mouse', 'scroll', 'key_press', 'hotkey']
   };
 }
+
+// --- Step 46: action-type taxonomy. ---
+// Describes every action type the v1 pipeline knows about. "active"
+// types are simulated; "planned" types validate as known but are
+// never executed (a request to run one is blocked). This powers the
+// V1 readiness UI without enabling anything.
+function getActionTypeInfo() {
+  return [
+    { type: 'click',       state: 'active',  realInput: false },
+    { type: 'image_click', state: 'active',  realInput: false },
+    { type: 'text_click',  state: 'active',  realInput: false },
+    { type: 'wait',        state: 'active',  realInput: false },
+    { type: 'move_mouse',  state: 'planned', realInput: false },
+    { type: 'scroll',      state: 'planned', realInput: false },
+    { type: 'key_press',   state: 'planned', realInput: false },
+    { type: 'hotkey',      state: 'planned', realInput: false }
+  ];
+}
+
+// Planned/disabled action types: recognized by the taxonomy but never
+// executed in this build.
+var PIPELINE_PLANNED_ACTION_TYPES = ['move_mouse', 'scroll', 'key_press', 'hotkey'];
 
 // --- Action validation (single source of truth). ---
 // The Action schema for 0.1.x is:
@@ -100,6 +127,20 @@ function validateAction(action) {
     }
     return { ok: true };
   }
+  if (action.type === 'wait') {
+    // Step 46: non-input delay action. Simulation-only and never
+    // touches the OS. durationMs must be a finite non-negative number.
+    if (typeof action.durationMs !== 'number' || !isFinite(action.durationMs) || action.durationMs < 0) {
+      return { ok: false, error: 'wait requires a non-negative durationMs' };
+    }
+    return { ok: true };
+  }
+  // Step 46: planned/disabled action types are recognized so the UI
+  // and diagnostics can list them, but they never execute. Validation
+  // reports them as not-yet-available rather than "unsupported".
+  if (PIPELINE_PLANNED_ACTION_TYPES.indexOf(action.type) !== -1) {
+    return { ok: false, error: 'Action type "' + action.type + '" is planned and disabled in this build' };
+  }
   return { ok: false, error: 'Unsupported action type: ' + action.type };
 }
 
@@ -134,9 +175,69 @@ function evaluateActionSafety(action, context) {
   return { ok: true, errors: [], warnings: [] };
 }
 
+// --- Step 46: real-mode readiness evaluation. ---
+// Returns the list of preconditions that are NOT met for real mode.
+// Real mode needs ALL of: realDesktopActions flag, explicit user
+// confirmation, safeMode, emergency stop enabled, audit logs enabled,
+// adapter available, and a passed permission check. In this build at
+// least the flag, the adapter, and the safety review are always unmet,
+// so the list is never empty.
+function evaluateRealModeReadiness(context) {
+  var ctx = (context && typeof context === 'object') ? context : {};
+  var settings = (ctx.settings && typeof ctx.settings === 'object') ? ctx.settings : {};
+  var safety = (settings.safety && typeof settings.safety === 'object') ? settings.safety : {};
+  var ff = (typeof getFeatureFlags === 'function') ? getFeatureFlags() : {};
+  var unmet = [];
+
+  if (ff.realDesktopActions !== true) unmet.push('realDesktopActionsFlag');
+  if (ff.simulationOnly !== false)    unmet.push('simulationOnlyOff');
+  if (ctx.userConfirmed !== true)     unmet.push('userConfirmation');
+  if (safety.safeMode !== true)       unmet.push('safeMode');
+  if (safety.emergencyStopEnabled !== true) unmet.push('emergencyStop');
+  if (ctx.auditLogsEnabled !== true)  unmet.push('auditLogsEnabled');
+
+  // Adapter availability — must be a registered, available real adapter.
+  var adapterAvailable = false;
+  try {
+    if (typeof isRealAdapterAvailable === 'function') adapterAvailable = isRealAdapterAvailable();
+  } catch (err) { adapterAvailable = false; }
+  if (!adapterAvailable) unmet.push('adapterAvailable');
+
+  if (ctx.permissionCheckPassed !== true) unmet.push('permissionCheck');
+
+  // The safety review gate is independent of runtime context and is
+  // never satisfied in this build.
+  unmet.push('safetyReviewPassed');
+
+  return { ready: false, unmet: unmet };
+}
+
 // --- Hard gate. ALWAYS false on this step. ---
-function canExecuteRealAction(/* context */) {
-  return false;
+// Built on top of evaluateRealModeReadiness so the reason is auditable,
+// but the safety-review precondition guarantees it can never return
+// true in this build.
+function canExecuteRealAction(context) {
+  var readiness = evaluateRealModeReadiness(context);
+  return readiness.ready === true && readiness.unmet.length === 0;
+}
+
+// --- Step 46: uniform result normalizer. ---
+// Guarantees every pipeline result carries the full v1 shape so
+// callers never branch on mode to read a field. `realAction` is forced
+// to false — there is no real-action code path in this build.
+function normalizeActionResult(result) {
+  var r = (result && typeof result === 'object') ? result : {};
+  var mode = (r.mode === 'real' || r.mode === 'dry-run') ? r.mode : 'simulation';
+  return {
+    success:    r.success === true || r.ok === true,
+    mode:       mode,
+    simulated:  (typeof r.simulated === 'boolean') ? r.simulated : (mode === 'simulation'),
+    realAction: false,
+    action:     (r.action !== undefined) ? r.action : null,
+    result:     (r.result !== undefined) ? r.result : null,
+    error:      (typeof r.error === 'string') ? r.error : null,
+    timestamp:  (typeof r.timestamp === 'string') ? r.timestamp : new Date().toISOString()
+  };
 }
 
 // --- Simulated execution path. ---
@@ -319,6 +420,12 @@ function executeAction(action, context) {
       var active = getActiveAdapter();
       if (active && (active.realActions === true || active.type === 'real')) {
         return blockRealAction(action, context);
+      }
+      // Step 46: wait is a non-input delay action. It bypasses the
+      // mock adapter (which only understands `click`) and goes through
+      // the legacy simulate path. It never touches the OS.
+      if (action.type === 'wait') {
+        return executeSimulatedAction(action, context);
       }
       // Step 30: image_click does NOT go through the mock adapter.
       // The mock adapter only knows about `click` actions and would
