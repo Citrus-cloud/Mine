@@ -1,36 +1,55 @@
 # Release Notes — ClickFlow Desktop
 
-## v1.0.0-alpha.1 (Step 79)
+## v1.0.0 🏁 (Step 84 — Final Release)
 
-**Phase 4 complete — smart click with safety gate.**
+**ClickFlow Desktop v1.0.0 is the first stable release.**
 
-This release introduces real `image_click` and `text_click` dispatch under
-a four-check safety gate. All prior Phase 1–3 features (OCR, template
-matching, visual scenario builder, region selector, audit log) are included.
+### What’s included
 
-### What's new
+#### Safety gate (Step 77)
+- Four independent checks: `reviewPassed`, `consentFresh` (15 s TTL),
+  `rateLimitOk` (≤10/min rolling window), `emergencyStopClear`.
+- `evaluateGate()` → `{ allowed, failedChecks[], checks{} }`.
+- `canDispatchRealInput()` convenience boolean.
+- Emergency stop fires synchronously; clears consent.
 
-- **Safety review gate** (`real-input-safety-review.js`):
-  reviewPassed + consentFresh (15 s TTL) + rateLimitOk (≤10/min) +
-  emergencyStopClear. `evaluateGate()` / `canDispatchRealInput()`.
-- **Real smart click** (`real-smart-click.js`):
-  `imageClick(request, adapterDispatch)` and
-  `textClick(request, adapterDispatch)` — injected adapter, one-use consent,
-  rate recording, full `ClickResultStatus` enum.
-- **30 new automated tests** across Steps 77–78 (Node.js, no external deps).
+#### Real smart click (Step 78)
+- `imageClick(request, adapterDispatch)` — image-template based click.
+- `textClick(request, adapterDispatch)` — OCR text-based click.
+- One-use consent model; rate counter updated on success.
+- `ClickResultStatus { DISPATCHED, BLOCKED, ERROR }`.
 
-### Known limitations (alpha)
+#### Parity & l10n (Step 80)
+- Full Android ↔ Desktop feature parity (16 feature groups).
+- Russian UI strings for all Phase 3–4 features.
 
-- `adapterDispatch` must be wired by the caller; no default robot adapter
-  ships in this release.
-- E2E hardware dispatch (mouse move + click) is not yet connected to the UI
-  consent flow.
-- Localization covers en-US only.
+#### Documentation (Step 82)
+- Desktop user guide + Android companion guide (en + ru).
+- E2E QA scenarios (8 scenarios, 12 automated tests).
+- Beta readiness checklist.
 
-### Upgrade notes
+### Test coverage
 
-First alpha release — no migration required.
+| Suite | Tests |
+|-------|-------|
+| Safety review (Step 77) | 15 |
+| Real smart click (Step 78) | 15 |
+| E2E runner (Step 81) | 12 |
+| **Total desktop** | **42** |
+| Android JVM (Steps 64–76) | 93+ |
+
+### Known limitations
+
+- `adapterDispatch` must be wired by the host application; no default
+  robot adapter ships in this release (platform-specific).
+- E2E hardware dispatch (mouse move + click) requires host wiring.
+- Android real-tap `dispatchGesture` is behind the safety gate
+  (gate opens only when all four Android flags are set).
+
+### Upgrade from alpha.1
+
+No data migration required. `package.json` version: `1.0.0`.
 
 ---
 
-## v1.0.0-alpha.0 and earlier — see CHANGELOG.md
+## v1.0.0-alpha.1 (Step 79) — see CHANGELOG.md

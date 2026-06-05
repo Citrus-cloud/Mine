@@ -1,11 +1,11 @@
 {
   "name": "clickflow-desktop",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0",
   "description": "ClickFlow — cross-platform smart click-automation (desktop)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node tests/real-input-safety-review.test.js && node tests/real-smart-click.test.js",
+    "test": "node tests/real-input-safety-review.test.js && node tests/real-smart-click.test.js && node tests/e2e-runner.js",
     "build": "electron-builder"
   },
   "keywords": ["automation", "click", "ocr", "template-matching", "electron"],
