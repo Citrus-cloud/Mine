@@ -4,18 +4,23 @@ All notable changes are documented here.
 
 ## [Unreleased]
 
-### Step 81 — E2E QA scenarios + automated runner
+### Step 83 — Public beta preparation
 
-- New `docs/e2e-qa-scenarios.md` — 8 end-to-end test scenarios:
-  safety gate lifecycle, imageClick / textClick happy paths, rate limit,
-  emergency stop mid-session, adapter error handling, localization switcher,
-  Android↔Desktop parity smoke.
-- New `tests/e2e-runner.js` — 12 automated e2e tests (Node.js, no deps):
-  S1 gate lifecycle (a–e), S2 image happy path + consent one-use, S3 text
-  happy path, S4 rate limit at MAX+1, S5 e-stop blocks, S6 adapter error
-  / throw.
-- Run: `node tests/e2e-runner.js`
+- `docs/beta-readiness.md` — beta readiness checklist (12 items).
+- All automated tests pass (77: 15, 78: 15, 81 e2e: 12).
+- `package.json` pre-release label updated to `beta.1`.
 
-### Step 80 — Parity matrix + ru l10n
-### Step 79 — QA + v1.0.0-alpha.1
+### Step 82 — User documentation
+
+- New `docs/user-guide.md` — full desktop user guide (en + ru):
+  quick start, template/text target setup, scenario builder, safety model,
+  keyboard shortcuts, troubleshooting.
+- New `docs/android-user-guide.md` — Android companion guide:
+  architecture diagram, build & test commands, safety model summary (en + ru).
+
+### Step 81 — E2E QA
+- `docs/e2e-qa-scenarios.md` + `tests/e2e-runner.js` (12 tests).
+
+### Step 80 — Parity + ru l10n
+### Step 79 — v1.0.0-alpha.1
 ### Steps 51–78 — see git history
