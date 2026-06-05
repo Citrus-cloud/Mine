@@ -1,92 +1,28 @@
 {
-  "name": "clickflow",
+  "name": "clickflow-desktop",
   "version": "1.0.0-alpha.1",
-  "description": "ClickFlow — минималистичный кроссплатформенный кликер и визуальный автоматизатор (Electron, simulation-only smart desktop beta; Desktop v1 alpha real-coordinate-click prototype behind a hard safety gate).",
+  "description": "ClickFlow — cross-platform smart click-automation (desktop)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "smoke": "node scripts/smoke-check.js"
+    "test": "node tests/real-input-safety-review.test.js && node tests/real-smart-click.test.js",
+    "build": "electron-builder"
   },
-  "keywords": [
-    "clickflow",
-    "electron",
-    "automation",
-    "simulation",
-    "desktop",
-    "beta"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Citrus-cloud/Mine.git"
-  },
-  "build": {
-    "appId": "com.clickflow.app",
-    "productName": "ClickFlow",
-    "directories": {
-      "output": "dist",
-      "buildResources": "assets"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "src/**/*",
-      "assets/**/*",
-      "docs/**/*",
-      "README.md",
-      "PROJECT_CONTEXT.md",
-      "CHANGELOG.md",
-      "RELEASE_NOTES.md",
-      "CONTRIBUTING.md",
-      "package.json",
-      "node_modules/tesseract.js/**/*",
-      "node_modules/tesseract.js-core/**/*",
-      "node_modules/wasm-feature-detect/**/*",
-      "node_modules/idb-keyval/**/*",
-      "node_modules/bmp-js/**/*",
-      "node_modules/regenerator-runtime/**/*",
-      "node_modules/zlibjs/**/*",
-      "node_modules/is-electron/**/*",
-      "node_modules/opencollective-postinstall/**/*",
-      "!**/*.broken-*",
-      "!**/.DS_Store",
-      "!**/Thumbs.db",
-      "!**/.git",
-      "!**/.gitignore",
-      "!**/userData/**",
-      "!**/.env",
-      "!**/.env.*",
-      "!**/*.tmp",
-      "!**/*.log",
-      "!**/screenshots/**",
-      "!**/screenshot-*.png",
-      "!**/screenshot-*.jpg",
-      "!dist/**",
-      "!coverage/**",
-      "!.cache/**",
-      "!.npm/**"
-    ],
-    "win": {
-      "target": "nsis"
-    },
-    "mac": {
-      "target": "dmg",
-      "category": "public.app-category.utilities"
-    },
-    "linux": {
-      "target": "AppImage",
-      "category": "Utility"
-    }
-  },
-  "author": "",
+  "keywords": ["automation", "click", "ocr", "template-matching", "electron"],
+  "author": "Citrus-cloud",
   "license": "MIT",
-  "dependencies": {
-    "tesseract.js": "^5.0.4"
-  },
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.0"
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "tesseract.js": "^5.0.0"
+  },
+  "build": {
+    "appId": "com.citruscloud.clickflow",
+    "productName": "ClickFlow",
+    "mac": { "category": "public.app-category.utilities" },
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage" }
   }
 }
