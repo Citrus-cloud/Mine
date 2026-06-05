@@ -6,24 +6,17 @@ Electron-based desktop application for **ClickFlow**.
 
 ## 🇷🇺 Краткое описание
 
-**Где мы сейчас:**
-
-- ✅ Шаги 51–80 сделаны.
-- 🔄 **Только что:** **Шаг 80** — `parity-matrix.md` + `i18n-ru-smartclick.js` (30 ru-строк).
-- ➡️ **Следующий:** **Шаг 81** — e2e QA сценарии.
-
----
-
-## Status
-
-> **Phase 5 in progress. Step 80 done, Step 81 next.**
+- ✅ Шаги 51–81.
+- 🔄 **Только что:** **Шаг 81** — `docs/e2e-qa-scenarios.md` + `tests/e2e-runner.js` (12 e2e-тестов).
+- ➡️ **Следующий:** **Шаг 82** — пользовательская документация.
 
 ## Roadmap (Phase 5)
-- **80 ✅** parity + l10n · **81 ➡️** e2e QA · **82** user docs · **83** public beta · **84** `v1.0.0`
+- **80 ✅** · **81 ✅** · **82 ➡️** user docs · **83** public beta · **84** `v1.0.0`
 
 ## Run tests
 ```bash
 npm test
+node tests/e2e-runner.js
 ```
 
 ## License

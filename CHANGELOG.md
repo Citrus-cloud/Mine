@@ -4,25 +4,18 @@ All notable changes are documented here.
 
 ## [Unreleased]
 
-### Step 80 — Parity matrix + Russian localization for smart-click
+### Step 81 — E2E QA scenarios + automated runner
 
-- New `docs/parity-matrix.md` — Android ↔ Desktop feature parity table
-  covering all 16 feature groups (Steps 66–79). Status: ✅ all critical paths
-  covered; ⚠️ Android ru localization in progress.
-- New `src/i18n-ru-smartclick.js` — 30 Russian strings for Phase 3–4 features:
-  safety gate checks, real-click dispatch results, emergency-stop UI,
-  consent dialog. Keys follow existing `i18n.js` convention.
-- Phase 5 begins.
+- New `docs/e2e-qa-scenarios.md` — 8 end-to-end test scenarios:
+  safety gate lifecycle, imageClick / textClick happy paths, rate limit,
+  emergency stop mid-session, adapter error handling, localization switcher,
+  Android↔Desktop parity smoke.
+- New `tests/e2e-runner.js` — 12 automated e2e tests (Node.js, no deps):
+  S1 gate lifecycle (a–e), S2 image happy path + consent one-use, S3 text
+  happy path, S4 rate limit at MAX+1, S5 e-stop blocks, S6 adapter error
+  / throw.
+- Run: `node tests/e2e-runner.js`
 
-## v1.0.0-alpha.1 (Step 79)
-
-### Step 79 — QA checklist + release
-- `docs/qa-checklist-alpha1.md`, `RELEASE_NOTES.md`, `package.json` → 1.0.0-alpha.1.
-
-### Step 78 — Real image_click + text_click
-- `real-smart-click.js` + 15 tests.
-
-### Step 77 — Safety review gate
-- `real-input-safety-review.js` + 15 tests.
-
-### Step 51 and earlier — see git history
+### Step 80 — Parity matrix + ru l10n
+### Step 79 — QA + v1.0.0-alpha.1
+### Steps 51–78 — see git history
